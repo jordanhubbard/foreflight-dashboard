@@ -1,0 +1,26 @@
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table, th, td {
+    border: 1px solid black;
+    padding: 8px;
+    text-align: left;
+}
+
+.solo {
+    background-color: #d4edda; /* light green for solo flights */
+}
+
+.dual {
+    background-color: #f8d7da; /* light red for dual instruction flights */
+}
+
+.other {
+    background-color: #d1ecf1; /* light blue for other flights */
+}
+
+.error {
+    background-color: #f8c291; /* light orange for flagged rows with errors */
+}

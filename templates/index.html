@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <title>ForeFlight Logbook Dashboard</title>
+</head>
+<body>
+
+<h1>ForeFlight Logbook Dashboard</h1>
+
+<h2>Currency (Last 3 Months)</h2>
+<ul>
+    <li>Day Hours: {{ currency.day_hours }}</li>
+    <li>Night Hours: {{ currency.night_hours }}</li>
+    <li>Takeoffs: {{ currency.takeoffs }}</li>
+    <li>Landings: {{ currency.landings }}</li>
+</ul>
+
+<h2>Hours per Aircraft</h2>
+<table>
+    <thead><tr><th>Aircraft ID</th><th>Total Hours</th></tr></thead>
+    <tbody>
+        {% for record in hours_by_aircraft %}
+        <tr><td>{{ record.AircraftID }}</td><td>{{ record.TotalTime }}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>Data Quality Summary</h2>
+<p>Number of Incorrect Entries: {{ num_bad_entries }}</p>
+{% if first_bad_entry_date %}
+<p>First Incorrect Entry Date: {{ first_bad_entry_date.strftime('%Y-%m-%d') }}</p>
+{% else %}
+<p>No incorrect entries detected.</p>
+{% endif %}
+
+<h2>Flight Log</h2>
+<table>
+    <thead>
+        <tr><th>Date</th><th>Aircraft ID</th><th>Route</th><th>Total Time</th>
+            <th>Day</th><th>Night</th><th>Takeoffs</th><th>Landings</th>
+            <th>Solo</th><th>Dual Received</th><th>Dual Given</th><th>Errors</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for flight in flights %}
+        <tr class="{{ flight.FlightType }} {% if flight.HasErrors %}error{% endif %}">
+            <td>{{ flight.Date }}</td><td>{{ flight.AircraftID }}</td><td>{{ flight.Route }}</td>
+            <td>{{ flight.TotalTime }}</td><td>{{ flight.Day }}</td><td>{{ flight.Night }}</td>
+            <td>{{ flight.Takeoffs }}</td><td>{{ flight.Landings }}</td>
+            <td>{{ flight.Solo }}</td><td>{{ flight.DualReceived }}</td><td>{{ flight.DualGiven }}</td>
+            <td>{{ flight.Errors | join(', ') }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+</body>
+</html>

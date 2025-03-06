@@ -1,0 +1,7 @@
+Date,AircraftID,AircraftType,Route,TotalTime,Day,Night,Takeoffs,Landings,DualGiven,DualReceived,Solo
+2024-01-15,N12345,C172,KABC-KXYZ,1.5,1.0,0.5,3,3,0,1.5,0
+2024-02-10,N67890,PA28,KDEF-KGHI,2.0,2.0,0.0,4,4,0,2.0,0
+2024-02-20,N12345,C172,KXYZ-KABC,1.0,1.0,0.0,2,2,0,0,1
+2024-03-01,N12345,C172,KABC-KXYZ,1.2,1.2,0.0,2,2,0,0,1
+2024-03-04,,C172,KABC-KXYZ,1.3,1.3,0.0,3,3,0,0,1  # Missing AircraftID (for error testing)
+2024-03-05,N55555,C182,KXYZ-KDEF,abc,1.0,0.0,2,2,0,0,1  # Invalid TotalTime (for error testing)
