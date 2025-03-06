@@ -73,8 +73,19 @@ def hours_per_aircraft(df):
     return df.groupby('AircraftID')['TotalTime'].sum().reset_index()
 
 @app.route('/')
+@app.route('/')
 def index():
     df = load_logbook_data()
+
+    # Early exit if logbook could not be loaded or is empty
+    if df.empty:
+        return """
+        <h1>ForeFlight Logbook Dashboard</h1>
+        <p style='color:red;'>⚠️ No valid logbook data found.</p>
+        <p>Please ensure that <strong>foreflight_logbook.csv</strong> is present in the project folder and properly formatted.</p>
+        """
+
+    # Continue if data exists
     df['Errors'] = df.apply(validate_row, axis=1)
     df['HasErrors'] = df['Errors'].apply(lambda x: len(x) > 0)
 
