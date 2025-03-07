@@ -1,116 +1,95 @@
 from flask import Flask, render_template
 import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta
-import os
 
 app = Flask(__name__)
 
-def load_logbook_data():
-    try:
-        df = pd.read_csv('foreflight_logbook.csv')
+LOGBOOK_FILE = 'foreflight_logbook.csv'
 
-        if df.empty:
-            print("Warning: The logbook CSV is empty.")
-            return pd.DataFrame()  # Safe empty DataFrame
+def load_flight_data():
+    df = pd.read_csv(LOGBOOK_FILE)
+    flight_table_start = None
+    for i, row in df.iterrows():
+        if row.astype(str).str.contains('Flights Table', case=False, na=False).any():
+            flight_table_start = i + 2
+            break
+    if flight_table_start is None:
+        raise ValueError("Could not find 'Flights Table' in the file.")
+    flight_data = pd.read_csv(LOGBOOK_FILE, skiprows=flight_table_start)
+    flight_data['Date'] = pd.to_datetime(flight_data['Date'], errors='coerce')
+    flight_data = flight_data.dropna(subset=['Date'])
+    numeric_cols = flight_data.select_dtypes(include=[np.number]).columns
+    flight_data[numeric_cols] = flight_data[numeric_cols].fillna(0)
+    return flight_data.sort_values('Date')
 
-        # Ensure Date is datetime
-        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+def calculate_fill_rates(flight_data):
+    total_rows = len(flight_data)
+    return {col: (flight_data[col].notna().sum() / total_rows) * 100 for col in flight_data.columns}
 
-        # Convert numeric fields to numbers, replacing bad values with 0
-        numeric_columns = ['TotalTime', 'Day', 'Night', 'Takeoffs', 'Landings', 'DualGiven', 'DualReceived', 'Solo']
-        for col in numeric_columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+def detect_anomalies(flight_data, threshold=3.0):
+    anomalies = {}
+    for column in flight_data.select_dtypes(include=[np.number]).columns:
+        mean = flight_data[column].mean()
+        std_dev = flight_data[column].std()
+        if pd.isna(mean) or pd.isna(std_dev) or std_dev == 0:
+            continue
+        outliers = flight_data[(flight_data[column] < mean - threshold * std_dev) |
+                               (flight_data[column] > mean + threshold * std_dev)]
+        if not outliers.empty:
+            anomalies[column] = {"mean": mean, "std_dev": std_dev, "outliers": outliers}
+    return anomalies
 
-        return df
-
-    except FileNotFoundError:
-        print("Error: foreflight_logbook.csv not found.")
-        return pd.DataFrame()
-
-    except pd.errors.EmptyDataError:
-        print("Error: foreflight_logbook.csv is empty.")
-        return pd.DataFrame()
-
-    except pd.errors.ParserError:
-        print("Error: foreflight_logbook.csv could not be parsed.")
-        return pd.DataFrame()
-
-    except Exception as e:
-        print(f"Unexpected error while loading logbook data: {e}")
-        return pd.DataFrame()
-
-def validate_row(row):
-    errors = []
-
-    required_fields = ['Date', 'AircraftID', 'TotalTime', 'Takeoffs', 'Landings']
-    for field in required_fields:
-        if pd.isna(row[field]) or str(row[field]).strip() == '':
-            errors.append(f"Missing {field}")
-
-    numeric_fields = ['TotalTime', 'Day', 'Night', 'Takeoffs', 'Landings', 'DualGiven', 'DualReceived', 'Solo']
-    for field in numeric_fields:
-        try:
-            if pd.notna(row[field]):
-                float(row[field])
-        except ValueError:
-            errors.append(f"Invalid number in {field}")
-
-    if pd.isna(row['Date']):
-        errors.append("Invalid Date")
-
-    return errors
-
-def calculate_currency(df):
-    recent_flights = df[df['Date'] >= datetime.now() - timedelta(days=90)]
+def calculate_summary(flight_data):
+    first_flight = flight_data['Date'].min()
+    last_flight = flight_data['Date'].max()
+    tail_number_counts = flight_data['AircraftID'].value_counts().reset_index()
+    tail_number_counts.columns = ['Tail Number', 'Flights']
+    cutoff_date = last_flight - timedelta(days=30)
+    recent_flights = flight_data[flight_data['Date'] >= cutoff_date]
     return {
-        'day_hours': recent_flights['Day'].sum(),
-        'night_hours': recent_flights['Night'].sum(),
-        'takeoffs': recent_flights['Takeoffs'].sum(),
-        'landings': recent_flights['Landings'].sum()
+        'first_flight': first_flight,
+        'last_flight': last_flight,
+        'tail_number_counts': tail_number_counts,
+        'solo_hours_last_30': recent_flights['Solo'].sum(),
+        'dual_hours_last_30': recent_flights['DualReceived'].sum()
     }
 
-def hours_per_aircraft(df):
-    return df.groupby('AircraftID')['TotalTime'].sum().reset_index()
+def enhance_flight_data(flight_data, anomalies):
+    running_totals = {col: 0.0 for col in ['DualReceived', 'Night', 'SimulatedInstrument', 'PIC', 'DayLandingsFullStop', 'NightLandingsFullStop']}
+    anomaly_rows = set()
+    for column_data in anomalies.values():
+        anomaly_rows.update(column_data['outliers'].index)
+
+    enhanced_rows = []
+    for idx, row in flight_data.iterrows():
+        for key in running_totals:
+            running_totals[key] += row.get(key, 0)
+        enhanced_row = row.to_dict()
+        for key, value in running_totals.items():
+            enhanced_row[f'Running{key}'] = value
+        enhanced_row['is_anomaly'] = idx in anomaly_rows
+        for key, value in enhanced_row.items():
+            if isinstance(value, float):
+                enhanced_row[key] = f"{value:.1f}"
+        enhanced_rows.append(enhanced_row)
+    return enhanced_rows
 
 @app.route('/')
-@app.route('/')
-def index():
-    df = load_logbook_data()
+def display_logbook():
+    flight_data = load_flight_data()
+    fill_rates = calculate_fill_rates(flight_data)
+    anomalies = detect_anomalies(flight_data)
+    summary = calculate_summary(flight_data)
+    enhanced_flights = enhance_flight_data(flight_data, anomalies)
 
-    # Early exit if logbook could not be loaded or is empty
-    if df.empty:
-        return """
-        <h1>ForeFlight Logbook Dashboard</h1>
-        <p style='color:red;'>⚠️ No valid logbook data found.</p>
-        <p>Please ensure that <strong>foreflight_logbook.csv</strong> is present in the project folder and properly formatted.</p>
-        """
-
-    # Continue if data exists
-    df['Errors'] = df.apply(validate_row, axis=1)
-    df['HasErrors'] = df['Errors'].apply(lambda x: len(x) > 0)
-
-    bad_entries = df[df['HasErrors']]
-    num_bad_entries = len(bad_entries)
-    first_bad_entry_date = bad_entries['Date'].min() if num_bad_entries > 0 else None
-
-    currency = calculate_currency(df)
-    hours_by_aircraft = hours_per_aircraft(df)
-
-    def flight_type(row):
-        if row['Solo'] > 0:
-            return 'solo'
-        elif row['DualReceived'] > 0 or row['DualGiven'] > 0:
-            return 'dual'
-        return 'other'
-
-    df['FlightType'] = df.apply(flight_type, axis=1)
-
-    return render_template('index.html', 
-                           currency=currency,
-                           hours_by_aircraft=hours_by_aircraft.to_dict('records'),
-                           flights=df.to_dict('records'),
-                           num_bad_entries=num_bad_entries,
-                           first_bad_entry_date=first_bad_entry_date)
+    most_popular_aircraft = summary['tail_number_counts'].iloc[0]['Tail Number']
+    return render_template('index.html',
+                           summary=summary,
+                           flights=enhanced_flights,
+                           most_popular_aircraft=most_popular_aircraft,
+                           fill_rates=fill_rates,
+                           anomalies=anomalies)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')

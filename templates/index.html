@@ -1,59 +1,53 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
-    <title>ForeFlight Logbook Dashboard</title>
+    <title>ForeFlight Logbook Summary</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+    <h1>ForeFlight Logbook Summary</h1>
 
-<h1>ForeFlight Logbook Dashboard</h1>
+    <h2>Summary Information</h2>
+    <p>First Flight: {{ summary.first_flight.strftime('%Y-%m-%d') }}</p>
+    <p>Most Recent Flight: {{ summary.last_flight.strftime('%Y-%m-%d') }}</p>
 
-<h2>Currency (Last 3 Months)</h2>
-<ul>
-    <li>Day Hours: {{ currency.day_hours }}</li>
-    <li>Night Hours: {{ currency.night_hours }}</li>
-    <li>Takeoffs: {{ currency.takeoffs }}</li>
-    <li>Landings: {{ currency.landings }}</li>
-</ul>
-
-<h2>Hours per Aircraft</h2>
-<table>
-    <thead><tr><th>Aircraft ID</th><th>Total Hours</th></tr></thead>
-    <tbody>
-        {% for record in hours_by_aircraft %}
-        <tr><td>{{ record.AircraftID }}</td><td>{{ record.TotalTime }}</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-<h2>Data Quality Summary</h2>
-<p>Number of Incorrect Entries: {{ num_bad_entries }}</p>
-{% if first_bad_entry_date %}
-<p>First Incorrect Entry Date: {{ first_bad_entry_date.strftime('%Y-%m-%d') }}</p>
-{% else %}
-<p>No incorrect entries detected.</p>
-{% endif %}
-
-<h2>Flight Log</h2>
-<table>
-    <thead>
-        <tr><th>Date</th><th>Aircraft ID</th><th>Route</th><th>Total Time</th>
-            <th>Day</th><th>Night</th><th>Takeoffs</th><th>Landings</th>
-            <th>Solo</th><th>Dual Received</th><th>Dual Given</th><th>Errors</th>
+    <h3>Flights by Tail Number</h3>
+    <table>
+        <tr><th>Tail Number</th><th>Flights</th></tr>
+        {% for _, row in summary.tail_number_counts.iterrows() %}
+        <tr class="{{ 'popular' if row['Tail Number'] == most_popular_aircraft else '' }}">
+            <td>{{ row['Tail Number'] }}</td>
+            <td>{{ row['Flights'] }}</td>
         </tr>
-    </thead>
-    <tbody>
+        {% endfor %}
+    </table>
+
+    <p>Solo Hours (Last 30 Days): {{ "%.1f"|format(summary.solo_hours_last_30) }}</p>
+    <p>Dual Hours (Last 30 Days): {{ "%.1f"|format(summary.dual_hours_last_30) }}</p>
+
+    <h2>Flight Log (Running Totals)</h2>
+    <table>
+        <tr>
+            <th>Date</th><th>AircraftID</th><th>From</th><th>To</th><th>Total Time</th>
+            <th>Dual Rec</th><th>Night</th><th>Sim Inst</th><th>PIC</th>
+            <th>Day Landings</th><th>Night Landings</th>
+        </tr>
         {% for flight in flights %}
-        <tr class="{{ flight.FlightType }} {% if flight.HasErrors %}error{% endif %}">
-            <td>{{ flight.Date }}</td><td>{{ flight.AircraftID }}</td><td>{{ flight.Route }}</td>
-            <td>{{ flight.TotalTime }}</td><td>{{ flight.Day }}</td><td>{{ flight.Night }}</td>
-            <td>{{ flight.Takeoffs }}</td><td>{{ flight.Landings }}</td>
-            <td>{{ flight.Solo }}</td><td>{{ flight.DualReceived }}</td><td>{{ flight.DualGiven }}</td>
-            <td>{{ flight.Errors | join(', ') }}</td>
+        <tr class="{{ 'anomaly' if flight.is_anomaly else '' }}">
+            <td>{{ flight.Date }}</td><td>{{ flight.AircraftID }}</td><td>{{ flight.From }}</td>
+            <td>{{ flight.To }}</td><td>{{ flight.TotalTime }}</td><td>{{ flight.DualReceived }}</td>
+            <td>{{ flight.Night }}</td><td>{{ flight.SimulatedInstrument }}</td><td>{{ flight.PIC }}</td>
+            <td>{{ flight.DayLandingsFullStop }}</td><td>{{ flight.NightLandingsFullStop }}</td>
         </tr>
         {% endfor %}
-    </tbody>
-</table>
+    </table>
 
+    <h2>Field Fill Rates</h2>
+    <table>
+        <tr><th>Field</th><th>Fill Rate (%)</th></tr>
+        {% for field, rate in fill_rates.items() %}
+        <tr><td>{{ field }}</td><td>{{ "%.1f"|format(rate) }}%</td></tr>
+        {% endfor %}
+    </table>
 </body>
 </html>

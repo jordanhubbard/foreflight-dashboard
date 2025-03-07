@@ -1,26 +1,34 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+h1, h2, h3 {
+    color: #333;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
+    margin: 20px 0;
 }
 
-table, th, td {
-    border: 1px solid black;
+th {
+    background-color: #f4f4f4;
+    border: 1px solid #ccc;
     padding: 8px;
     text-align: left;
 }
 
-.solo {
-    background-color: #d4edda; /* light green for solo flights */
+td {
+    border: 1px solid #ccc;
+    padding: 8px;
 }
 
-.dual {
-    background-color: #f8d7da; /* light red for dual instruction flights */
+.popular {
+    background-color: lightgreen;
 }
 
-.other {
-    background-color: #d1ecf1; /* light blue for other flights */
-}
-
-.error {
-    background-color: #f8c291; /* light orange for flagged rows with errors */
+.anomaly {
+    background-color: lightcoral;
 }
