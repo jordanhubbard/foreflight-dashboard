@@ -184,6 +184,15 @@
             position: relative;
             z-index: 2;
         }
+        .night-flight {
+            background-color: #f0f8ff !important; /* Light blue */
+        }
+        .day-flight {
+            background-color: #fffff0 !important; /* Light yellow */
+        }
+        .pic-solo-flight {
+            background-color: #f0fff0 !important; /* Light green */
+        }
     </style>
 </head>
 <body>
@@ -290,7 +299,7 @@
 
         <!-- Flight Entries -->
         {% for entry in entries %}
-        <div id="entry-{{ loop.index0 }}" class="flight-entry {% if entry.error_explanation %}error-entry{% endif %}" data-has-error="{{ 'true' if entry.error_explanation else 'false' }}">
+        <div id="entry-{{ loop.index0 }}" class="flight-entry {% if entry.error_explanation %}error-entry{% endif %} {% if entry.conditions.night > 0 %}night-flight{% elif entry.conditions.day > 0 %}day-flight{% endif %} {% if entry.pilot_role in ['PIC', 'Solo'] %}pic-solo-flight{% endif %}" data-has-error="{{ 'true' if entry.error_explanation else 'false' }}">
             <div class="flight-header">
                 <div>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</div>
                 <div class="flight-date">{{ entry.date.strftime('%Y-%m-%d') }}</div>

@@ -1,7 +1,0 @@
-body { font-family: Arial; margin: 20px; }
-h1, h2, h3 { color: #333; }
-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-th, td { border: 1px solid #ddd; padding: 8px; }
-th { background-color: #f4f4f4; }
-.popular { background-color: lightgreen; }
-.anomaly { background-color: lightcoral; }
