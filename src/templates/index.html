@@ -10,6 +10,12 @@
         .error-entry {
             background-color: #fff3f3;
             border-left: 4px solid #dc3545;
+            animation: highlight-error 2s ease-in-out;
+        }
+        @keyframes highlight-error {
+            0% { background-color: #ffebeb; }
+            50% { background-color: #ffe0e0; }
+            100% { background-color: #fff3f3; }
         }
         .validation-error {
             color: #dc3545;
@@ -426,6 +432,31 @@
                 </div>
             </div>
         </div>
+
+        <script>
+            // Initialize chart data
+            const chartData = {
+                labels: {{ aircraft_stats|map(attribute='registration')|list|tojson }},
+                datasets: [{
+                    label: 'Number of Flights',
+                    data: {{ aircraft_stats|map(attribute='count')|list|tojson }},
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }, {
+                    label: 'Total Hours',
+                    data: {{ aircraft_stats|map(attribute='total_time')|list|tojson }},
+                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }]
+            };
+
+            // Initialize chart when DOM is loaded
+            document.addEventListener('DOMContentLoaded', function() {
+                initializeAircraftChart(chartData);
+            });
+        </script>
         {% endif %}
         {% endif %}
     </div>
@@ -472,26 +503,8 @@
             updateErrorCounter();
         }
 
-        // Initialize aircraft statistics chart
-        {% if aircraft_stats %}
-        document.addEventListener('DOMContentLoaded', function() {
-            const chartData = {
-                labels: [{% for stat in aircraft_stats %}'{{ stat.registration }}',{% endfor %}],
-                datasets: [{
-                    label: 'Number of Flights',
-                    data: [{% for stat in aircraft_stats %}{{ stat.count }},{% endfor %}],
-                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                }, {
-                    label: 'Total Hours',
-                    data: [{% for stat in aircraft_stats %}{{ stat.total_time }},{% endfor %}],
-                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    borderWidth: 1
-                }]
-            };
-
+        // Chart initialization function
+        function initializeAircraftChart(data) {
             const chartOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -509,15 +522,14 @@
             };
 
             const ctx = document.getElementById('aircraftChart').getContext('2d');
-            const chart = new Chart(ctx, {
+            new Chart(ctx, {
                 type: 'bar',
-                data: chartData,
+                data: data,
                 options: chartOptions
             });
-        });
-        {% endif %}
+        }
 
-        // Replace the aircraft chart initialization with table sorting functionality
+        // Table sorting functionality
         function sortTable(columnIndex) {
             const table = document.querySelector('.aircraft-stats-table');
             const headers = table.querySelectorAll('th');
