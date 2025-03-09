@@ -60,6 +60,7 @@ class LogbookEntry(BaseModel):
     remarks: Optional[str] = Field(None, description="Flight remarks")
     pilot_role: str = Field("PIC", description="Pilot role")
     dual_received: float = Field(0.0, description="Dual instruction received")
+    solo_time: float = Field(0.0, description="Solo flight time")
     ground_training: float = Field(0.0, description="Ground training time")
     landings_day: int = Field(0, description="Number of day landings")
     landings_night: int = Field(0, description="Number of night landings")
@@ -88,10 +89,20 @@ class LogbookEntry(BaseModel):
         if not self.destination or not self.destination.identifier:
             issues.append("Missing destination airport")
             
+        # Validate aircraft registration (tail number)
+        if not self.aircraft or not self.aircraft.registration:
+            issues.append("Missing aircraft registration")
+        elif not self.aircraft.registration.startswith(('N', 'C-', 'G-')):  # US, Canadian, or UK registrations
+            issues.append(f"Invalid aircraft registration format: {self.aircraft.registration}")
+            
         # Validate pilot role
         valid_roles = ["PIC", "SIC", "STUDENT", "Dual Given"]
         if self.pilot_role not in valid_roles:
             issues.append(f"Invalid pilot role (must be one of: {', '.join(valid_roles)})")
+            
+        # Check for implausibly short flight time
+        if 0 < self.total_time < 0.3:
+            issues.append(f"Flight time of {self.total_time} hours seems implausibly short (less than 18 minutes)")
             
         # Check flight conditions consistency only if conditions are provided
         total_condition_time = (
@@ -112,6 +123,14 @@ class LogbookEntry(BaseModel):
         # Check dual received time consistency
         if self.dual_received > self.total_time:
             issues.append(f"Dual received time ({self.dual_received}) exceeds flight time ({self.total_time})")
+            
+        # Check that total time is accounted for in PIC, dual received, or solo time
+        if self.total_time > 0:
+            is_pic = self.pilot_role == "PIC"
+            total_accounted_time = (
+                self.total_time if is_pic else 0.0) + self.dual_received + self.solo_time
+            if total_accounted_time < 0.1:  # Using 0.1 to account for floating point precision
+                issues.append("Flight has total time but no PIC, dual received, or solo time recorded")
             
         # Set error explanation if issues were found
         if issues:
