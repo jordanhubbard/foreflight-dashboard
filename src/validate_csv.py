@@ -2,7 +2,7 @@
 
 import csv
 from datetime import datetime, time
-from src.models import LogbookEntry, Aircraft, Airport, FlightConditions
+from .core.models import LogbookEntry, Aircraft, Airport, FlightConditions
 import logging
 
 logger = logging.getLogger(__name__)

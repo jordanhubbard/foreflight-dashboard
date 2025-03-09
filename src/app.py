@@ -6,8 +6,8 @@ from werkzeug.utils import secure_filename
 import os
 from datetime import datetime, timedelta
 from collections import defaultdict
-from src.validate_csv import validate_logbook
-from src.models import RunningTotals
+from .validate_csv import validate_logbook
+from .core.models import RunningTotals
 import logging.handlers
 import shutil
 
