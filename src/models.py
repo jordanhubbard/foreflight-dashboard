@@ -88,18 +88,10 @@ class LogbookEntry(BaseModel):
         if not self.destination or not self.destination.identifier:
             issues.append("Missing destination airport")
             
-        # Check for missing landings only if we have block times (indicating a complete entry)
-        if self.departure_time and self.arrival_time and (self.landings_day + self.landings_night) == 0:
-            issues.append("No landings recorded")
-            
         # Validate pilot role
         valid_roles = ["PIC", "SIC", "STUDENT", "Dual Given"]
         if self.pilot_role not in valid_roles:
             issues.append(f"Invalid pilot role (must be one of: {', '.join(valid_roles)})")
-            
-        # Check for missing remarks - disabled as it's not critical
-        # if not self.remarks:
-        #     issues.append("No remarks/comments provided")
             
         # Check flight conditions consistency only if conditions are provided
         total_condition_time = (
