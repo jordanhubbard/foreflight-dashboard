@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ForeFlight Logbook Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .error-entry {
+            background-color: #fff3f3;
+            border-left: 4px solid #dc3545;
+        }
+        .validation-error {
+            color: #dc3545;
+            font-size: 0.9em;
+            margin-top: 0.5em;
+        }
+        .flight-entry {
+            border: 1px solid #dee2e6;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 4px;
+            scroll-margin-top: 100px;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto;
+            gap: 1rem;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            background: white;
+        }
+        .flight-header {
+            font-weight: 500;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .flight-date {
+            font-size: 0.8em;
+            color: #6c757d;
+        }
+        .flight-stat {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .stat-label {
+            font-size: 0.75em;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-value {
+            font-weight: 500;
+        }
+        .validation-error {
+            grid-column: 1 / -1;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #dee2e6;
+        }
+        .running-totals {
+            grid-column: 1 / -1;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #dee2e6;
+        }
+        .stats-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stats-card {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .nav-controls {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 1rem;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+        .current-error {
+            background-color: #ffeeba !important;
+            border-left: 4px solid #ffc107 !important;
+        }
+        .totals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        .total-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .total-label {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-bottom: 0.2rem;
+        }
+        .total-value {
+            font-weight: 500;
+            color: #0d6efd;
+        }
+        .validation-stats {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+        }
+        .aircraft-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .aircraft-stat-card {
+            background: #f8f9fa;
+            border-radius: 4px;
+            padding: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .stat-header {
+            font-weight: 500;
+            color: #0d6efd;
+            margin: 0;
+        }
+        .stat-details {
+            font-size: 0.9em;
+            color: #6c757d;
+            text-align: right;
+        }
+        .aircraft-stats-table {
+            width: 100%;
+            margin-bottom: 1rem;
+            background-color: #fff;
+            border-collapse: collapse;
+        }
+        .aircraft-stats-table th,
+        .aircraft-stats-table td {
+            padding: 0.5rem;
+            border-bottom: 1px solid #dee2e6;
+            text-align: left;
+        }
+        .aircraft-stats-table th {
+            background-color: #f8f9fa;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .aircraft-stats-table th:hover {
+            background-color: #e9ecef;
+        }
+        .aircraft-stats-table tr:last-child td {
+            border-bottom: none;
+        }
+        .sort-icon::after {
+            content: '↕';
+            margin-left: 0.5rem;
+            color: #6c757d;
+        }
+        .sort-asc::after {
+            content: '↑';
+            color: #0d6efd;
+        }
+        .sort-desc::after {
+            content: '↓';
+            color: #0d6efd;
+        }
+        .upload-form {
+            position: relative;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">ForeFlight Logbook Manager</h1>
+        
+        <!-- Upload Form -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Upload Logbook</h5>
+                <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form">
+                    <div class="mb-3">
+                        <input type="file" class="form-control" name="file" accept=".csv" style="z-index: 2; position: relative;">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Upload and Validate</button>
+                </form>
+            </div>
+        </div>
+
+        {% if stats %}
+        <!-- 30 Day Statistics -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Last 30 Days Statistics</h5>
+                <div class="stats-dashboard">
+                    <div class="stats-card">
+                        <div class="stat-label">Total Time</div>
+                        <div class="stat-value">{{ "%.1f"|format(stats.total_time) }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">Day/Night</div>
+                        <div class="stat-value">{{ "%.1f"|format(stats.total_day) }}/{{ "%.1f"|format(stats.total_night) }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">PIC Time</div>
+                        <div class="stat-value">{{ "%.1f"|format(stats.total_pic) }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">Sim Instrument</div>
+                        <div class="stat-value">{{ "%.1f"|format(stats.total_sim_instrument) }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">Dual Received</div>
+                        <div class="stat-value">{{ "%.1f"|format(stats.total_dual_received) }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">Takeoffs/Landings</div>
+                        <div class="stat-value">{{ stats.total_takeoffs }}/{{ stats.total_landings }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if entries %}
+        <!-- Combined Error Navigation and Validation Summary -->
+        <div class="nav-controls">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <button class="btn btn-outline-primary" onclick="navigateError(-1)">← Previous Error</button>
+                <div class="validation-stats">
+                    <span class="badge bg-secondary me-2">Total Entries: {{ entries|length }}</span>
+                    <span class="badge {% if entries|selectattr('error_explanation')|list|length > 0 %}bg-danger{% else %}bg-success{% endif %}">
+                        Issues: {{ entries|selectattr('error_explanation')|list|length }}
+                    </span>
+                </div>
+                <span id="errorCounter" class="text-muted"></span>
+                <button class="btn btn-outline-primary" onclick="navigateError(1)">Next Error →</button>
+            </div>
+        </div>
+
+        {% if aircraft_stats %}
+        <!-- Aircraft Statistics -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Aircraft Statistics</h5>
+                <div class="table-responsive">
+                    <table class="aircraft-stats-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable(0)" class="sort-icon">Registration</th>
+                                <th onclick="sortTable(1)" class="sort-icon">Type</th>
+                                <th onclick="sortTable(2)" class="sort-icon">Flights</th>
+                                <th onclick="sortTable(3)" class="sort-icon">Hours</th>
+                                <th>Avg Time/Flight</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in aircraft_stats %}
+                            <tr>
+                                <td>{{ stat.registration }}</td>
+                                <td>{{ stat.type }}</td>
+                                <td>{{ stat.count }}</td>
+                                <td>{{ "%.1f"|format(stat.total_time) }}</td>
+                                <td>{{ "%.1f"|format(stat.total_time / stat.count) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <!-- Flight Entries -->
+        {% for entry in entries %}
+        <div id="entry-{{ loop.index0 }}" class="flight-entry {% if entry.error_explanation %}error-entry{% endif %}" data-has-error="{{ 'true' if entry.error_explanation else 'false' }}">
+            <div class="flight-header">
+                <div>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</div>
+                <div class="flight-date">{{ entry.date.strftime('%Y-%m-%d') }}</div>
+            </div>
+            
+            <div class="flight-stat">
+                <span class="stat-label">Aircraft</span>
+                <span class="stat-value">{{ entry.aircraft.registration }}</span>
+            </div>
+
+            <div class="flight-stat">
+                <span class="stat-label">Total Time</span>
+                <span class="stat-value">{{ entry.total_time }}</span>
+            </div>
+
+            <div class="flight-stat">
+                <span class="stat-label">Day/Night</span>
+                <span class="stat-value">{{ "%.1f"|format(entry.conditions.day) }}/{{ "%.1f"|format(entry.conditions.night) }}</span>
+            </div>
+
+            <div class="flight-stat">
+                <span class="stat-label">Landings</span>
+                <span class="stat-value">{{ entry.landings_day + entry.landings_night }}</span>
+            </div>
+
+            <div class="flight-stat">
+                <span class="stat-label">Role</span>
+                <span class="stat-value">{{ entry.pilot_role }}</span>
+            </div>
+
+            <span class="badge {% if entry.error_explanation %}bg-danger{% else %}bg-success{% endif %}">
+                {{ 'Has Issues' if entry.error_explanation else 'Valid' }}
+            </span>
+
+            {% if entry.error_explanation %}
+            <div class="validation-error">
+                <strong>Validation Issues:</strong>
+                <ul class="mb-0">
+                    {% for issue in entry.error_explanation.split(';') %}
+                    <li>{{ issue.strip() }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if entry.running_totals %}
+            <div class="running-totals">
+                <h6 class="mb-2">Running Totals</h6>
+                <div class="totals-grid">
+                    <div class="total-item">
+                        <span class="total-label">Ground Training</span>
+                        <span class="total-value">{{ entry.running_totals.ground_training }}</span>
+                    </div>
+                    <div class="total-item">
+                        <span class="total-label">ASEL Time</span>
+                        <span class="total-value">{{ entry.running_totals.asel_time }}</span>
+                    </div>
+                    <div class="total-item">
+                        <span class="total-label">Day Time</span>
+                        <span class="total-value">{{ entry.running_totals.day_time }}</span>
+                    </div>
+                    <div class="total-item">
+                        <span class="total-label">Night Time</span>
+                        <span class="total-value">{{ entry.running_totals.night_time }}</span>
+                    </div>
+                    <div class="total-item">
+                        <span class="total-label">Sim Instrument</span>
+                        <span class="total-value">{{ entry.running_totals.sim_instrument }}</span>
+                    </div>
+                    <div class="total-item">
+                        <span class="total-label">Dual Received</span>
+                        <span class="total-value">{{ entry.running_totals.dual_received }}</span>
+                    </div>
+                    <div class="total-item">
+                        <span class="total-label">PIC Time</span>
+                        <span class="total-value">{{ entry.running_totals.pic_time }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Error navigation
+        let currentErrorIndex = -1;
+        const errorEntries = Array.from(document.querySelectorAll('.flight-entry[data-has-error="true"]'));
+        
+        function updateErrorCounter() {
+            const counter = document.getElementById('errorCounter');
+            if (!counter) return;
+            
+            if (errorEntries.length > 0 && currentErrorIndex >= 0) {
+                counter.textContent = `Error ${currentErrorIndex + 1} of ${errorEntries.length}`;
+            } else {
+                counter.textContent = `${errorEntries.length} Errors Found`;
+            }
+        }
+
+        function navigateError(direction) {
+            if (errorEntries.length === 0) return;
+
+            // Remove highlight from current error
+            if (currentErrorIndex >= 0) {
+                errorEntries[currentErrorIndex].classList.remove('current-error');
+            }
+
+            // Update index
+            currentErrorIndex += direction;
+            if (currentErrorIndex >= errorEntries.length) currentErrorIndex = 0;
+            if (currentErrorIndex < 0) currentErrorIndex = errorEntries.length - 1;
+
+            // Highlight and scroll to new error
+            const targetEntry = errorEntries[currentErrorIndex];
+            targetEntry.classList.add('current-error');
+            targetEntry.scrollIntoView({ behavior: 'smooth' });
+            updateErrorCounter();
+        }
+
+        // Initialize error counter
+        if (errorEntries.length > 0) {
+            updateErrorCounter();
+        }
+
+        // Replace the aircraft chart initialization with table sorting functionality
+        function sortTable(columnIndex) {
+            const table = document.querySelector('.aircraft-stats-table');
+            const headers = table.querySelectorAll('th');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Remove existing sort classes
+            headers.forEach(header => {
+                header.classList.remove('sort-asc', 'sort-desc');
+                header.classList.add('sort-icon');
+            });
+            
+            // Determine sort direction
+            const currentHeader = headers[columnIndex];
+            const isAscending = !currentHeader.classList.contains('sort-asc');
+            
+            // Update sort indicator
+            currentHeader.classList.remove('sort-icon');
+            currentHeader.classList.add(isAscending ? 'sort-asc' : 'sort-desc');
+            
+            // Sort rows
+            rows.sort((rowA, rowB) => {
+                const cellA = rowA.cells[columnIndex].textContent;
+                const cellB = rowB.cells[columnIndex].textContent;
+                
+                // Handle numeric columns
+                if (columnIndex >= 2) {
+                    return isAscending ? 
+                        parseFloat(cellA) - parseFloat(cellB) : 
+                        parseFloat(cellB) - parseFloat(cellA);
+                }
+                
+                // Handle text columns
+                return isAscending ? 
+                    cellA.localeCompare(cellB) : 
+                    cellB.localeCompare(cellA);
+            });
+            
+            // Reorder rows
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowLeft') {
+                navigateError(-1);
+            } else if (e.key === 'ArrowRight') {
+                navigateError(1);
+            }
+        });
+    </script>
+</body>
+</html> 

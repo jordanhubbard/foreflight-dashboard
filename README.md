@@ -1,65 +1,58 @@
-# ForeFlight Logbook Dashboard
+# ForeFlight Logbook Manager
 
-This Flask web app reads a ForeFlight logbook CSV file, displays summary statistics, tracks recent flight currency, and flags incomplete or incorrect log entries.
+A powerful tool for managing and analyzing ForeFlight logbook data. This application helps pilots organize, analyze, and visualize their flight data from ForeFlight.
 
 ## Features
 
-- Displays **3-month flight currency** (day/night hours, takeoffs/landings).
-- Summarizes **hours per aircraft tail number**.
-- **Highlights rows with errors** (missing dates, hours, or tail numbers).
-- **Lists the first bad entry date for quick lookup in ForeFlight.**
+- Import ForeFlight logbook data
+- Analyze flight hours and patterns
+- Generate reports and statistics
+- Track currency requirements
+- Visualize flight data
 
-## Installation
+## Setup
 
-1. Clone this repository:
-    ```bash
-    git clone https://github.com/yourusername/foreflight-logbook-dashboard.git
-    cd foreflight-logbook-dashboard
-    ```
+1. Create a virtual environment:
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On Unix/macOS
+```
 
-2. Create a virtual environment (optional but recommended):
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate  # On Windows use: venv\Scripts\activate
-    ```
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-3. Install dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
+3. Configure environment variables:
+Create a `.env` file with your ForeFlight API credentials (if applicable).
 
-## Usage
+## Project Structure
 
-1. Place your `foreflight_logbook.csv` file in the project root (same folder as `app.py`).
-Note that this project creates a sample foreflight_logbook.csv file with a deliberate
-error in it to test the validation function of the logbook importer.  You can simply
-overwrite this file with your own logbook.
+```
+foreflight_logbook/
+├── src/               # Source code
+├── tests/            # Test files
+├── docs/             # Documentation
+├── venv/             # Virtual environment
+├── requirements.txt  # Project dependencies
+└── README.md         # This file
+```
 
-2. Run the app:
-    ```bash
-    python app.py
-    ```
+## Development
 
-3. Open your browser and visit:
-    ```
-    http://localhost:5000
-    ```
-
-## Sample Data
-
-A sample `foreflight_logbook.csv` is provided for testing.
-
----
-
-## Sample Flight Row Colors
-
-- **Green:** Solo flights
-- **Red:** Dual instruction flights
-- **Blue:** Other flights
-- **Orange:** Rows with errors (missing data or invalid formats)
-
----
+- Use `black` for code formatting
+- Use `isort` for import sorting
+- Use `flake8` for linting
+- Write tests using `pytest`
 
 ## License
 
-This project is open-source under the BSD 2 clause License.
+MIT License
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request 
