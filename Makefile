@@ -38,7 +38,12 @@ setup:
 	mkdir -p uploads
 
 run-dev:
-	. venv/bin/activate && PYTHONPATH=. FLASK_DEBUG=1 FLASK_ENV=development python3 src/app.py
+	. venv/bin/activate && \
+	FLASK_APP=src/app.py \
+	FLASK_DEBUG=1 \
+	FLASK_ENV=development \
+	PYTHONPATH=. \
+	python3 -m flask run --host=0.0.0.0 --port=5050 --reload
 
 run:
 	. venv/bin/activate && PYTHONPATH=. python3 src/app.py

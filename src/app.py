@@ -227,7 +227,11 @@ def upload_file():
         return redirect(url_for('index'))
 
 if __name__ == '__main__':
+    # Enable hot reloading
     app.debug = True
     app.jinja_env.auto_reload = True
     app.config['TEMPLATES_AUTO_RELOAD'] = True
-    app.run(host='0.0.0.0', port=5050) 
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+    
+    # Run the app
+    app.run(host='0.0.0.0', port=5050, debug=True) 
