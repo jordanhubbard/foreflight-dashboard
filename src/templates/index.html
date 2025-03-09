@@ -251,15 +251,20 @@
         <!-- Combined Error Navigation and Validation Summary -->
         <div class="nav-controls">
             <div class="d-flex align-items-center gap-3 flex-wrap">
+                {% set error_count = entries|selectattr('error_explanation')|list|length %}
+                {% if error_count > 0 %}
                 <button class="btn btn-outline-primary" onclick="navigateError(-1)">← Previous Error</button>
+                {% endif %}
                 <div class="validation-stats">
                     <span class="badge bg-secondary me-2">Total Entries: {{ entries|length }}</span>
-                    <span class="badge {% if entries|selectattr('error_explanation')|list|length > 0 %}bg-danger{% else %}bg-success{% endif %}">
-                        Issues: {{ entries|selectattr('error_explanation')|list|length }}
+                    <span class="badge {% if error_count > 0 %}bg-danger{% else %}bg-success{% endif %}">
+                        Issues: {{ error_count }}
                     </span>
                 </div>
+                {% if error_count > 0 %}
                 <span id="errorCounter" class="text-muted"></span>
                 <button class="btn btn-outline-primary" onclick="navigateError(1)">Next Error →</button>
+                {% endif %}
             </div>
         </div>
 
