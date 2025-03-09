@@ -41,8 +41,8 @@ class LogbookEntry(BaseModel):
     """Main logbook entry model."""
     id: Optional[str] = Field(None, description="Entry ID")
     date: datetime = Field(..., description="Date of flight")
-    departure_time: time = Field(..., description="Departure time")
-    arrival_time: time = Field(..., description="Arrival time")
+    departure_time: Optional[time] = Field(None, description="Departure time")
+    arrival_time: Optional[time] = Field(None, description="Arrival time")
     total_time: float = Field(..., description="Total flight time")
     
     # Aircraft information
@@ -93,6 +93,10 @@ class LogbookEntry(BaseModel):
         if self.pilot_role not in valid_roles:
             issues.append(f"Invalid pilot role (must be one of: {', '.join(valid_roles)})")
             
+        # Check for dual received time conflicts with PIC role
+        if self.dual_received > 0 and self.pilot_role == "PIC":
+            issues.append(f"Entry cannot have both dual received time ({self.dual_received}) and PIC role")
+            
         # Check flight conditions consistency only if conditions are provided
         total_condition_time = (
             self.conditions.day +
@@ -112,28 +116,6 @@ class LogbookEntry(BaseModel):
         # Check dual received time consistency
         if self.dual_received > self.total_time:
             issues.append(f"Dual received time ({self.dual_received}) exceeds flight time ({self.total_time})")
-
-        # Check time consistency only if both times are provided
-        if self.departure_time and self.arrival_time:
-            # Calculate time difference accounting for midnight crossing
-            hours_diff = 0
-            if self.arrival_time < self.departure_time:
-                # Flight crossed midnight
-                hours_diff = (24 - self.departure_time.hour + self.arrival_time.hour) + (self.arrival_time.minute - self.departure_time.minute) / 60
-            else:
-                hours_diff = (self.arrival_time.hour - self.departure_time.hour) + (self.arrival_time.minute - self.departure_time.minute) / 60
-            
-            # Check for reasonable total time (max 24 hours)
-            if self.total_time > 24:
-                issues.append(f"Total time ({self.total_time}) exceeds 24 hours")
-            
-            # Check for reasonable block time
-            if hours_diff > 24:
-                issues.append(f"Block time ({hours_diff:.1f}) exceeds 24 hours")
-            
-            # Only check block time against total time if both are reasonable values
-            if hours_diff > 0 and abs(hours_diff - self.total_time) > 0.2:  # Allow 12 minutes difference
-                issues.append(f"Block time ({hours_diff:.1f}) differs significantly from logged time ({self.total_time})")
             
         # Set error explanation if issues were found
         if issues:
