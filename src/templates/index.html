@@ -119,6 +119,8 @@
         .chart-container {
             position: relative;
             width: 100%;
+            height: 400px;  /* Set a fixed height for the chart */
+            margin-bottom: 2rem;
         }
         .aircraft-stats-grid {
             display: grid;
@@ -268,40 +270,6 @@
             </div>
         </div>
 
-        {% if aircraft_stats %}
-        <!-- Aircraft Statistics -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <h5 class="card-title">Aircraft Statistics</h5>
-                <div class="table-responsive">
-                    <table class="aircraft-stats-table">
-                        <thead>
-                            <tr>
-                                <th onclick="sortTable(0)" class="sort-icon">Registration</th>
-                                <th onclick="sortTable(1)" class="sort-icon">Type</th>
-                                <th onclick="sortTable(2)" class="sort-icon">Flights</th>
-                                <th onclick="sortTable(3)" class="sort-icon">Hours</th>
-                                <th>Avg Time/Flight</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for stat in aircraft_stats %}
-                            <tr>
-                                <td>{{ stat.registration }}</td>
-                                <td>{{ stat.type }}</td>
-                                <td>{{ stat.count }}</td>
-                                <td>{{ "%.1f"|format(stat.total_time) }}</td>
-                                <td>{{ "%.1f"|format(stat.total_time / stat.count) }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        {% endif %}
-
         <!-- Flight Entries -->
         {% for entry in entries %}
         <div id="entry-{{ loop.index0 }}" class="flight-entry {% if entry.error_explanation %}error-entry{% endif %} {% if entry.conditions.night > 0 %}night-flight{% elif entry.conditions.day > 0 %}day-flight{% endif %} {% if entry.pilot_role in ['PIC', 'Solo'] %}pic-solo-flight{% endif %}" data-has-error="{{ 'true' if entry.error_explanation else 'false' }}">
@@ -387,6 +355,46 @@
             {% endif %}
         </div>
         {% endfor %}
+
+        {% if aircraft_stats %}
+        <!-- Aircraft Statistics -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">Aircraft Statistics</h5>
+                
+                <!-- Bar Chart -->
+                <div class="chart-container mb-4">
+                    <canvas id="aircraftChart"></canvas>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="aircraft-stats-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable(0)" class="sort-icon">Registration</th>
+                                <th onclick="sortTable(1)" class="sort-icon">Type</th>
+                                <th onclick="sortTable(2)" class="sort-icon">Flights</th>
+                                <th onclick="sortTable(3)" class="sort-icon">Hours</th>
+                                <th>Avg Time/Flight</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in aircraft_stats %}
+                            <tr>
+                                <td>{{ stat.registration }}</td>
+                                <td>{{ stat.type }}</td>
+                                <td>{{ stat.count }}</td>
+                                <td>{{ "%.1f"|format(stat.total_time) }}</td>
+                                <td>{{ "%.1f"|format(stat.total_time / stat.count) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -430,6 +438,51 @@
         if (errorEntries.length > 0) {
             updateErrorCounter();
         }
+
+        // Initialize aircraft statistics chart
+        {% if aircraft_stats %}
+        document.addEventListener('DOMContentLoaded', function() {
+            const chartData = {
+                labels: [{% for stat in aircraft_stats %}'{{ stat.registration }}',{% endfor %}],
+                datasets: [{
+                    label: 'Number of Flights',
+                    data: [{% for stat in aircraft_stats %}{{ stat.count }},{% endfor %}],
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }, {
+                    label: 'Total Hours',
+                    data: [{% for stat in aircraft_stats %}{{ stat.total_time }},{% endfor %}],
+                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }]
+            };
+
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Aircraft Usage Statistics'
+                    }
+                }
+            };
+
+            const ctx = document.getElementById('aircraftChart').getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: chartData,
+                options: chartOptions
+            });
+        });
+        {% endif %}
 
         // Replace the aircraft chart initialization with table sorting functionality
         function sortTable(columnIndex) {
