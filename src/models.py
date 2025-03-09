@@ -93,10 +93,6 @@ class LogbookEntry(BaseModel):
         if self.pilot_role not in valid_roles:
             issues.append(f"Invalid pilot role (must be one of: {', '.join(valid_roles)})")
             
-        # Check for dual received time conflicts with PIC role
-        if self.dual_received > 0 and self.pilot_role == "PIC":
-            issues.append(f"Entry cannot have both dual received time ({self.dual_received}) and PIC role")
-            
         # Check flight conditions consistency only if conditions are provided
         total_condition_time = (
             self.conditions.day +
