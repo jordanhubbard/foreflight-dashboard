@@ -86,16 +86,23 @@ def calculate_30_day_stats(entries):
     """Calculate statistics for the last 30 days."""
     thirty_days_ago = datetime.now() - timedelta(days=30)
     recent_entries = [e for e in entries if e.date >= thirty_days_ago]
-    
+    return calculate_stats_for_entries(recent_entries)
+
+def calculate_all_time_stats(entries):
+    """Calculate statistics for all entries."""
+    return calculate_stats_for_entries(entries)
+
+def calculate_stats_for_entries(entries):
+    """Calculate statistics for the given entries."""
     stats = {
-        'total_time': sum(float(e.total_time) for e in recent_entries),
-        'total_day': sum(float(e.conditions.day) for e in recent_entries),
-        'total_night': sum(float(e.conditions.night) for e in recent_entries),
-        'total_pic': sum(float(e.total_time) if e.pilot_role == 'PIC' else 0 for e in recent_entries),
-        'total_sim_instrument': sum(float(e.conditions.simulated_instrument) for e in recent_entries),
-        'total_dual_received': sum(float(e.dual_received) for e in recent_entries),
-        'total_takeoffs': sum(e.landings_day + e.landings_night for e in recent_entries),
-        'total_landings': sum(e.landings_day + e.landings_night for e in recent_entries)
+        'total_time': sum(float(e.total_time) for e in entries),
+        'total_day': sum(float(e.conditions.day) for e in entries),
+        'total_night': sum(float(e.conditions.night) for e in entries),
+        'total_pic': sum(float(e.total_time) if e.pilot_role == 'PIC' else 0 for e in entries),
+        'total_sim_instrument': sum(float(e.conditions.simulated_instrument) for e in entries),
+        'total_dual_received': sum(float(e.dual_received) for e in entries),
+        'total_takeoffs': sum(e.landings_day + e.landings_night for e in entries),
+        'total_landings': sum(e.landings_day + e.landings_night for e in entries)
     }
     return stats
 
@@ -187,6 +194,7 @@ def upload_file():
         # Calculate statistics
         logger.debug("\n=== Calculating Statistics ===")
         stats = calculate_30_day_stats(entries)
+        all_time_stats = calculate_all_time_stats(entries)
         aircraft_stats = prepare_aircraft_stats(entries)
         
         # Clean up the uploaded file
@@ -195,7 +203,8 @@ def upload_file():
         
         # Log detailed information about what we're passing to the template
         logger.debug("\n=== Template Data ===")
-        logger.debug(f"Stats: {stats}")
+        logger.debug(f"30 Day Stats: {stats}")
+        logger.debug(f"All Time Stats: {all_time_stats}")
         logger.debug(f"Aircraft stats: {aircraft_stats}")
         logger.debug(f"Number of entries: {len(entries)}")
         if entries:
@@ -214,7 +223,8 @@ def upload_file():
             logger.debug("\n=== Rendering Template ===")
             return render_template('index.html', 
                                 entries=entries, 
-                                stats=stats, 
+                                stats=stats,
+                                all_time_stats=all_time_stats,
                                 aircraft_stats=aircraft_stats)
         except Exception as template_error:
             logger.error(f"\nTemplate rendering error: {str(template_error)}", exc_info=True)

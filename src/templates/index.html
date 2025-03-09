@@ -247,6 +247,39 @@
                 </div>
             </div>
         </div>
+
+        <!-- All Time Statistics -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">All Time Statistics</h5>
+                <div class="stats-dashboard">
+                    <div class="stats-card">
+                        <div class="stat-label">Total Time</div>
+                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_time) }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">Day/Night</div>
+                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_day) }}/{{ "%.1f"|format(all_time_stats.total_night) }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">PIC Time</div>
+                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_pic) }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">Sim Instrument</div>
+                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_sim_instrument) }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">Dual Received</div>
+                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_dual_received) }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">Takeoffs/Landings</div>
+                        <div class="stat-value">{{ all_time_stats.total_takeoffs }}/{{ all_time_stats.total_landings }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
         {% endif %}
 
         {% if entries %}
