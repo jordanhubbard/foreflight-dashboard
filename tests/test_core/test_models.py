@@ -151,70 +151,92 @@ def test_dual_received_consistency():
 
 def test_time_accountability():
     """Test validation of time accountability (PIC/dual/solo)."""
-    # Test PIC time
+    # Test PIC flight - total time should be counted as PIC time
     entry = create_valid_entry()
-    entry.total_time = 1.0
-    entry.conditions.day = 1.0
+    entry.total_time = 2.5
+    entry.conditions.day = 2.5
     entry.pilot_role = "PIC"
-    entry.validate_entry()
-    assert entry.error_explanation is None
-
-    # Test dual received time
-    entry = create_valid_entry()
-    entry.total_time = 1.0
-    entry.conditions.day = 1.0
-    entry.pilot_role = "STUDENT"
-    entry.dual_received = 1.0
-    entry.validate_entry()
-    assert entry.error_explanation is None
-
-    # Test solo time
-    entry = create_valid_entry()
-    entry.total_time = 1.0
-    entry.conditions.day = 1.0
-    entry.pilot_role = "STUDENT"
-    entry.solo_time = 1.0
-    entry.validate_entry()
-    assert entry.error_explanation is None
-
-    # Test missing accountability
-    entry = create_valid_entry()
-    entry.total_time = 1.0
-    entry.conditions.day = 1.0
-    entry.pilot_role = "STUDENT"
     entry.dual_received = 0.0
-    entry.solo_time = 0.0
     entry.validate_entry()
-    assert "no PIC, dual received, or solo time recorded" in entry.error_explanation
+    assert entry.error_explanation is None
+    assert entry.pic_time == 2.5  # PIC time should equal total time
+    
+    # Test student flight - total time should be counted as dual received
+    entry = create_valid_entry()
+    entry.total_time = 1.8
+    entry.conditions.day = 1.8
+    entry.pilot_role = "STUDENT"
+    entry.dual_received = 1.8
+    entry.pic_time = 0.0
+    entry.validate_entry()
+    assert entry.error_explanation is None
+    
+    # Test invalid mix of PIC and dual received time
+    entry = create_valid_entry()
+    entry.total_time = 2.0
+    entry.conditions.day = 2.0
+    entry.pilot_role = "PIC"
+    entry.dual_received = 1.0  # This should cause an error since PIC flights should have no dual received
+    entry.pic_time = 2.0  # Set PIC time to match total time
+    entry.validate_entry()
+    assert entry.error_explanation is not None
+    assert "should equal sum of PIC time" in entry.error_explanation
+    
+    # Test rounding tolerance
+    entry = create_valid_entry()
+    entry.total_time = 1.5
+    entry.conditions.day = 1.5
+    entry.pilot_role = "STUDENT"
+    entry.dual_received = 1.45  # Within 0.1 tolerance
+    entry.pic_time = 0.0
+    entry.validate_entry()
+    assert entry.error_explanation is None
+    
+    # Test student flight with incorrect time accounting
+    entry = create_valid_entry()
+    entry.total_time = 2.0
+    entry.conditions.day = 2.0
+    entry.pilot_role = "STUDENT"
+    entry.dual_received = 1.5  # Less than total time
+    entry.pic_time = 0.0
+    entry.validate_entry()
+    assert entry.error_explanation is not None
+    assert "should equal sum of PIC time" in entry.error_explanation
+    
+    # Test PIC flight with incorrect time accounting
+    entry = create_valid_entry()
+    entry.total_time = 3.0
+    entry.conditions.day = 3.0
+    entry.pilot_role = "PIC"
+    entry.dual_received = 0.0
+    entry.pic_time = 2.5  # Less than total time
+    entry.validate_entry()
+    assert entry.error_explanation is not None
+    assert "should equal sum of PIC time" in entry.error_explanation
 
 def test_future_date():
     """Test validation of future dates."""
-    entry = create_valid_entry()
+    # Use a date far in the future to ensure it's always in the future
+    future_date = datetime.now().replace(year=datetime.now().year + 10)
     with pytest.raises(ValueError, match="Flight date cannot be in the future"):
-        entry.date = datetime(2025, 1, 1)
-        entry.validate_entry()
-
-def test_arrival_departure_times():
-    """Test validation of arrival and departure times."""
-    entry = create_valid_entry()
-    
-    # Test normal same-day flight
-    entry.departure_time = time(14, 0)  # 2:00 PM
-    entry.arrival_time = time(15, 30)   # 3:30 PM
-    entry.total_time = 1.5
-    entry.validate_entry()
-    assert entry.error_explanation is None
-
-    # Test midnight crossing
-    entry.departure_time = time(23, 0)  # 11:00 PM
-    entry.arrival_time = time(1, 0)     # 1:00 AM
-    entry.total_time = 2.0
-    entry.validate_entry()
-    assert entry.error_explanation is None
-
-    # Test mismatched times
-    with pytest.raises(ValueError, match="don't match total time"):
-        entry.departure_time = time(14, 0)  # 2:00 PM
-        entry.arrival_time = time(18, 0)    # 6:00 PM
-        entry.total_time = 2.0  # Should be 4.0
-        entry.validate_entry() 
+        LogbookEntry(
+            date=future_date,
+            total_time=1.5,
+            aircraft=Aircraft(
+                registration="N12345",
+                type="C172",
+                category_class="ASEL"
+            ),
+            departure=Airport(identifier="KBOS"),
+            destination=Airport(identifier="KJFK"),
+            conditions=FlightConditions(
+                day=1.5,
+                night=0.0,
+                actual_instrument=0.0,
+                simulated_instrument=0.0,
+                cross_country=0.0
+            ),
+            pilot_role="PIC",
+            dual_received=0.0,
+            solo_time=0.0
+        ) 

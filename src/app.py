@@ -130,56 +130,6 @@ def prepare_aircraft_stats(entries):
     ]
     return sorted(aircraft_list, key=lambda x: x['count'], reverse=True)
 
-def prepare_instructor_stats(entries):
-    """Prepare instructor statistics for display."""
-    logger.debug("\n=== Processing Instructor Statistics ===")
-    instructor_stats = defaultdict(lambda: {
-        'name': '',
-        'flights': 0,
-        'dual_time': 0.0,
-        'last_flight': datetime.min
-    })
-    
-    logger.debug(f"Total entries to process: {len(entries)}")
-    
-    # First, let's log all entries with instructor names
-    instructor_entries = [e for e in entries if e.instructor_name]
-    logger.debug(f"\nFound {len(instructor_entries)} entries with instructor names:")
-    for entry in instructor_entries:
-        logger.debug(f"  Date: {entry.date}, Instructor: {entry.instructor_name!r}, Dual: {entry.dual_received}")
-    
-    for entry in entries:
-        logger.debug(f"\nProcessing entry from {entry.date}:")
-        logger.debug(f"  Instructor name: {entry.instructor_name!r}")
-        logger.debug(f"  Dual received: {entry.dual_received}")
-        logger.debug(f"  Pilot role: {entry.pilot_role}")
-        
-        if entry.instructor_name:
-            key = entry.instructor_name
-            instructor_stats[key]['name'] = entry.instructor_name
-            instructor_stats[key]['flights'] += 1
-            instructor_stats[key]['dual_time'] += float(entry.dual_received)
-            instructor_stats[key]['last_flight'] = max(instructor_stats[key]['last_flight'], entry.date)
-            logger.debug(f"  Updated stats for {key!r}: {instructor_stats[key]}")
-    
-    # Convert to list and sort by number of flights
-    instructor_list = [
-        {
-            'name': stats['name'],
-            'flights': stats['flights'],
-            'dual_time': stats['dual_time'],
-            'last_flight': stats['last_flight']
-        }
-        for stats in instructor_stats.values()
-    ]
-    
-    sorted_list = sorted(instructor_list, key=lambda x: x['flights'], reverse=True)
-    logger.debug(f"\nFinal instructor stats ({len(sorted_list)} instructors):")
-    for instructor in sorted_list:
-        logger.debug(f"  {instructor['name']!r}: {instructor['flights']} flights, {instructor['dual_time']} dual hours")
-    
-    return sorted_list
-
 @app.route('/')
 def index():
     """Render the main page."""
@@ -246,7 +196,6 @@ def upload_file():
         stats = calculate_30_day_stats(entries)
         all_time_stats = calculate_all_time_stats(entries)
         aircraft_stats = prepare_aircraft_stats(entries)
-        instructor_stats = prepare_instructor_stats(entries)
         
         # Clean up the uploaded file
         logger.debug(f"\nCleaning up uploaded file: {filepath}")
@@ -257,7 +206,6 @@ def upload_file():
         logger.debug(f"30 Day Stats: {stats}")
         logger.debug(f"All Time Stats: {all_time_stats}")
         logger.debug(f"Aircraft stats: {aircraft_stats}")
-        logger.debug(f"Instructor stats: {instructor_stats}")
         logger.debug(f"Number of entries: {len(entries)}")
         if entries:
             logger.debug("\nFirst entry details:")
@@ -277,8 +225,7 @@ def upload_file():
                                 entries=entries, 
                                 stats=stats,
                                 all_time_stats=all_time_stats,
-                                aircraft_stats=aircraft_stats,
-                                instructor_stats=instructor_stats)
+                                aircraft_stats=aircraft_stats)
         except Exception as template_error:
             logger.error(f"\nTemplate rendering error: {str(template_error)}", exc_info=True)
             flash('Error rendering results template')

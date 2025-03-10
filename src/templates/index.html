@@ -239,9 +239,6 @@
                     <button class="btn btn-outline-primary" onclick="document.getElementById('aircraft-stats').scrollIntoView({behavior: 'smooth'})">
                         <i class="bi bi-airplane"></i> Aircraft Statistics
                     </button>
-                    <button class="btn btn-outline-primary" onclick="document.getElementById('instructor-stats').scrollIntoView({behavior: 'smooth'})">
-                        <i class="bi bi-person"></i> Instructor Statistics
-                    </button>
                 </div>
             </div>
         </div>
@@ -490,37 +487,6 @@
         {% endif %}
     </div>
 
-    {% if entries %}
-    <!-- Instructor Statistics -->
-    <div id="instructor-stats" class="card mt-4">
-        <div class="card-body">
-            <h5 class="card-title">Instructor Statistics</h5>
-            <div class="table-responsive">
-                <table class="instructor-stats-table aircraft-stats-table">
-                    <thead>
-                        <tr>
-                            <th onclick="sortInstructorTable(0)" class="sort-icon">Instructor Name</th>
-                            <th onclick="sortInstructorTable(1)" class="sort-icon">Number of Flights</th>
-                            <th onclick="sortInstructorTable(2)" class="sort-icon">Dual Received Hours</th>
-                            <th onclick="sortInstructorTable(3)" class="sort-icon">Last Flight</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for instructor in instructor_stats %}
-                        <tr>
-                            <td>{{ instructor.name }}</td>
-                            <td>{{ instructor.flights }}</td>
-                            <td>{{ "%.1f"|format(instructor.dual_time) }}</td>
-                            <td>{{ instructor.last_flight.strftime('%Y-%m-%d') }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Error navigation
@@ -640,58 +606,6 @@
                 navigateError(1);
             }
         });
-
-        // Instructor table sorting functionality
-        function sortInstructorTable(columnIndex) {
-            const table = document.querySelector('.instructor-stats-table');
-            const headers = table.querySelectorAll('th');
-            const tbody = table.querySelector('tbody');
-            const rows = Array.from(tbody.querySelectorAll('tr'));
-            
-            // Remove existing sort classes
-            headers.forEach(header => {
-                header.classList.remove('sort-asc', 'sort-desc');
-                header.classList.add('sort-icon');
-            });
-            
-            // Determine sort direction
-            const currentHeader = headers[columnIndex];
-            const isAscending = !currentHeader.classList.contains('sort-asc');
-            
-            // Update sort indicator
-            currentHeader.classList.remove('sort-icon');
-            currentHeader.classList.add(isAscending ? 'sort-asc' : 'sort-desc');
-            
-            // Sort rows
-            rows.sort((rowA, rowB) => {
-                const cellA = rowA.cells[columnIndex].textContent;
-                const cellB = rowB.cells[columnIndex].textContent;
-                
-                // Handle numeric columns
-                if (columnIndex >= 1 && columnIndex <= 2) {
-                    return isAscending ? 
-                        parseFloat(cellA) - parseFloat(cellB) : 
-                        parseFloat(cellB) - parseFloat(cellA);
-                }
-                
-                // Handle date column
-                if (columnIndex === 3) {
-                    const dateA = new Date(cellA);
-                    const dateB = new Date(cellB);
-                    return isAscending ? 
-                        dateA - dateB : 
-                        dateB - dateA;
-                }
-                
-                // Handle text columns
-                return isAscending ? 
-                    cellA.localeCompare(cellB) : 
-                    cellB.localeCompare(cellA);
-            });
-            
-            // Reorder rows
-            rows.forEach(row => tbody.appendChild(row));
-        }
     </script>
 </body>
 </html> 

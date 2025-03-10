@@ -60,6 +60,7 @@ class LogbookEntry(BaseModel):
     remarks: Optional[str] = Field(None, description="Flight remarks")
     pilot_role: str = Field("PIC", description="Pilot role")
     dual_received: float = Field(0.0, description="Dual instruction received")
+    pic_time: float = Field(0.0, description="PIC time")
     solo_time: float = Field(0.0, description="Solo flight time")
     ground_training: float = Field(0.0, description="Ground training time")
     landings_day: int = Field(0, description="Number of day landings")
@@ -126,41 +127,22 @@ class LogbookEntry(BaseModel):
         if self.dual_received > self.total_time:
             issues.append(f"Dual received time ({self.dual_received}) exceeds flight time ({self.total_time})")
             
-        # Check that total time is accounted for in PIC, dual received, or solo time
+        # Check that total time matches PIC time plus dual received time
         if self.total_time > 0:
-            is_pic = self.pilot_role == "PIC"
-            total_accounted_time = (
-                self.total_time if is_pic else 0.0) + self.dual_received + self.solo_time
-            if total_accounted_time < 0.1:  # Using 0.1 to account for floating point precision
-                issues.append("Flight has total time but no PIC, dual received, or solo time recorded")
+            # For PIC flights, set PIC time to total time if not already set
+            if self.pilot_role == "PIC" and self.pic_time == 0.0:
+                self.pic_time = self.total_time
             
+            total_accounted_time = self.dual_received + self.pic_time
+            
+            if abs(total_accounted_time - self.total_time) > 0.1:  # Allow 0.1 hour difference for rounding
+                issues.append(f"Total time ({self.total_time:.1f}) should equal sum of PIC time ({self.pic_time:.1f}) and dual received time ({self.dual_received:.1f})")
+
         # Set error explanation if issues were found
         if issues:
             self.error_explanation = "; ".join(issues)
         else:
             self.error_explanation = None
-
-    @validator('arrival_time')
-    def validate_times(cls, v, values):
-        """Validate that arrival time is after departure time, accounting for flights crossing midnight."""
-        if 'departure_time' in values:
-            dt = values['departure_time']
-            # If arrival time is before departure time, assume flight crossed midnight
-            if v < dt:
-                # Verify the total time makes sense for a flight crossing midnight
-                if 'total_time' in values:
-                    # Calculate time difference accounting for midnight crossing
-                    hours_diff = (24 - dt.hour + v.hour) + (v.minute - dt.minute) / 60
-                    # Allow some rounding difference (0.2 hours = 12 minutes)
-                    if abs(hours_diff - values['total_time']) > 0.2:
-                        raise ValueError("Arrival and departure times don't match total time")
-            else:
-                # For same-day flights, verify total time roughly matches time difference
-                if 'total_time' in values:
-                    hours_diff = (v.hour - dt.hour) + (v.minute - dt.minute) / 60
-                    if abs(hours_diff - values['total_time']) > 0.2:
-                        raise ValueError("Arrival and departure times don't match total time")
-        return v
 
     class Config:
         """Pydantic model configuration."""
