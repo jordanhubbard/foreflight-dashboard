@@ -82,6 +82,15 @@ class LogbookEntry(BaseModel):
             raise ValueError("Flight date cannot be in the future")
         return v
 
+    @validator('pic_time')
+    def validate_pic_time(cls, v, values):
+        """Validate and set PIC time based on pilot role."""
+        if 'pilot_role' in values and values['pilot_role'] == "PIC" and v == 0:
+            # If role is PIC but no PIC time specified, use total time
+            if 'total_time' in values:
+                return values['total_time']
+        return v
+
     def validate_entry(self) -> None:
         """Validate the entry and set error explanation if issues are found."""
         issues = []
@@ -99,7 +108,7 @@ class LogbookEntry(BaseModel):
             issues.append(f"Invalid aircraft registration format: {self.aircraft.registration}")
             
         # Validate pilot role
-        valid_roles = ["PIC", "SIC", "STUDENT", "Dual Given"]
+        valid_roles = ["PIC", "SIC", "STUDENT", "INSTRUCTOR"]
         if self.pilot_role not in valid_roles:
             issues.append(f"Invalid pilot role (must be one of: {', '.join(valid_roles)})")
             
@@ -126,6 +135,10 @@ class LogbookEntry(BaseModel):
         # Check dual received time consistency
         if self.dual_received > self.total_time:
             issues.append(f"Dual received time ({self.dual_received}) exceeds flight time ({self.total_time})")
+            
+        # Set PIC time for PIC flights if not already set
+        if self.pilot_role == "PIC" and self.pic_time == 0:
+            self.pic_time = self.total_time
             
         # Check that total time matches PIC time plus dual received time
         if self.total_time > 0:

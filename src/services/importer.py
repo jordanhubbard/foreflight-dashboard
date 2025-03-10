@@ -302,17 +302,26 @@ class ForeFlightImporter:
                         cross_country=cross_country
                     )
                     
-                    # Determine pilot role
-                    if dual_received > 0:
+                    # Determine pilot role and PIC time
+                    if pic_time > 0 and dual_received > 0:
+                        # Mixed flight with both PIC and dual received time
+                        pilot_role = "PIC"  # Use PIC as the primary role
+                    elif dual_received > 0:
                         pilot_role = "STUDENT"
                     elif dual_given > 0:
                         pilot_role = "INSTRUCTOR"
+                        pic_time = total_time  # Instructors log PIC time
                     elif pic_time > 0:
                         pilot_role = "PIC"
                     elif sic_time > 0:
                         pilot_role = "SIC"
                     else:
-                        pilot_role = "Unknown"
+                        pilot_role = "PIC"  # Default to PIC if no other role is determined
+                        pic_time = total_time  # Set PIC time to total time for PIC flights
+                    
+                    # If role is PIC but no PIC time specified, use total time
+                    if pilot_role == "PIC" and pic_time == 0:
+                        pic_time = total_time
                     
                     # Create logbook entry
                     entry = LogbookEntry(
@@ -329,7 +338,8 @@ class ForeFlightImporter:
                         landings_night=self._clean_numeric(row['NightLandingsFullStop']),
                         remarks=str(row['PilotComments']) if pd.notna(row['PilotComments']) else None,
                         instructor_comments=str(row['InstructorComments']) if pd.notna(row['InstructorComments']) else None,
-                        dual_received=dual_received
+                        dual_received=dual_received,
+                        pic_time=pic_time
                     )
                     
                     entries.append(entry)
