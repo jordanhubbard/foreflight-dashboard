@@ -32,20 +32,19 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         .flight-entry.has-error {
-            background-color: #fff3f3;
-            border-color: #dc3545;
+            background-color: #fff3f3;  /* Light red for invalid entries */
         }
-        .flight-entry.day-flight {
-            border-left: 4px solid #4CAF50;
+        .flight-entry.pic-flight {
+            background-color: #e8f5e9;  /* Light green for PIC flights */
         }
-        .flight-entry.night-flight {
-            border-left: 4px solid #2196F3;
+        .flight-entry.dual-only {
+            background-color: #fff9c4;  /* Light yellow for dual-only flights */
         }
-        .flight-entry.pic-solo-flight {
-            background-color: #f8f9fa;
+        .flight-entry.night-only {
+            background-color: #e3f2fd;  /* Light blue for night-only flights */
         }
         .flight-entry.split-role {
-            background-color: #f3e5f5;  /* Light purple background for SPLIT role flights */
+            background-color: #f3e5f5;  /* Light purple for SPLIT role flights */
         }
         .flight-header {
             font-weight: 500;
@@ -241,20 +240,20 @@
         .flight-table tr:hover {
             background-color: #f8f9fa;
         }
-        .flight-table tr.error-entry {
-            background-color: #fff3f3;
+        .flight-table > tbody > tr.has-error {
+            background-color: #fff3f3 !important;  /* Light red for invalid entries */
         }
-        .flight-table tr.day-flight {
-            border-left: 4px solid #4CAF50;
+        .flight-table > tbody > tr.pic-flight {
+            background-color: #e8f5e9 !important;  /* Light green for PIC flights */
         }
-        .flight-table tr.night-flight {
-            border-left: 4px solid #2196F3;
+        .flight-table > tbody > tr.dual-only {
+            background-color: #fff9c4 !important;  /* Light yellow for dual-only flights */
         }
-        .flight-table tr.pic-solo-flight td {
-            font-weight: 500;
+        .flight-table > tbody > tr.night-only {
+            background-color: #e3f2fd !important;  /* Light blue for night-only flights */
         }
-        .flight-table tr.split-role {
-            background-color: #f3e5f5;
+        .flight-table > tbody > tr.split-role {
+            background-color: #f3e5f5 !important;  /* Light purple for SPLIT role flights */
         }
         .flight-date {
             color: #8B0000;
@@ -287,6 +286,78 @@
         .flight-table th.running-total {
             border-left: 1px solid #dee2e6;
             background-color: #e9ecef;
+        }
+        /* Add new styles for disclosure triangles */
+        .disclosure-triangle {
+            cursor: pointer;
+            user-select: none;
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+        
+        .disclosure-triangle.open {
+            transform: rotate(90deg);
+        }
+        
+        .details-row {
+            display: none;
+            background-color: #f8f9fa;
+            padding: 0.75rem;
+            border-radius: 4px;
+            margin: 0.25rem 0;
+            font-family: monospace;
+        }
+        
+        .details-row.show {
+            display: block;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            background: white;
+            padding: 0.5rem;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+
+        .detail-label {
+            font-size: 0.75em;
+            color: #6c757d;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.25rem;
+        }
+
+        .detail-value {
+            font-family: monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+            white-space: pre-line;
+        }
+
+        .detail-value br {
+            content: "";
+            margin: 0.15em;
+            display: block;
+        }
+
+        /* Remove any hover effects that might interfere with the background colors */
+        .flight-table > tbody > tr:hover {
+            background-color: inherit !important;
+        }
+
+        /* Ensure details rows don't get colored */
+        .flight-table > tbody > tr.details-row {
+            background-color: #f8f9fa !important;
         }
     </style>
 </head>
@@ -433,12 +504,16 @@
                 <tbody>
                     {% for entry in entries %}
                     <tr id="entry-{{ loop.index }}" 
-                        class="{% if entry.conditions.night > 0 %}night-flight{% else %}day-flight{% endif %}
-                               {% if entry.pilot_role == 'PIC' %}pic-solo-flight{% endif %}
-                               {% if entry.pilot_role == 'SPLIT' %}split-role{% endif %}
-                               {% if entry.error_explanation %}error-entry{% endif %}"
+                        class="{% if entry.error_explanation %}has-error{% endif %}
+                               {% if entry.pic_time > 0 and entry.dual_received == 0 %}pic-flight{% endif %}
+                               {% if entry.pic_time == 0 and entry.dual_received > 0 %}dual-only{% endif %}
+                               {% if entry.conditions.night > 0 and entry.conditions.day == 0 %}night-only{% endif %}
+                               {% if entry.pilot_role == 'SPLIT' %}split-role{% endif %}"
                         data-has-error="{{ 'true' if entry.error_explanation else 'false' }}">
-                        <td class="flight-date">{{ entry.date.strftime('%Y-%m-%d') }}</td>
+                        <td class="flight-date">
+                            <span class="disclosure-triangle" data-target="flight-details-{{ loop.index }}">▶</span>
+                            {{ entry.date.strftime('%Y-%m-%d') }}
+                        </td>
                         <td class="route">{{ entry.departure.identifier if entry.departure else '---' }} → {{ entry.destination.identifier if entry.destination else '---' }}</td>
                         <td>{{ entry.aircraft.registration }}</td>
                         <td>{{ "%.1f"|format(entry.total_time) }}</td>
@@ -461,6 +536,50 @@
                         <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.pic_time) }}</td>
                         <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.dual_received) }}</td>
                         <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.sim_instrument) }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="100%" class="details-row" id="flight-details-{{ loop.index }}">
+                            <div class="details-grid">
+                                <div class="detail-item">
+                                    <span class="detail-label">Aircraft Details</span>
+                                    <span class="detail-value">Registration: {{ entry.aircraft.registration }}
+Type: {{ entry.aircraft.type }}
+Category/Class: {{ entry.aircraft.category_class }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Route Information</span>
+                                    <span class="detail-value">Departure: {{ entry.departure.identifier }}
+Destination: {{ entry.destination.identifier }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Flight Times</span>
+                                    <span class="detail-value">Total: {{ entry.total_time }}
+Day: {{ entry.conditions.day }}
+Night: {{ entry.conditions.night }}
+PIC: {{ entry.pic_time }}
+Dual Received: {{ entry.dual_received }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Landings</span>
+                                    <span class="detail-value">Day: {{ entry.landings_day }}
+Night: {{ entry.landings_night }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Running Totals</span>
+                                    <span class="detail-value">Total Time: {{ entry.running_totals.asel_time }}
+Day: {{ entry.running_totals.day_time }}
+Night: {{ entry.running_totals.night_time }}
+PIC: {{ entry.running_totals.pic_time }}
+Dual: {{ entry.running_totals.dual_received }}</span>
+                                </div>
+                                {% if entry.remarks %}
+                                <div class="detail-item">
+                                    <span class="detail-label">Remarks</span>
+                                    <span class="detail-value">{{ entry.remarks }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -492,11 +611,37 @@
                         <tbody>
                             {% for aircraft in aircraft_stats %}
                             <tr>
-                                <td>{{ aircraft.registration }}</td>
+                                <td>
+                                    <span class="disclosure-triangle" data-target="aircraft-details-{{ loop.index }}">▶</span>
+                                    {{ aircraft.registration }}
+                                </td>
                                 <td>{{ aircraft.type }}</td>
                                 <td>{{ aircraft.count }}</td>
                                 <td>{{ "%.1f"|format(aircraft.total_time) }}</td>
                                 <td>{{ "%.1f"|format(aircraft.total_time / aircraft.count) }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="100%" class="details-row" id="aircraft-details-{{ loop.index }}">
+                                    <div class="details-grid">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Aircraft Information</span>
+                                            <span class="detail-value">
+                                                Registration: {{ aircraft.registration }}<br>
+                                                Type: {{ aircraft.type }}<br>
+                                                Total Flights: {{ aircraft.count }}<br>
+                                                Total Time: {{ "%.1f"|format(aircraft.total_time) }}
+                                            </span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Flight History</span>
+                                            <span class="detail-value">
+                                                {% for entry in entries if entry.aircraft.registration == aircraft.registration %}
+                                                {{ entry.date.strftime('%Y-%m-%d') }}: {{ entry.total_time }} hours<br>
+                                                {% endfor %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -505,32 +650,39 @@
             </div>
         </div>
 
-        <script>
-            {% set chart_js %}
-            // Initialize chart data
-            const chartData = {
-                labels: {{ aircraft_stats|map(attribute='registration')|list|tojson }},
-                datasets: [{
-                    label: 'Number of Flights',
-                    data: {{ aircraft_stats|map(attribute='count')|list|tojson }},
-                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                }, {
-                    label: 'Total Hours',
-                    data: {{ aircraft_stats|map(attribute='total_time')|list|tojson }},
-                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    borderWidth: 1
-                }]
-            };
+        <!-- Chart initialization -->
+        <script type="text/javascript">
+            (function() {
+                var aircraftData = {
+                    registrations: {{ aircraft_stats|map(attribute='registration')|list|tojson|safe }},
+                    flightCounts: {{ aircraft_stats|map(attribute='count')|list|tojson|safe }},
+                    totalHours: {{ aircraft_stats|map(attribute='total_time')|list|tojson|safe }}
+                };
 
-            // Initialize chart when DOM is loaded
-            document.addEventListener('DOMContentLoaded', function() {
-                initializeAircraftChart(chartData);
-            });
-            {% endset %}
-            {{ chart_js|safe }}
+                function createChartData() {
+                    return {
+                        labels: aircraftData.registrations,
+                        datasets: [{
+                            label: 'Number of Flights',
+                            data: aircraftData.flightCounts,
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }, {
+                            label: 'Total Hours',
+                            data: aircraftData.totalHours,
+                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }]
+                    };
+                }
+
+                document.addEventListener('DOMContentLoaded', function() {
+                    var chartData = createChartData();
+                    initializeAircraftChart(chartData);
+                });
+            })();
         </script>
         {% endif %}
         {% endif %}
@@ -650,6 +802,26 @@
             } else if (e.key === 'ArrowRight') {
                 navigateError(1);
             }
+        });
+
+        // Add JavaScript for handling disclosure triangles
+        document.addEventListener('DOMContentLoaded', function() {
+            // Function to toggle details
+            function toggleDetails(triangle, detailsId) {
+                const details = document.getElementById(detailsId);
+                if (details) {
+                    triangle.classList.toggle('open');
+                    details.classList.toggle('show');
+                }
+            }
+
+            // Add click handlers to all disclosure triangles
+            document.querySelectorAll('.disclosure-triangle').forEach(triangle => {
+                triangle.addEventListener('click', function() {
+                    const detailsId = this.getAttribute('data-target');
+                    toggleDetails(this, detailsId);
+                });
+            });
         });
     </script>
 </body>
