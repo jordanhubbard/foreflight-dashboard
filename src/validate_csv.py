@@ -142,6 +142,7 @@ def validate_logbook(csv_path):
                 departure_time=parse_time(row.get('TimeOut')) or parse_time("00:00"),
                 arrival_time=parse_time(row.get('TimeIn')) or parse_time("00:00"),
                 total_time=total_time,
+                pic_time=parse_float(row.get('PIC', 0)),
                 aircraft=Aircraft(
                     registration=aircraft_id,
                     type=aircraft_info['type'],
