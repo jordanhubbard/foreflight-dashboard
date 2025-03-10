@@ -1,9 +1,9 @@
 """FastAPI application for the ForeFlight Logbook Manager."""
 
 from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Annotated
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Request
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -56,7 +56,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         error_messages.append(message)
     
     return JSONResponse(
-        status_code=422,
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
             "success": False,
             "error": "Validation Error",
@@ -68,7 +68,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def general_exception_handler(request: Request, exc: Exception):
     """Handle all other exceptions with detailed messages."""
     return JSONResponse(
-        status_code=500,
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "success": False,
             "error": str(exc),
@@ -76,13 +76,15 @@ async def general_exception_handler(request: Request, exc: Exception):
         }
     )
 
-# Dependency to get ForeFlight client
-def get_foreflight_client() -> ForeFlightClient:
+async def get_foreflight_client() -> ForeFlightClient:
     """Get a ForeFlight API client instance."""
     try:
         return ForeFlightClient()
     except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 @app.get("/", response_class=HTMLResponse)
 async def get_index():
@@ -90,20 +92,16 @@ async def get_index():
     index_path = static_path / "index.html"
     return index_path.read_text()
 
-@app.post("/upload")
-async def upload_logbook(file: UploadFile = File(...)):
+@app.post("/upload", status_code=status.HTTP_200_OK)
+async def upload_logbook(file: Annotated[UploadFile, File(...)]):
     """Handle logbook file upload."""
     logger.info(f"Received file upload: {file.filename}")
     
     if not file.filename.lower().endswith('.csv'):
         logger.warning(f"Invalid file type: {file.filename}")
-        return JSONResponse(
-            status_code=400,
-            content={
-                "success": False,
-                "error": "Invalid File Type",
-                "details": ["Please upload a CSV file"]
-            }
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please upload a CSV file"
         )
 
     temp_path = None
@@ -121,10 +119,9 @@ async def upload_logbook(file: UploadFile = File(...)):
         
         if not validation_result['success']:
             logger.warning(f"Validation failed: {validation_result['error']}")
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
                     "error": validation_result['error'],
                     "details": validation_result.get('details', {})
                 }
@@ -139,10 +136,9 @@ async def upload_logbook(file: UploadFile = File(...)):
             
         except ValidationError as e:
             logger.error(f"Validation error during import: {str(e)}")
-            return JSONResponse(
-                status_code=422,
-                content={
-                    "success": False,
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
                     "error": "Validation Error",
                     "details": [
                         f"Error in {' -> '.join(str(loc) for loc in err['loc'])}: {err['msg']}"
@@ -152,42 +148,30 @@ async def upload_logbook(file: UploadFile = File(...)):
             )
         except ValueError as e:
             logger.error(f"Value error during import: {str(e)}")
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "error": "Import Error",
-                    "details": [str(e)]
-                }
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
             )
         except Exception as e:
             logger.error(f"Unexpected error during import: {str(e)}")
             logger.error(traceback.format_exc())
-            return JSONResponse(
-                status_code=500,
-                content={
-                    "success": False,
-                    "error": "Import Error",
-                    "details": [str(e), *traceback.format_exc().split('\n')]
-                }
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(e)
             )
 
         if not entries:
             logger.warning("No entries found in logbook")
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "error": "No Data",
-                    "details": ["No valid entries found in the logbook file"]
-                }
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No valid entries found in the logbook file"
             )
 
         # Calculate statistics
         logger.info("Calculating statistics")
         total_time = sum(entry.total_time for entry in entries)
-        pic_time = sum(entry.total_time for entry in entries if entry.pilot_role == "PIC")
-        dual_received = sum(entry.total_time for entry in entries if entry.pilot_role == "Dual Received")
+        pic_time = sum(entry.pic_time for entry in entries)
+        dual_received = sum(entry.dual_received for entry in entries)
         
         # Get date range
         dates = [entry.date for entry in entries]
@@ -207,10 +191,10 @@ async def upload_logbook(file: UploadFile = File(...)):
         recent_entries = [entry for entry in entries if entry.date >= thirty_days_ago]
         recent_activity = {
             "total_time": round(sum(entry.total_time for entry in recent_entries), 1),
-            "pic_time": round(sum(entry.total_time for entry in recent_entries if entry.pilot_role == "PIC"), 1),
+            "pic_time": round(sum(entry.pic_time for entry in recent_entries), 1),
             "night_time": round(sum(entry.conditions.night for entry in recent_entries), 1),
             "sim_instrument": round(sum(entry.conditions.simulated_instrument for entry in recent_entries), 1),
-            "dual_received": round(sum(entry.total_time for entry in recent_entries if entry.pilot_role == "Dual Received"), 1),
+            "dual_received": round(sum(entry.dual_received for entry in recent_entries), 1),
             "flight_count": len(recent_entries)
         }
 
@@ -263,34 +247,29 @@ async def upload_logbook(file: UploadFile = File(...)):
         }
 
         logger.info("Successfully processed logbook data")
-        return JSONResponse(
-            status_code=200,
-            content={
-                "success": True,
-                "entries_count": len(entries),
-                "statistics": {
-                    "total_time": round(total_time, 1),
-                    "pic_time": round(pic_time, 1),
-                    "dual_received": round(dual_received, 1),
-                    "date_range": date_range,
-                    "aircraft_types": {k: round(v, 1) for k, v in aircraft_types.items()},
-                    "recent_activity": recent_activity
-                },
-                "flight_data": flight_data,
-                "aircraft_summary": aircraft_summary
-            }
-        )
+        return {
+            "success": True,
+            "entries_count": len(entries),
+            "statistics": {
+                "total_time": round(total_time, 1),
+                "pic_time": round(pic_time, 1),
+                "dual_received": round(dual_received, 1),
+                "date_range": date_range,
+                "aircraft_types": {k: round(v, 1) for k, v in aircraft_types.items()},
+                "recent_activity": recent_activity
+            },
+            "flight_data": flight_data,
+            "aircraft_summary": aircraft_summary
+        }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Unexpected error in upload handler: {str(e)}")
         logger.error(traceback.format_exc())
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "error": "Upload Error",
-                "details": [str(e), *traceback.format_exc().split('\n')]
-            }
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
         )
     finally:
         # Clean up temporary file
@@ -304,50 +283,64 @@ async def upload_logbook(file: UploadFile = File(...)):
 
 @app.get("/entries", response_model=List[LogbookEntry])
 async def get_entries(
+    client: Annotated[ForeFlightClient, Depends(get_foreflight_client)],
     start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None,
-    client: ForeFlightClient = Depends(get_foreflight_client)
+    end_date: Optional[datetime] = None
 ):
     """Get logbook entries with optional date filtering."""
     try:
         return client.get_logbook_entries(start_date, end_date)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
-@app.post("/entries", response_model=LogbookEntry)
+@app.post("/entries", response_model=LogbookEntry, status_code=status.HTTP_201_CREATED)
 async def create_entry(
     entry: LogbookEntry,
-    client: ForeFlightClient = Depends(get_foreflight_client)
+    client: Annotated[ForeFlightClient, Depends(get_foreflight_client)]
 ):
     """Create a new logbook entry."""
     try:
         return client.add_logbook_entry(entry)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 @app.put("/entries/{entry_id}", response_model=LogbookEntry)
 async def update_entry(
     entry_id: str,
     entry: LogbookEntry,
-    client: ForeFlightClient = Depends(get_foreflight_client)
+    client: Annotated[ForeFlightClient, Depends(get_foreflight_client)]
 ):
     """Update an existing logbook entry."""
     entry.id = entry_id
     try:
         return client.update_logbook_entry(entry)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
-@app.delete("/entries/{entry_id}")
+@app.delete("/entries/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_entry(
     entry_id: str,
-    client: ForeFlightClient = Depends(get_foreflight_client)
+    client: Annotated[ForeFlightClient, Depends(get_foreflight_client)]
 ):
     """Delete a logbook entry."""
     try:
         client.delete_logbook_entry(entry_id)
-        return {"message": "Entry deleted successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        ) 

@@ -305,9 +305,10 @@ class ForeFlightImporter:
                     # Determine pilot role and PIC time
                     if pic_time > 0 and dual_received > 0:
                         # Mixed flight with both PIC and dual received time
-                        pilot_role = "PIC"  # Use PIC as the primary role
+                        pilot_role = "SPLIT"  # Use SPLIT for mixed role flights
                     elif dual_received > 0:
                         pilot_role = "STUDENT"
+                        pic_time = 0  # Students don't log PIC time
                     elif dual_given > 0:
                         pilot_role = "INSTRUCTOR"
                         pic_time = total_time  # Instructors log PIC time
@@ -315,11 +316,12 @@ class ForeFlightImporter:
                         pilot_role = "PIC"
                     elif sic_time > 0:
                         pilot_role = "SIC"
+                        pic_time = 0  # SIC doesn't log PIC time
                     else:
                         pilot_role = "PIC"  # Default to PIC if no other role is determined
                         pic_time = total_time  # Set PIC time to total time for PIC flights
                     
-                    # If role is PIC but no PIC time specified, use total time
+                    # If role is PIC and no PIC time specified, use total time
                     if pilot_role == "PIC" and pic_time == 0:
                         pic_time = total_time
                     

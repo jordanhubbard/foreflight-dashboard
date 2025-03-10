@@ -75,7 +75,7 @@ def calculate_running_totals(entries):
         totals['night_time'] += float(entry.conditions.night)
         totals['sim_instrument'] += float(entry.conditions.simulated_instrument)
         totals['dual_received'] += float(entry.dual_received)
-        totals['pic_time'] += float(entry.total_time) if entry.pilot_role == 'PIC' else 0.0
+        totals['pic_time'] += float(entry.pic_time)
         
         # Create RunningTotals instance with rounded values
         entry.running_totals = RunningTotals(**{k: round(v, 1) for k, v in totals.items()})
@@ -98,7 +98,7 @@ def calculate_stats_for_entries(entries):
         'total_time': sum(float(e.total_time) for e in entries),
         'total_day': sum(float(e.conditions.day) for e in entries),
         'total_night': sum(float(e.conditions.night) for e in entries),
-        'total_pic': sum(float(e.total_time) if e.pilot_role == 'PIC' else 0 for e in entries),
+        'total_pic': sum(float(e.pic_time) for e in entries),
         'total_sim_instrument': sum(float(e.conditions.simulated_instrument) for e in entries),
         'total_dual_received': sum(float(e.dual_received) for e in entries),
         'total_takeoffs': sum(e.landings_day + e.landings_night for e in entries),

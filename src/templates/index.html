@@ -24,18 +24,28 @@
             margin-top: 0.5em;
         }
         .flight-entry {
-            border: 1px solid #dee2e6;
-            padding: 0.75rem;
-            margin-bottom: 0.5rem;
-            border-radius: 4px;
-            scroll-margin-top: 100px;
-            display: grid;
-            grid-template-columns: minmax(120px, 1.5fr) minmax(80px, 0.8fr) minmax(60px, 0.6fr) minmax(80px, 0.8fr) minmax(50px, 0.5fr) minmax(70px, 0.7fr) auto;
-            gap: 0.5rem;
-            align-items: center;
-            position: relative;
-            z-index: 1;
-            background: white;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .flight-entry.has-error {
+            background-color: #fff3f3;
+            border-color: #dc3545;
+        }
+        .flight-entry.day-flight {
+            border-left: 4px solid #4CAF50;
+        }
+        .flight-entry.night-flight {
+            border-left: 4px solid #2196F3;
+        }
+        .flight-entry.pic-solo-flight {
+            background-color: #f8f9fa;
+        }
+        .flight-entry.split-role {
+            background-color: #f3e5f5;  /* Light purple background for SPLIT role flights */
         }
         .flight-header {
             font-weight: 500;
@@ -203,14 +213,9 @@
             position: relative;
             z-index: 2;
         }
-        .night-flight {
-            background-color: #f0f8ff !important; /* Light blue */
-        }
-        .day-flight {
-            background-color: #fffff0 !important; /* Light yellow */
-        }
-        .pic-solo-flight {
-            background-color: #f0fff0 !important; /* Light green */
+        .split-role-text {
+            color: #9c27b0;  /* Purple text color for SPLIT role */
+            font-weight: bold;
         }
     </style>
 </head>
@@ -334,7 +339,7 @@
 
         <!-- Flight Entries -->
         {% for entry in entries %}
-        <div id="entry-{{ loop.index0 }}" class="flight-entry {% if entry.error_explanation %}error-entry{% endif %} {% if entry.conditions.night > 0 %}night-flight{% elif entry.conditions.day > 0 %}day-flight{% endif %} {% if entry.pilot_role in ['PIC', 'Solo'] %}pic-solo-flight{% endif %}" data-has-error="{{ 'true' if entry.error_explanation else 'false' }}">
+        <div id="entry-{{ loop.index }}" class="flight-entry {% if entry.conditions.night > 0 %}night-flight{% else %}day-flight{% endif %} {% if entry.pilot_role == 'PIC' and entry.dual_received == 0 %}pic-solo-flight{% endif %} {% if entry.pilot_role == 'SPLIT' %}split-role{% endif %}" data-has-error="{{ 'true' if entry.error_explanation else 'false' }}">
             <div class="flight-header">
                 <div>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</div>
                 <div class="flight-date">{{ entry.date.strftime('%Y-%m-%d') }}</div>
@@ -362,7 +367,7 @@
 
             <div class="flight-stat">
                 <span class="stat-label">Role</span>
-                <span class="stat-value">{{ entry.pilot_role }}</span>
+                <span class="stat-value {% if entry.pilot_role == 'SPLIT' %}split-role-text{% endif %}">{{ entry.pilot_role }}</span>
             </div>
 
             <span class="badge {% if entry.error_explanation %}bg-danger{% else %}bg-success{% endif %}">
