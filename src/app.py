@@ -133,7 +133,7 @@ def prepare_aircraft_stats(entries):
 @app.route('/')
 def index():
     """Render the main page."""
-    return render_template('index.html')
+    return render_template('index.html', entries=None, stats=None, all_time_stats=None, aircraft_stats=None)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
