@@ -20,12 +20,13 @@ class ForeFlightImporter:
         Args:
             csv_path: Path to the ForeFlight CSV export file
         """
+        # Configure logging
+        self.logger = logging.getLogger('src.services.importer')
+        self.logger.setLevel(logging.DEBUG)
+        
         self.csv_path = Path(csv_path)
         if not self.csv_path.exists():
             raise FileNotFoundError(f"CSV file not found: {csv_path}")
-        
-        # Configure logging
-        logging.basicConfig(level=logging.DEBUG)
         
         # Read the CSV file in chunks to separate aircraft and flights
         self.aircraft_df = None
@@ -94,150 +95,107 @@ class ForeFlightImporter:
     def _parse_csv(self):
         """Parse the CSV file into aircraft and flights dataframes."""
         try:
-            logging.info(f"Starting to parse CSV file: {self.csv_path}")
+            self.logger.info(f"Starting to parse CSV file: {self.csv_path}")
             
-            # Read the entire file and normalize line endings
+            # Read the entire file
             with open(self.csv_path, 'r', encoding='utf-8-sig') as f:
-                content = f.read()
-                
-            # Normalize line endings
-            content = content.replace('\r\n', '\n').replace('\r', '\n')
-            
-            # Split into lines
-            raw_lines = content.split('\n')
-            logging.info(f"Read {len(raw_lines)} raw lines from file")
-            
-            # Process lines with better joining logic
-            processed_lines = []
-            current_line = None
-            
-            for line in raw_lines:
-                line = line.strip()
-                
-                if not line:  # Skip empty lines
-                    continue
-                    
-                if current_line is None:
-                    current_line = line
-                elif self._should_join_with_previous(line, current_line):
-                    # Join with a space to preserve formatting
-                    current_line = f"{current_line} {line}"
-                else:
-                    # Process the current line
-                    normalized = self._normalize_line(current_line)
-                    if normalized:
-                        processed_lines.append(normalized)
-                    current_line = line
-            
-            # Don't forget the last line
-            if current_line:
-                normalized = self._normalize_line(current_line)
-                if normalized:
-                    processed_lines.append(normalized)
-            
-            logging.info(f"Processed into {len(processed_lines)} normalized lines")
+                content = f.readlines()
             
             # Find section markers
             aircraft_start = None
             flights_start = None
             
-            for i, line in enumerate(processed_lines):
+            for i, line in enumerate(content):
                 if "Aircraft Table" in line:
                     aircraft_start = i
-                    logging.info(f"Found Aircraft Table at line {i}")
+                    self.logger.info(f"Found Aircraft Table at line {i}")
                 elif "Flights Table" in line:
                     flights_start = i
-                    logging.info(f"Found Flights Table at line {i}")
+                    self.logger.info(f"Found Flights Table at line {i}")
             
             if aircraft_start is None:
                 raise ValueError("Could not find Aircraft Table section")
             if flights_start is None:
                 raise ValueError("Could not find Flights Table section")
             
-            # Extract and parse aircraft section
-            aircraft_lines = processed_lines[aircraft_start + 1:flights_start]
-            logging.info(f"Extracted {len(aircraft_lines)} aircraft lines")
+            # Extract sections
+            aircraft_lines = content[aircraft_start:flights_start]
+            flight_lines = content[flights_start:]
             
-            # Find aircraft headers
-            aircraft_headers = None
-            aircraft_data = []
+            # Write sections to temporary files for pandas to read
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as aircraft_file:
+                aircraft_file.writelines(aircraft_lines)
+                aircraft_path = aircraft_file.name
+                
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as flight_file:
+                flight_file.writelines(flight_lines)
+                flight_path = flight_file.name
             
-            for line in aircraft_lines:
-                if not aircraft_headers:
-                    # Look for header line containing typical aircraft columns
-                    if any(keyword in line.lower() for keyword in ['aircraft', 'id', 'type', 'make', 'model']):
-                        try:
-                            headers = list(csv.reader([line]))[0]
-                            headers = [h.strip() for h in headers if h.strip()]
-                            if headers:
-                                aircraft_headers = headers
-                                logging.info(f"Found aircraft headers: {headers}")
-                                continue
-                        except Exception as e:
-                            logging.warning(f"Error parsing potential header line: {line}")
-                            logging.warning(f"Error details: {str(e)}")
+            # Read aircraft section with pandas
+            try:
+                self.aircraft_df = pd.read_csv(aircraft_path, skiprows=1)  # Skip "Aircraft Table" row
+                self.logger.info(f"Read aircraft DataFrame with shape: {self.aircraft_df.shape}")
+            except Exception as e:
+                self.logger.error(f"Error reading aircraft section: {str(e)}")
+                raise
+            
+            # Read flights section with pandas, handling empty fields and quotes
+            try:
+                self.flights_df = pd.read_csv(
+                    flight_path,
+                    skiprows=1,  # Skip "Flights Table" row
+                    keep_default_na=False,  # Don't convert empty strings to NaN
+                    quoting=csv.QUOTE_MINIMAL,  # Handle quotes properly
+                    escapechar='\\',  # Handle escaped characters
+                    encoding='utf-8-sig',  # Handle UTF-8 with BOM
+                    dtype={'InstructorName': str},  # Ensure instructor names are read as strings
+                    na_values=[],  # Don't treat any values as NA
+                    na_filter=False  # Don't filter NA values
+                )
+                self.logger.info(f"Read flights DataFrame with shape: {self.flights_df.shape}")
+                
+                # Debug: Check DataFrame columns and sample data
+                self.logger.debug("\nFlights DataFrame Info:")
+                self.logger.debug(f"Columns: {list(self.flights_df.columns)}")
+                self.logger.debug("\nSample of first 5 rows with all columns:")
+                sample = self.flights_df.head(5)
+                for idx, row in sample.iterrows():
+                    self.logger.debug(f"\nRow {idx} - All columns:")
+                    for col in self.flights_df.columns:
+                        val = row[col]
+                        self.logger.debug(f"  {col}: {val!r} (type: {type(val)}, repr: {repr(val)})")
+                
+                # Debug: Check instructor names and dual received
+                if 'InstructorName' in self.flights_df.columns:
+                    self.logger.debug("\nSample of instructor names and dual received from flights DataFrame:")
+                    sample = self.flights_df.head(10)  # Look at first 10 rows
+                    for idx, row in sample.iterrows():
+                        instructor = row.get('InstructorName', '')
+                        dual = self._clean_float(row.get('DualReceived', 0.0))
+                        self.logger.debug(f"\nProcessing row {idx}:")
+                        self.logger.debug(f"  Raw instructor: {instructor!r}")
+                        self.logger.debug(f"  Raw instructor type: {type(instructor)}")
+                        self.logger.debug(f"  Raw instructor repr: {repr(instructor)}")
+                        self.logger.debug(f"  Raw dual received: {row.get('DualReceived', 0.0)!r}")
+                        self.logger.debug(f"  Cleaned dual received: {dual}")
+                        
+                        # Try cleaning the instructor name
+                        cleaned_name = self._clean_instructor_name(instructor)
+                        self.logger.debug(f"  Cleaned instructor name: {cleaned_name!r}")
                 else:
-                    try:
-                        row = list(csv.reader([line]))[0]
-                        if len(row) >= len(aircraft_headers):
-                            aircraft_data.append(dict(zip(aircraft_headers, row)))
-                    except Exception as e:
-                        logging.warning(f"Error parsing aircraft data line: {line}")
-                        logging.warning(f"Error details: {str(e)}")
+                    self.logger.warning("No InstructorName column found in flights DataFrame")
+            except Exception as e:
+                self.logger.error(f"Error reading flights section: {str(e)}")
+                raise
             
-            if not aircraft_headers:
-                raise ValueError("Could not find valid aircraft headers")
-            
-            if not aircraft_data:
-                raise ValueError("No valid aircraft data found")
-            
-            # Extract and parse flights section
-            flight_lines = processed_lines[flights_start + 1:]
-            logging.info(f"Extracted {len(flight_lines)} flight lines")
-            
-            # Find flight headers
-            flight_headers = None
-            flight_data = []
-            
-            for line in flight_lines:
-                if not flight_headers:
-                    # Look for header line containing typical flight columns
-                    if any(keyword in line for keyword in ['Date', 'Aircraft', 'From', 'To']):
-                        try:
-                            headers = list(csv.reader([line]))[0]
-                            headers = [h.strip() for h in headers if h.strip()]
-                            if headers:
-                                flight_headers = headers
-                                logging.info(f"Found flight headers: {headers}")
-                                continue
-                        except Exception as e:
-                            logging.warning(f"Error parsing potential flight header line: {line}")
-                            logging.warning(f"Error details: {str(e)}")
-                else:
-                    try:
-                        row = list(csv.reader([line]))[0]
-                        if len(row) >= len(flight_headers):
-                            flight_data.append(dict(zip(flight_headers, row)))
-                    except Exception as e:
-                        logging.warning(f"Error parsing flight data line: {line}")
-                        logging.warning(f"Error details: {str(e)}")
-            
-            if not flight_headers:
-                raise ValueError("Could not find valid flight headers")
-            
-            if not flight_data:
-                raise ValueError("No valid flight data found")
-            
-            # Convert to pandas DataFrames
-            self.aircraft_df = pd.DataFrame(aircraft_data)
-            self.flights_df = pd.DataFrame(flight_data)
-            
-            logging.info("Successfully created DataFrames")
-            logging.info(f"Aircraft DataFrame shape: {self.aircraft_df.shape}")
-            logging.info(f"Flight DataFrame shape: {self.flights_df.shape}")
+            # Clean up temporary files
+            import os
+            os.unlink(aircraft_path)
+            os.unlink(flight_path)
             
         except Exception as e:
-            logging.error(f"Error parsing CSV: {str(e)}")
+            self.logger.error(f"Error parsing CSV: {str(e)}")
             raise ValueError(f"Error parsing CSV file: {str(e)}")
         
     def _parse_time(self, time_str: str) -> Optional[time]:
@@ -300,6 +258,74 @@ class ForeFlightImporter:
                 return default
         return default
 
+    def _clean_instructor_name(self, raw_name):
+        """Clean instructor name from raw format."""
+        if not raw_name or pd.isna(raw_name):
+            return None
+        
+        # Handle format: "Name;Instructor;email"
+        if ';' in raw_name:
+            parts = raw_name.split(';')
+            if len(parts) >= 1:
+                return parts[0].strip()
+        
+        return raw_name.strip()
+
+    def _process_instructor_stats(self):
+        """Process instructor statistics from the flights DataFrame."""
+        instructor_stats = {}
+        
+        # Log the column names to verify we have InstructorName
+        self.logger.debug(f"DataFrame columns: {self.flights_df.columns.tolist()}")
+        
+        if 'InstructorName' not in self.flights_df.columns:
+            self.logger.warning("InstructorName column not found in DataFrame")
+            return []
+        
+        # Log the first few rows of instructor names
+        self.logger.debug("First 5 rows of instructor names:")
+        for idx, row in self.flights_df.head().iterrows():
+            self.logger.debug(f"Row {idx} - Raw instructor name: {row.get('InstructorName', 'NOT FOUND')}")
+        
+        for _, row in self.flights_df.iterrows():
+            dual_received = row.get('DualReceived', 0.0)
+            raw_instructor_name = row.get('InstructorName')
+            
+            self.logger.debug(f"Processing row - Dual received: {dual_received}, Raw instructor name: {raw_instructor_name!r}")
+            
+            if dual_received > 0:
+                instructor_name = self._clean_instructor_name(raw_instructor_name)
+                self.logger.debug(f"  Cleaned instructor name: {instructor_name!r}")
+                
+                if instructor_name:
+                    if instructor_name not in instructor_stats:
+                        instructor_stats[instructor_name] = {
+                            'name': instructor_name,
+                            'num_flights': 0,
+                            'dual_received': 0.0,
+                            'last_flight': None
+                        }
+                    
+                    instructor_stats[instructor_name]['num_flights'] += 1
+                    instructor_stats[instructor_name]['dual_received'] += dual_received
+                    
+                    flight_date = row.get('Date')
+                    if flight_date and (
+                        not instructor_stats[instructor_name]['last_flight'] or 
+                        flight_date > instructor_stats[instructor_name]['last_flight']
+                    ):
+                        instructor_stats[instructor_name]['last_flight'] = flight_date
+        
+        # Convert to list and sort by number of flights
+        stats_list = list(instructor_stats.values())
+        stats_list.sort(key=lambda x: x['num_flights'], reverse=True)
+        
+        self.logger.debug(f"Final instructor stats ({len(stats_list)} instructors):")
+        for stat in stats_list:
+            self.logger.debug(f"  {stat['name']}: {stat['num_flights']} flights, {stat['dual_received']} hours")
+        
+        return stats_list
+
     def import_entries(self) -> List[LogbookEntry]:
         """Import all logbook entries from the CSV.
         
@@ -313,8 +339,40 @@ class ForeFlightImporter:
             entries = []
             aircraft_dict = self._create_aircraft_dict()
             
+            self.logger.debug("\n=== CSV Column Headers ===")
+            self.logger.debug(f"Available columns: {list(self.flights_df.columns)}")
+            
+            # Log a few rows of instructor names for debugging
+            if 'InstructorName' in self.flights_df.columns:
+                self.logger.debug("\n=== Sample Instructor Names ===")
+                sample_rows = self.flights_df.head(5)
+                for idx, row in sample_rows.iterrows():
+                    instructor_name = row.get('InstructorName', 'NOT FOUND')
+                    dual_received = row.get('DualReceived', 0.0)
+                    self.logger.debug(f"Row {idx}:")
+                    self.logger.debug(f"  Raw InstructorName: {instructor_name!r}")
+                    cleaned_name = self._clean_instructor_name(instructor_name)
+                    self.logger.debug(f"  Cleaned InstructorName: {cleaned_name!r}")
+                    self.logger.debug(f"  DualReceived: {dual_received}")
+            else:
+                self.logger.debug("No InstructorName column found in CSV")
+            
             for idx, row in self.flights_df.iterrows():
                 try:
+                    # Log instructor-related fields for debugging
+                    self.logger.debug(f"\nProcessing row {idx}:")
+                    instructor_name_raw = row.get('InstructorName', '')  # Changed from 'NOT FOUND' to ''
+                    self.logger.debug(f"Raw InstructorName from CSV: {instructor_name_raw!r}")
+                    instructor_name = self._clean_instructor_name(instructor_name_raw)
+                    self.logger.debug(f"Cleaned InstructorName: {instructor_name!r}")
+                    dual_received = self._clean_float(row.get('DualReceived', 0.0))
+                    self.logger.debug(f"DualReceived: {dual_received}")
+                    
+                    # Only use instructor name if there is dual received time
+                    if dual_received <= 0:
+                        instructor_name = None
+                        self.logger.debug("No dual received time, setting instructor_name to None")
+                    
                     # Validate required fields
                     if pd.isna(row['Date']):
                         raise ValueError(f"Missing date in flight {idx + 1}")
@@ -333,7 +391,6 @@ class ForeFlightImporter:
                     actual_inst = self._clean_float(row['ActualInstrument'])
                     sim_inst = self._clean_float(row['SimulatedInstrument'])
                     cross_country = self._clean_float(row['CrossCountry'])
-                    dual_received = self._clean_float(row['DualReceived'])
                     dual_given = self._clean_float(row['DualGiven'])
                     pic_time = self._clean_float(row['PIC'])
                     sic_time = self._clean_float(row['SIC'])
@@ -349,15 +406,17 @@ class ForeFlightImporter:
                     
                     # Determine pilot role
                     if dual_received > 0:
-                        pilot_role = "Dual Received"
+                        pilot_role = "STUDENT"  # Changed from "Dual Received" to "STUDENT"
                     elif dual_given > 0:
-                        pilot_role = "Dual Given"
+                        pilot_role = "INSTRUCTOR"  # Changed from "Dual Given" to "INSTRUCTOR"
                     elif pic_time > 0:
                         pilot_role = "PIC"
                     elif sic_time > 0:
                         pilot_role = "SIC"
                     else:
                         pilot_role = "Unknown"
+                    
+                    self.logger.debug(f"Pilot role determined as: {pilot_role}")
                     
                     # Create logbook entry
                     entry = LogbookEntry(
@@ -372,9 +431,13 @@ class ForeFlightImporter:
                         pilot_role=pilot_role,
                         landings_day=self._clean_numeric(row['DayLandingsFullStop']),
                         landings_night=self._clean_numeric(row['NightLandingsFullStop']),
-                        remarks=str(row['PilotComments']) if pd.notna(row['PilotComments']) else None
+                        remarks=str(row['PilotComments']) if pd.notna(row['PilotComments']) else None,
+                        instructor_name=instructor_name,
+                        instructor_comments=str(row['InstructorComments']) if pd.notna(row['InstructorComments']) else None,
+                        dual_received=dual_received
                     )
                     
+                    self.logger.debug(f"Created entry with instructor_name: {entry.instructor_name!r}")
                     entries.append(entry)
                     
                 except Exception as e:
@@ -383,7 +446,83 @@ class ForeFlightImporter:
             if not entries:
                 raise ValueError("No valid entries found in the logbook")
                 
+            self.logger.debug(f"\nProcessed {len(entries)} entries")
+            instructor_entries = [e for e in entries if e.instructor_name]
+            self.logger.debug(f"Found {len(instructor_entries)} entries with instructor names:")
+            for entry in instructor_entries:
+                self.logger.debug(f"  Date: {entry.date}, Instructor: {entry.instructor_name!r}, Dual: {entry.dual_received}")
+            
             return entries
             
         except Exception as e:
-            raise ValueError(f"Error importing entries: {str(e)}") 
+            raise ValueError(f"Error importing entries: {str(e)}")
+
+    def _parse_csv_file(self, file_path):
+        """Parse the CSV file and return a list of flight entries."""
+        entries = []
+        with open(file_path, 'r') as f:
+            # Skip to the Flights Table
+            for line in f:
+                if 'Flights Table' in line:
+                    break
+            
+            # Read the header line
+            header = next(f).strip().split(',')
+            self.logger.debug(f"CSV columns: {header}")
+            
+            # Find the index of the InstructorName column
+            instructor_name_idx = None
+            for i, col in enumerate(header):
+                if col == 'InstructorName':
+                    instructor_name_idx = i
+                    break
+            
+            if instructor_name_idx is None:
+                self.logger.warning("InstructorName column not found in CSV")
+            else:
+                self.logger.debug(f"InstructorName column found at index {instructor_name_idx}")
+            
+            # Read the first few rows to check instructor names
+            sample_rows = []
+            for _ in range(5):
+                try:
+                    row = next(f)
+                    sample_rows.append(row)
+                except StopIteration:
+                    break
+            
+            self.logger.debug("Sample rows instructor names:")
+            for row in sample_rows:
+                values = row.strip().split(',')
+                if instructor_name_idx is not None and instructor_name_idx < len(values):
+                    self.logger.debug(f"Raw instructor name: {values[instructor_name_idx]}")
+            
+            # Reset file pointer to after header
+            f.seek(0)
+            for line in f:
+                if 'Flights Table' in line:
+                    break
+            next(f)  # Skip header line again
+            
+            # Process all rows including the sample rows we read
+            all_rows = sample_rows + f.readlines()
+            for row in all_rows:
+                values = row.strip().split(',')
+                if len(values) < len(header):
+                    continue
+                    
+                entry = {}
+                for i, col in enumerate(header):
+                    if i < len(values):
+                        entry[col] = values[i]
+                
+                if instructor_name_idx is not None and instructor_name_idx < len(values):
+                    raw_instructor = values[instructor_name_idx]
+                    self.logger.debug(f"Processing instructor name: {raw_instructor}")
+                
+                # Convert the entry to a FlightEntry object
+                flight_entry = self._create_flight_entry(entry)
+                if flight_entry:
+                    entries.append(flight_entry)
+        
+        return entries 

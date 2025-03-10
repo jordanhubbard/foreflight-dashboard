@@ -64,6 +64,8 @@ class LogbookEntry(BaseModel):
     ground_training: float = Field(0.0, description="Ground training time")
     landings_day: int = Field(0, description="Number of day landings")
     landings_night: int = Field(0, description="Number of night landings")
+    instructor_name: Optional[str] = Field(None, description="Name of the instructor for dual received flights")
+    instructor_comments: Optional[str] = Field(None, description="Comments from the instructor")
     
     # Running totals
     running_totals: Optional[RunningTotals] = None

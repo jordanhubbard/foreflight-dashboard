@@ -15,33 +15,33 @@ import shutil
 os.makedirs('logs', exist_ok=True)
 
 # Configure root logger
-logging.basicConfig(level=logging.DEBUG,
-                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-# Create file handler
-file_handler = logging.handlers.RotatingFileHandler(
-    'logs/foreflight.log',
-    maxBytes=1024*1024,  # 1MB
-    backupCount=5
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.handlers.RotatingFileHandler(
+            'logs/foreflight.log',
+            maxBytes=1024*1024,  # 1MB
+            backupCount=5,
+            encoding='utf-8'
+        ),
+        logging.StreamHandler()
+    ]
 )
-file_handler.setLevel(logging.DEBUG)
-file_handler.setFormatter(logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-))
 
-# Create console handler
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
-console_handler.setFormatter(logging.Formatter(
-    '%(levelname)s - %(message)s'
-))
-
-# Get the root logger and add handlers
-root_logger = logging.getLogger()
-root_logger.addHandler(file_handler)
-root_logger.addHandler(console_handler)
-
+# Get the root logger
 logger = logging.getLogger(__name__)
+
+# Ensure all loggers are set to DEBUG level and have the same handlers
+root_logger = logging.getLogger()
+for name in logging.root.manager.loggerDict:
+    log = logging.getLogger(name)
+    log.setLevel(logging.DEBUG)
+    # Remove any existing handlers
+    log.handlers = []
+    # Add the same handlers as the root logger
+    for handler in root_logger.handlers:
+        log.addHandler(handler)
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # Required for flash messages
@@ -130,10 +130,60 @@ def prepare_aircraft_stats(entries):
     ]
     return sorted(aircraft_list, key=lambda x: x['count'], reverse=True)
 
+def prepare_instructor_stats(entries):
+    """Prepare instructor statistics for display."""
+    logger.debug("\n=== Processing Instructor Statistics ===")
+    instructor_stats = defaultdict(lambda: {
+        'name': '',
+        'flights': 0,
+        'dual_time': 0.0,
+        'last_flight': datetime.min
+    })
+    
+    logger.debug(f"Total entries to process: {len(entries)}")
+    
+    # First, let's log all entries with instructor names
+    instructor_entries = [e for e in entries if e.instructor_name]
+    logger.debug(f"\nFound {len(instructor_entries)} entries with instructor names:")
+    for entry in instructor_entries:
+        logger.debug(f"  Date: {entry.date}, Instructor: {entry.instructor_name!r}, Dual: {entry.dual_received}")
+    
+    for entry in entries:
+        logger.debug(f"\nProcessing entry from {entry.date}:")
+        logger.debug(f"  Instructor name: {entry.instructor_name!r}")
+        logger.debug(f"  Dual received: {entry.dual_received}")
+        logger.debug(f"  Pilot role: {entry.pilot_role}")
+        
+        if entry.instructor_name:
+            key = entry.instructor_name
+            instructor_stats[key]['name'] = entry.instructor_name
+            instructor_stats[key]['flights'] += 1
+            instructor_stats[key]['dual_time'] += float(entry.dual_received)
+            instructor_stats[key]['last_flight'] = max(instructor_stats[key]['last_flight'], entry.date)
+            logger.debug(f"  Updated stats for {key!r}: {instructor_stats[key]}")
+    
+    # Convert to list and sort by number of flights
+    instructor_list = [
+        {
+            'name': stats['name'],
+            'flights': stats['flights'],
+            'dual_time': stats['dual_time'],
+            'last_flight': stats['last_flight']
+        }
+        for stats in instructor_stats.values()
+    ]
+    
+    sorted_list = sorted(instructor_list, key=lambda x: x['flights'], reverse=True)
+    logger.debug(f"\nFinal instructor stats ({len(sorted_list)} instructors):")
+    for instructor in sorted_list:
+        logger.debug(f"  {instructor['name']!r}: {instructor['flights']} flights, {instructor['dual_time']} dual hours")
+    
+    return sorted_list
+
 @app.route('/')
 def index():
-    """Display the main page."""
-    return render_template('index.html', entries=[], stats=None, aircraft_stats=None)
+    """Render the main page."""
+    return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -196,6 +246,7 @@ def upload_file():
         stats = calculate_30_day_stats(entries)
         all_time_stats = calculate_all_time_stats(entries)
         aircraft_stats = prepare_aircraft_stats(entries)
+        instructor_stats = prepare_instructor_stats(entries)
         
         # Clean up the uploaded file
         logger.debug(f"\nCleaning up uploaded file: {filepath}")
@@ -206,6 +257,7 @@ def upload_file():
         logger.debug(f"30 Day Stats: {stats}")
         logger.debug(f"All Time Stats: {all_time_stats}")
         logger.debug(f"Aircraft stats: {aircraft_stats}")
+        logger.debug(f"Instructor stats: {instructor_stats}")
         logger.debug(f"Number of entries: {len(entries)}")
         if entries:
             logger.debug("\nFirst entry details:")
@@ -225,7 +277,8 @@ def upload_file():
                                 entries=entries, 
                                 stats=stats,
                                 all_time_stats=all_time_stats,
-                                aircraft_stats=aircraft_stats)
+                                aircraft_stats=aircraft_stats,
+                                instructor_stats=instructor_stats)
         except Exception as template_error:
             logger.error(f"\nTemplate rendering error: {str(template_error)}", exc_info=True)
             flash('Error rendering results template')
