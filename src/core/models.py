@@ -129,10 +129,6 @@ class LogbookEntry(BaseModel):
             
         # Check that total time matches PIC time plus dual received time
         if self.total_time > 0:
-            # For PIC flights, set PIC time to total time if not already set
-            if self.pilot_role == "PIC" and self.pic_time == 0.0:
-                self.pic_time = self.total_time
-            
             total_accounted_time = self.dual_received + self.pic_time
             
             if abs(total_accounted_time - self.total_time) > 0.1:  # Allow 0.1 hour difference for rounding
