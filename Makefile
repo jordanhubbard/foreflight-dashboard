@@ -36,6 +36,8 @@ clean:
 	find . -type d -name "htmlcov" -exec rm -r {} +
 	find . -type d -name "build" -exec rm -r {} +
 	find . -type d -name "dist" -exec rm -r {} +
+	rm -f logs/*
+	rm -f uploads/*
 
 run-dev: setup
 	. venv/bin/activate && \
