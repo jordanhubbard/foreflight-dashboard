@@ -197,6 +197,13 @@ class LogbookEntry(BaseModel):
             if abs(total_accounted_time - self.total_time) > 0.1:  # Allow 0.1 hour difference for rounding
                 issues.append(f"Total time ({self.total_time:.1f}) should equal sum of PIC time ({self.pic_time:.1f}) and dual received time ({self.dual_received:.1f})")
 
+        # Check that cross-country time has sufficient distance
+        if self.conditions.cross_country > 0:
+            # Get distance from ForeFlight CSV
+            distance = float(self.remarks.split('Distance: ')[1].split('nm')[0]) if 'Distance: ' in self.remarks else 0.0
+            if distance < 50:
+                issues.append(f"Cross-country time logged ({self.conditions.cross_country}) but flight distance ({distance}nm) is less than 50nm")
+
         # Set error explanation if issues were found
         if issues:
             self.error_explanation = "; ".join(issues)

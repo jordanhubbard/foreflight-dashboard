@@ -338,7 +338,7 @@ class ForeFlightImporter:
                         pilot_role=pilot_role,
                         landings_day=self._clean_numeric(row['DayLandingsFullStop']),
                         landings_night=self._clean_numeric(row['NightLandingsFullStop']),
-                        remarks=str(row['PilotComments']) if pd.notna(row['PilotComments']) else None,
+                        remarks=f"Distance: {self._clean_float(row.get('Distance', 0.0))}nm\n{str(row['PilotComments']) if pd.notna(row['PilotComments']) else None or str(row['InstructorComments']) if pd.notna(row['InstructorComments']) else None or 'No remarks'}",
                         instructor_comments=str(row['InstructorComments']) if pd.notna(row['InstructorComments']) else None,
                         dual_received=dual_received,
                         pic_time=pic_time

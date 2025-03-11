@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ForeFlight Logbook Manager</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .error-entry {
@@ -45,6 +45,9 @@
         }
         .flight-entry.split-role {
             background-color: #f3e5f5;  /* Light purple for SPLIT role flights */
+        }
+        .flight-entry.cross-country {
+            background-color: #fff3e0;  /* Light orange for cross-country flights */
         }
         .flight-header {
             font-weight: 500;
@@ -255,6 +258,9 @@
         .flight-table > tbody > tr.split-role {
             background-color: #f3e5f5 !important;  /* Light purple for SPLIT role flights */
         }
+        .flight-table > tbody > tr.cross-country {
+            background-color: #fff3e0 !important;  /* Light orange for cross-country flights */
+        }
         .flight-date {
             color: #8B0000;
             font-weight: 500;
@@ -273,6 +279,14 @@
         }
         .badge {
             font-size: 0.75em;
+        }
+        .badge-xc {
+            background-color: #17a2b8;
+            margin-left: 0.25rem;
+        }
+        .badge-xc i {
+            font-size: 0.8em;
+            margin-right: 0.2em;
         }
         .running-total {
             font-family: monospace;
@@ -508,7 +522,8 @@
                                {% if entry.pic_time > 0 and entry.dual_received == 0 %}pic-flight{% endif %}
                                {% if entry.pic_time == 0 and entry.dual_received > 0 %}dual-only{% endif %}
                                {% if entry.conditions.night > 0 and entry.conditions.day == 0 %}night-only{% endif %}
-                               {% if entry.pilot_role == 'SPLIT' %}split-role{% endif %}"
+                               {% if entry.pilot_role == 'SPLIT' %}split-role{% endif %}
+                               {% if entry.conditions.cross_country > 0 %}cross-country{% endif %}"
                         data-has-error="{{ 'true' if entry.error_explanation else 'false' }}">
                         <td class="flight-date">
                             <span class="disclosure-triangle" data-target="flight-details-{{ loop.index }}">▶</span>
@@ -529,6 +544,11 @@
                             </span>
                             {% else %}
                             <span class="badge bg-success">Valid</span>
+                            {% endif %}
+                            {% if entry.conditions.cross_country > 0 %}
+                            <span class="badge badge-xc" data-bs-toggle="tooltip" title="Cross-country flight">
+                                <i class="fas fa-plane"></i> XC
+                            </span>
                             {% endif %}
                         </td>
                         <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.asel_time) }}</td>

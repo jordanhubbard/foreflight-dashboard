@@ -160,7 +160,7 @@ def validate_logbook(csv_path):
                 pilot_role=determine_pilot_role(row),
                 landings_day=parse_int(row.get('DayLandingsFullStop', 0)),
                 landings_night=night_landings,
-                remarks=row.get('PilotComments') or row.get('InstructorComments') or "No remarks",
+                remarks=f"Distance: {row.get('Distance', '0.0')}nm\n{row.get('PilotComments') or row.get('InstructorComments') or 'No remarks'}",
                 dual_received=parse_float(row.get('DualReceived', 0))
             )
             
