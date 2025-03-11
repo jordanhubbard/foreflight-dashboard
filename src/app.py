@@ -4,7 +4,7 @@ import csv
 from flask import Flask, render_template, request, redirect, url_for, flash
 from werkzeug.utils import secure_filename
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 from src.validate_csv import validate_logbook
 from src.core.models import RunningTotals
@@ -60,7 +60,8 @@ def calculate_running_totals(entries):
         'night_time': 0.0,
         'sim_instrument': 0.0,
         'dual_received': 0.0,
-        'pic_time': 0.0
+        'pic_time': 0.0,
+        'cross_country': 0.0
     }
     
     # Sort entries by date in chronological order
@@ -69,13 +70,14 @@ def calculate_running_totals(entries):
     # Calculate running totals for each entry
     for entry in sorted_entries:
         # Update running totals
-        totals['ground_training'] += float(entry.ground_training) if hasattr(entry, 'ground_training') else 0.0
-        totals['asel_time'] += float(entry.total_time) if entry.aircraft.category_class == "ASEL" else 0.0
+        totals['ground_training'] += float(entry.ground_training)
+        totals['asel_time'] += float(entry.total_time) if entry.aircraft.category_class == "airplane_single_engine_land" else 0.0
         totals['day_time'] += float(entry.conditions.day)
         totals['night_time'] += float(entry.conditions.night)
         totals['sim_instrument'] += float(entry.conditions.simulated_instrument)
         totals['dual_received'] += float(entry.dual_received)
         totals['pic_time'] += float(entry.pic_time)
+        totals['cross_country'] += float(entry.conditions.cross_country)
         
         # Create RunningTotals instance with rounded values
         entry.running_totals = RunningTotals(**{k: round(v, 1) for k, v in totals.items()})
@@ -88,6 +90,12 @@ def calculate_30_day_stats(entries):
     recent_entries = [e for e in entries if e.date >= thirty_days_ago]
     return calculate_stats_for_entries(recent_entries)
 
+def calculate_year_stats(entries):
+    """Calculate statistics for the last year."""
+    one_year_ago = datetime.now(timezone.utc) - timedelta(days=365)
+    recent_entries = [e for e in entries if e.date.replace(tzinfo=timezone.utc) >= one_year_ago]
+    return calculate_stats_for_entries(recent_entries)
+
 def calculate_all_time_stats(entries):
     """Calculate statistics for all entries."""
     return calculate_stats_for_entries(entries)
@@ -96,11 +104,21 @@ def calculate_stats_for_entries(entries):
     """Calculate statistics for the given entries."""
     stats = {
         'total_time': sum(float(e.total_time) for e in entries),
+        'total_time_tailwheel': sum(float(e.total_time) for e in entries if e.aircraft.gear_type == "tailwheel"),
+        'total_time_tricycle': sum(float(e.total_time) for e in entries if e.aircraft.gear_type == "tricycle"),
+        'total_time_asel': sum(float(e.total_time) for e in entries if e.aircraft.category_class == "airplane_single_engine_land"),
+        'total_time_amel': sum(float(e.total_time) for e in entries if e.aircraft.category_class == "airplane_multi_engine_land"),
+        'total_time_ases': sum(float(e.total_time) for e in entries if e.aircraft.category_class == "airplane_single_engine_sea"),
+        'total_time_ames': sum(float(e.total_time) for e in entries if e.aircraft.category_class == "airplane_multi_engine_sea"),
+        'total_time_helo': sum(float(e.total_time) for e in entries if e.aircraft.category_class == "rotorcraft_helicopter"),
+        'total_time_gyro': sum(float(e.total_time) for e in entries if e.aircraft.category_class == "rotorcraft_gyroplane"),
+        'total_time_glider': sum(float(e.total_time) for e in entries if e.aircraft.category_class == "glider"),
         'total_day': sum(float(e.conditions.day) for e in entries),
         'total_night': sum(float(e.conditions.night) for e in entries),
         'total_pic': sum(float(e.pic_time) for e in entries),
         'total_sim_instrument': sum(float(e.conditions.simulated_instrument) for e in entries),
         'total_dual_received': sum(float(e.dual_received) for e in entries),
+        'total_ground_training': sum(float(e.ground_training) for e in entries),
         'total_takeoffs': sum(e.landings_day + e.landings_night for e in entries),
         'total_landings': sum(e.landings_day + e.landings_night for e in entries)
     }
@@ -193,7 +211,7 @@ def upload_file():
         
         # Calculate statistics
         logger.debug("\n=== Calculating Statistics ===")
-        stats = calculate_30_day_stats(entries)
+        stats = calculate_year_stats(entries)
         all_time_stats = calculate_all_time_stats(entries)
         aircraft_stats = prepare_aircraft_stats(entries)
         
@@ -203,7 +221,7 @@ def upload_file():
         
         # Log detailed information about what we're passing to the template
         logger.debug("\n=== Template Data ===")
-        logger.debug(f"30 Day Stats: {stats}")
+        logger.debug(f"Year Stats: {stats}")
         logger.debug(f"All Time Stats: {all_time_stats}")
         logger.debug(f"Aircraft stats: {aircraft_stats}")
         logger.debug(f"Number of entries: {len(entries)}")

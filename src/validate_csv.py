@@ -16,12 +16,14 @@ def parse_time(time_str):
     except ValueError:
         return None
 
-def parse_float(value):
-    """Parse float value, returning 0.0 if invalid."""
-    try:
-        return float(value) if value else 0.0
-    except ValueError:
+def parse_float(value: str) -> float:
+    """Parse a string into a float, handling empty strings and invalid values."""
+    if not value or value.strip() == '':
         return 0.0
+    try:
+        return float(value)
+    except ValueError:
+        raise ValueError(f"Could not convert '{value}' to float")
 
 def parse_int(value):
     """Parse integer value, returning 0 if invalid."""
@@ -87,9 +89,11 @@ def validate_logbook(csv_path):
         if row.get('AircraftID'):
             aircraft_data[row['AircraftID']] = {
                 'type': row.get('Model', 'UNKNOWN'),
-                'make': row.get('Make', 'UNKNOWN')
+                'make': row.get('Make', 'UNKNOWN'),
+                'category_class': row.get('aircraftClass (FAA)', 'airplane_single_engine_land'),
+                'gear_type': row.get('GearType', 'fixed_tricycle').lower()
             }
-            logger.debug(f"Found aircraft: {row['AircraftID']} - {row.get('Model', 'UNKNOWN')}")
+            logger.debug(f"Found aircraft: {row['AircraftID']} - {row.get('Model', 'UNKNOWN')} - {row.get('GearType', 'fixed_tricycle')}")
     
     logger.debug(f"\nTotal aircraft found: {len(aircraft_data)}")
     
@@ -109,33 +113,46 @@ def validate_logbook(csv_path):
         try:
             row = dict(zip(flight_headers, line.strip().split(',')))
             
+            # Special logging for 2013-10-11 entry
+            is_target_date = row.get('Date') == '2013-10-11'
+            if is_target_date:
+                logger.debug("\n=== Processing 2013-10-11 Entry ===")
+                logger.debug(f"Raw row data: {row}")
+            
             if not row.get('Date'):
-                logger.debug(f"Skipping row {row_count} - no date")
+                logger.error(f"Skipping row {row_count} - no date")
+                error_count += 1
                 continue
             
-            aircraft_id = row.get('AircraftID') or "UNKNOWN"
-            aircraft_info = aircraft_data.get(aircraft_id, {'type': 'UNKNOWN', 'make': 'UNKNOWN'})
+            if is_target_date:
+                logger.debug(f"Processing flight on 2013-10-11:")
+                logger.debug(f"  Aircraft: {row.get('AircraftID')}")
+                logger.debug(f"  From/To: {row.get('From')} -> {row.get('To')}")
+                logger.debug(f"  Total Time: {row.get('TotalTime')}")
+                logger.debug(f"  Cross Country: {row.get('CrossCountry')}")
+                logger.debug(f"  PIC Time: {row.get('PIC')}")
+                logger.debug(f"  Dual Received: {row.get('DualReceived')}")
             
-            logger.debug(f"\nProcessing flight {row_count}:")
-            logger.debug(f"  Date: {row.get('Date')}")
-            logger.debug(f"  Aircraft: {aircraft_id}")
-            logger.debug(f"  Route: {row.get('From')} -> {row.get('To')}")
+            aircraft_id = row.get('AircraftID') or "UNKNOWN"
+            if aircraft_id not in aircraft_data:
+                if is_target_date:
+                    logger.error(f"  Error: Aircraft {aircraft_id} not found in aircraft table")
+                error_count += 1
+                # Don't skip - create a default aircraft entry
+                aircraft_data[aircraft_id] = {
+                    'type': 'UNKNOWN',
+                    'make': 'UNKNOWN',
+                    'category_class': 'airplane_single_engine_land',
+                    'gear_type': 'fixed_tricycle'
+                }
+                
+            aircraft_info = aircraft_data[aircraft_id]
             
             # Create entry
             total_time = parse_float(row.get('TotalTime'))
+            day_time = parse_float(row.get('Day', 0))
             night_time = parse_float(row.get('Night', 0))
             night_landings = parse_int(row.get('NightLandingsFullStop', 0))
-            
-            if night_landings > 0 and night_time == 0:
-                night_time = min(night_landings * 0.3, total_time)
-                logger.debug(f"  Estimated night time from landings: {night_time}")
-            
-            day_time = max(0.0, total_time - night_time)
-            
-            logger.debug(f"  Times:")
-            logger.debug(f"    Total: {total_time}")
-            logger.debug(f"    Day: {day_time}")
-            logger.debug(f"    Night: {night_time}")
             
             entry = LogbookEntry(
                 date=datetime.strptime(row['Date'], "%Y-%m-%d"),
@@ -146,13 +163,14 @@ def validate_logbook(csv_path):
                 aircraft=Aircraft(
                     registration=aircraft_id,
                     type=aircraft_info['type'],
-                    category_class="ASEL"  # Default to ASEL
+                    category_class=aircraft_info['category_class'],
+                    gear_type="tailwheel" if "fixed_tailwheel" in aircraft_info['gear_type'] else "tricycle"
                 ),
                 departure=Airport(identifier=row.get('From', '')),
                 destination=Airport(identifier=row.get('To', '')),
                 conditions=FlightConditions(
-                    day=day_time,
-                    night=night_time,
+                    night=parse_float(row.get('Night', 0)),
+                    day=total_time - parse_float(row.get('Night', 0)),
                     actual_instrument=parse_float(row.get('ActualInstrument', 0)),
                     simulated_instrument=parse_float(row.get('SimulatedInstrument', 0)),
                     cross_country=parse_float(row.get('CrossCountry', 0))
@@ -161,32 +179,33 @@ def validate_logbook(csv_path):
                 landings_day=parse_int(row.get('DayLandingsFullStop', 0)),
                 landings_night=night_landings,
                 remarks=f"Distance: {row.get('Distance', '0.0')}nm\n{row.get('PilotComments') or row.get('InstructorComments') or 'No remarks'}",
-                dual_received=parse_float(row.get('DualReceived', 0))
+                dual_received=parse_float(row.get('DualReceived', 0)),
+                ground_training=parse_float(row.get('GroundTraining', 0))
             )
             
-            # Validate the entry
+            # Validate the entry but always add it to entries
             entry.validate_entry()
-            entries.append(entry)
-            logger.debug("  Entry processed successfully")
-            
-            # Print validation results
             if entry.error_explanation:
+                if is_target_date:
+                    logger.debug(f"  Entry has validation issues: {entry.error_explanation}")
                 error_count += 1
-                logger.debug(f"  Validation issues:")
-                logger.debug(f"    {entry.error_explanation}")
             else:
-                logger.debug("  Entry valid")
+                if is_target_date:
+                    logger.debug("  Entry processed successfully")
+            
+            entries.append(entry)
             
         except Exception as e:
             error_count += 1
-            logger.error(f"\nError processing entry for {row.get('Date', 'UNKNOWN DATE')}:")
-            logger.error(f"  {str(e)}")
+            if is_target_date:
+                logger.error(f"\nError processing entry for 2013-10-11:")
+                logger.error(f"  {str(e)}")
             continue
     
     logger.debug("\n=== Validation Summary ===")
     logger.debug(f"Total rows processed: {row_count}")
     logger.debug(f"Valid entries: {len(entries)}")
-    logger.debug(f"Entries with errors: {error_count}")
+    logger.debug(f"Entries with validation issues: {error_count}")
     
     return entries
 

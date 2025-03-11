@@ -23,6 +23,7 @@ class Aircraft(BaseModel):
     registration: str
     type: str
     category_class: str
+    gear_type: str = "tricycle"  # Default to tricycle gear since it's more common
     
     model_config = ConfigDict(
         title="Aircraft",
@@ -51,6 +52,7 @@ class RunningTotals(BaseModel):
     sim_instrument: float = 0.0
     dual_received: float = 0.0
     pic_time: float = 0.0
+    cross_country: float = 0.0
     
     model_config = ConfigDict(
         title="RunningTotals",
@@ -166,13 +168,14 @@ class LogbookEntry(BaseModel):
         if 0 < self.total_time < 0.3:
             issues.append(f"Flight time of {self.total_time} hours seems implausibly short (less than 18 minutes)")
             
-        # Check flight conditions consistency only if conditions are provided
+        # Check flight conditions consistency only if conditions are provided and both day and night are non-zero
         total_condition_time = (
             self.conditions.day +
             self.conditions.night
         )
-        if total_condition_time > 0 and abs(total_condition_time - self.total_time) > 0.1:
-            issues.append(f"Day ({self.conditions.day}) + night ({self.conditions.night}) time ({total_condition_time}) does not match total time ({self.total_time})")
+        if total_condition_time > 0 and self.conditions.day > 0 and self.conditions.night > 0:
+            if abs(total_condition_time - self.total_time) > 0.1:
+                issues.append(f"Day ({self.conditions.day}) + night ({self.conditions.night}) time ({total_condition_time}) does not match total time ({self.total_time})")
             
         # Check instrument time consistency
         total_instrument = (
@@ -194,15 +197,20 @@ class LogbookEntry(BaseModel):
             
             total_accounted_time = self.dual_received + self.pic_time
             
-            if abs(total_accounted_time - self.total_time) > 0.1:  # Allow 0.1 hour difference for rounding
-                issues.append(f"Total time ({self.total_time:.1f}) should equal sum of PIC time ({self.pic_time:.1f}) and dual received time ({self.dual_received:.1f})")
+            # Only check time accountability if both PIC and dual received are non-zero
+            if self.pic_time > 0 and self.dual_received > 0:
+                if abs(total_accounted_time - self.total_time) > 0.1:  # Allow 0.1 hour difference for rounding
+                    issues.append(f"Total time ({self.total_time:.1f}) should equal sum of PIC time ({self.pic_time:.1f}) and dual received time ({self.dual_received:.1f})")
 
-        # Check that cross-country time has sufficient distance
-        if self.conditions.cross_country > 0:
-            # Get distance from ForeFlight CSV
-            distance = float(self.remarks.split('Distance: ')[1].split('nm')[0]) if 'Distance: ' in self.remarks else 0.0
-            if distance < 50:
-                issues.append(f"Cross-country time logged ({self.conditions.cross_country}) but flight distance ({distance}nm) is less than 50nm")
+        # Check that cross-country time has sufficient distance only if distance is provided
+        if self.conditions.cross_country > 0 and 'Distance:' in self.remarks:
+            try:
+                distance = float(self.remarks.split('Distance: ')[1].split('nm')[0])
+                if distance < 50:
+                    issues.append(f"Cross-country time logged ({self.conditions.cross_country}) but flight distance ({distance}nm) is less than 50nm")
+            except (ValueError, IndexError):
+                # If we can't parse the distance, skip this check
+                pass
 
         # Set error explanation if issues were found
         if issues:

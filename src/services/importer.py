@@ -212,10 +212,16 @@ class ForeFlightImporter:
         )
         for _, row in self.aircraft_df.iterrows():
             if row['AircraftID']:  # Only add non-empty aircraft IDs
+                gear_type = row['GearType'].lower() if pd.notna(row['GearType']) else "tricycle"
+                if "fixed_tailwheel" in gear_type:
+                    gear_type = "tailwheel"
+                elif "fixed_tricycle" in gear_type:
+                    gear_type = "tricycle"
                 aircraft_dict[row['AircraftID']] = Aircraft(
                     registration=row['AircraftID'],
                     type=row['TypeCode'],
-                    category_class=row['aircraftClass (FAA)'] or "airplane_single_engine_land"
+                    category_class=row['aircraftClass (FAA)'] or "airplane_single_engine_land",
+                    gear_type=gear_type
                 )
         return aircraft_dict
         
