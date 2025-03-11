@@ -873,26 +873,27 @@ Dual: {{ entry.running_totals.dual_received }}</span>
             
             rows.forEach(row => {
                 if (!row.classList.contains('details-row')) {
+                    // Start with true and apply all filters
                     let showRow = true;
 
                     // Time filter
                     if (timeFilter !== 'all') {
                         const dayTime = parseFloat(row.cells[4].textContent.split('/')[0]);
                         const nightTime = parseFloat(row.cells[4].textContent.split('/')[1]);
-                        if (timeFilter === 'day' && nightTime > 0 && dayTime === 0) showRow = false;
-                        if (timeFilter === 'night' && dayTime > 0 && nightTime === 0) showRow = false;
+                        if (timeFilter === 'day' && (nightTime > 0 || dayTime === 0)) showRow = false;
+                        if (timeFilter === 'night' && (dayTime > 0 || nightTime === 0)) showRow = false;
                     }
 
-                    // Role filter
-                    if (roleFilter !== 'all') {
+                    // Only continue checking if the previous filter passed
+                    if (showRow && roleFilter !== 'all') {
                         const picTime = parseFloat(row.cells[7].textContent);
                         const dualTime = parseFloat(row.cells[8].textContent);
                         if (roleFilter === 'student' && (picTime > 0 || dualTime === 0)) showRow = false;
                         if (roleFilter === 'pic' && picTime === 0) showRow = false;
                     }
 
-                    // Condition filter
-                    if (conditionFilter !== 'all') {
+                    // Only continue checking if the previous filters passed
+                    if (showRow && conditionFilter !== 'all') {
                         if (conditionFilter === 'sim' && !row.querySelector('[title*="simulated instrument"]')) showRow = false;
                         if (conditionFilter === 'xc' && !row.classList.contains('cross-country')) showRow = false;
                     }
