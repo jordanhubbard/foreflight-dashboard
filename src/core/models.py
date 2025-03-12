@@ -197,10 +197,9 @@ class LogbookEntry(BaseModel):
             
             total_accounted_time = self.dual_received + self.pic_time
             
-            # Only check time accountability if both PIC and dual received are non-zero
-            if self.pic_time > 0 and self.dual_received > 0:
-                if abs(total_accounted_time - self.total_time) > 0.1:  # Allow 0.1 hour difference for rounding
-                    issues.append(f"Total time ({self.total_time:.1f}) should equal sum of PIC time ({self.pic_time:.1f}) and dual received time ({self.dual_received:.1f})")
+            # Check time accountability for all flights
+            if abs(total_accounted_time - self.total_time) > 0.1:  # Allow 0.1 hour difference for rounding
+                issues.append(f"Total time ({self.total_time:.1f}) should equal sum of PIC time ({self.pic_time:.1f}) and dual received time ({self.dual_received:.1f})")
 
         # Check that cross-country time has sufficient distance only if distance is provided
         if self.conditions.cross_country > 0 and 'Distance:' in self.remarks:
