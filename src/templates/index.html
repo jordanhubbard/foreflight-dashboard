@@ -451,21 +451,21 @@
                 <h5 class="card-title">Last Year Statistics</h5>
                 <div class="stats-dashboard">
                     <div class="stats-card">
-                        <div class="stat-label">Total Time</div>
-                        <div class="stat-value">{{ "%.1f"|format(stats.total_time_tricycle) }}/{{ "%.1f"|format(stats.total_time_tailwheel) }}</div>
-                        <div class="stat-sublabel">Tricycle/Tailwheel</div>
+                        <div class="stat-label">Ground Training</div>
+                        <div class="stat-value">{{ "%.1f"|format(stats.total_ground_training) }}</div>
                     </div>
                     <div class="stats-card">
                         <div class="stat-label">ASEL Time</div>
                         <div class="stat-value">{{ "%.1f"|format(stats.total_time_asel) }}</div>
                     </div>
                     <div class="stats-card">
-                        <div class="stat-label">Day/Night</div>
-                        <div class="stat-value">{{ "%.1f"|format(stats.total_day) }}/{{ "%.1f"|format(stats.total_night) }}</div>
+                        <div class="stat-label">Total Time</div>
+                        <div class="stat-value">{{ "%.1f"|format(stats.total_time_tricycle) }}/{{ "%.1f"|format(stats.total_time_tailwheel) }}</div>
+                        <div class="stat-sublabel">Tricycle/Tailwheel</div>
                     </div>
                     <div class="stats-card">
-                        <div class="stat-label">PIC Time</div>
-                        <div class="stat-value">{{ "%.1f"|format(stats.total_pic) }}</div>
+                        <div class="stat-label">Day/Night</div>
+                        <div class="stat-value">{{ "%.1f"|format(stats.total_day) }}/{{ "%.1f"|format(stats.total_night) }}</div>
                     </div>
                     <div class="stats-card">
                         <div class="stat-label">Sim Instrument</div>
@@ -476,8 +476,8 @@
                         <div class="stat-value">{{ "%.1f"|format(stats.total_dual_received) }}</div>
                     </div>
                     <div class="stats-card">
-                        <div class="stat-label">Ground Training</div>
-                        <div class="stat-value">{{ "%.1f"|format(stats.total_ground_training) }}</div>
+                        <div class="stat-label">PIC Time</div>
+                        <div class="stat-value">{{ "%.1f"|format(stats.total_pic) }}</div>
                     </div>
                     <div class="stats-card">
                         <div class="stat-label">Takeoffs/Landings</div>
@@ -493,21 +493,21 @@
                 <h5 class="card-title">All Time Statistics</h5>
                 <div class="stats-dashboard">
                     <div class="stats-card">
-                        <div class="stat-label">Total Time</div>
-                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_time_tricycle) }}/{{ "%.1f"|format(all_time_stats.total_time_tailwheel) }}</div>
-                        <div class="stat-sublabel">Tricycle/Tailwheel</div>
+                        <div class="stat-label">Ground Training</div>
+                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_ground_training) }}</div>
                     </div>
                     <div class="stats-card">
                         <div class="stat-label">ASEL Time</div>
                         <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_time_asel) }}</div>
                     </div>
                     <div class="stats-card">
-                        <div class="stat-label">Day/Night</div>
-                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_day) }}/{{ "%.1f"|format(all_time_stats.total_night) }}</div>
+                        <div class="stat-label">Total Time</div>
+                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_time_tricycle) }}/{{ "%.1f"|format(all_time_stats.total_time_tailwheel) }}</div>
+                        <div class="stat-sublabel">Tricycle/Tailwheel</div>
                     </div>
                     <div class="stats-card">
-                        <div class="stat-label">PIC Time</div>
-                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_pic) }}</div>
+                        <div class="stat-label">Day/Night</div>
+                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_day) }}/{{ "%.1f"|format(all_time_stats.total_night) }}</div>
                     </div>
                     <div class="stats-card">
                         <div class="stat-label">Sim Instrument</div>
@@ -518,8 +518,8 @@
                         <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_dual_received) }}</div>
                     </div>
                     <div class="stats-card">
-                        <div class="stat-label">Ground Training</div>
-                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_ground_training) }}</div>
+                        <div class="stat-label">PIC Time</div>
+                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_pic) }}</div>
                     </div>
                     <div class="stats-card">
                         <div class="stat-label">Takeoffs/Landings</div>
@@ -566,11 +566,13 @@
                             <th>PIC</th>
                             <th>Dual Rcvd</th>
                             <th>Status</th>
+                            <th class="text-end running-total">Ground</th>
                             <th class="text-end running-total">ASEL Time</th>
+                            <th class="text-end running-total">XC</th>
                             <th class="text-end running-total">Day/Night</th>
-                            <th class="text-end running-total">PIC</th>
-                            <th class="text-end running-total">Dual Rcvd</th>
                             <th class="text-end running-total">Sim Inst</th>
+                            <th class="text-end running-total">Dual Rcvd</th>
+                            <th class="text-end running-total">PIC</th>
                         </tr>
                     </thead>
                 </table>
@@ -589,11 +591,13 @@
                             <th>PIC</th>
                             <th>Dual Rcvd</th>
                             <th>Status</th>
+                            <th class="text-end running-total">Ground</th>
                             <th class="text-end running-total">ASEL Time</th>
+                            <th class="text-end running-total">XC</th>
                             <th class="text-end running-total">Day/Night</th>
-                            <th class="text-end running-total">PIC</th>
-                            <th class="text-end running-total">Dual Rcvd</th>
                             <th class="text-end running-total">Sim Inst</th>
+                            <th class="text-end running-total">Dual Rcvd</th>
+                            <th class="text-end running-total">PIC</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -633,11 +637,13 @@
                                 </span>
                                 {% endif %}
                             </td>
+                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.ground_training) if entry.running_totals.ground_training else "0.0" }}</td>
                             <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.asel_time) }}</td>
+                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.cross_country) if entry.running_totals.cross_country else "0.0" }}</td>
                             <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.day_time) }}/{{ "%.1f"|format(entry.running_totals.night_time) }}</td>
-                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.pic_time) }}</td>
-                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.dual_received) }}</td>
                             <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.sim_instrument) }}</td>
+                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.dual_received) }}</td>
+                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.pic_time) }}</td>
                         </tr>
                         <tr>
                             <td colspan="100%" class="details-row" id="flight-details-{{ loop.index }}">
@@ -647,12 +653,12 @@
                                         <span class="detail-value">Registration: {{ entry.aircraft.registration }}
 Type: {{ entry.aircraft.type }}
 Category/Class: {{ entry.aircraft.category_class }}</span>
-                                    </div>
+            </div>
                                     <div class="detail-item">
                                         <span class="detail-label">Route Information</span>
                                         <span class="detail-value">Departure: {{ entry.departure.identifier }}
 Destination: {{ entry.destination.identifier }}</span>
-                                    </div>
+            </div>
                                     <div class="detail-item">
                                         <span class="detail-label">Flight Times</span>
                                         <span class="detail-value">Total: {{ entry.total_time }}
@@ -660,37 +666,40 @@ Day: {{ entry.conditions.day }}
 Night: {{ entry.conditions.night }}
 PIC: {{ entry.pic_time }}
 Dual Received: {{ entry.dual_received }}</span>
-                                    </div>
+            </div>
                                     <div class="detail-item">
                                         <span class="detail-label">Landings</span>
                                         <span class="detail-value">Day: {{ entry.landings_day }}
 Night: {{ entry.landings_night }}</span>
-                                    </div>
+            </div>
                                     <div class="detail-item">
                                         <span class="detail-label">Running Totals</span>
-                                        <span class="detail-value">Total Time: {{ entry.running_totals.asel_time }}
+                                        <span class="detail-value">Ground: {{ entry.running_totals.ground_training if entry.running_totals.ground_training else "0.0" }}
+ASEL Time: {{ entry.running_totals.asel_time }}
+Cross Country: {{ entry.running_totals.cross_country if entry.running_totals.cross_country else "0.0" }}
 Day: {{ entry.running_totals.day_time }}
 Night: {{ entry.running_totals.night_time }}
-PIC: {{ entry.running_totals.pic_time }}
-Dual: {{ entry.running_totals.dual_received }}</span>
-                                    </div>
+Sim Instrument: {{ entry.running_totals.sim_instrument }}
+Dual Received: {{ entry.running_totals.dual_received }}
+PIC: {{ entry.running_totals.pic_time }}</span>
+            </div>
                                     {% if entry.remarks %}
                                     <div class="detail-item">
                                         <span class="detail-label">Remarks</span>
                                         <span class="detail-value">{{ entry.remarks }}</span>
-                                    </div>
-                                    {% endif %}
-                                </div>
+            </div>
+            {% endif %}
+                    </div>
                             </td>
                         </tr>
                         {% endfor %}
                         {% else %}
                         <tr>
-                            <td colspan="15" class="text-center p-5">
+                            <td colspan="17" class="text-center p-5">
                                 <div class="alert alert-info mb-0">
                                     <i class="fas fa-info-circle me-2"></i>
                                     Upload a ForeFlight logbook CSV file to view your flight data
-                                </div>
+                    </div>
                             </td>
                         </tr>
                         {% endif %}
@@ -712,16 +721,16 @@ Dual: {{ entry.running_totals.dual_received }}</span>
 
                 <div class="flight-table-container">
                     <div class="flight-table-header">
-                        <table class="aircraft-stats-table">
-                            <thead>
-                                <tr>
-                                    <th onclick="sortTable(0)" class="sort-icon">Registration</th>
-                                    <th onclick="sortTable(1)" class="sort-icon">Type</th>
-                                    <th onclick="sortTable(2)" class="sort-icon">Flights</th>
-                                    <th onclick="sortTable(3)" class="sort-icon">Hours</th>
-                                    <th>Avg Time/Flight</th>
-                                </tr>
-                            </thead>
+                    <table class="aircraft-stats-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable(0)" class="sort-icon">Registration</th>
+                                <th onclick="sortTable(1)" class="sort-icon">Type</th>
+                                <th onclick="sortTable(2)" class="sort-icon">Flights</th>
+                                <th onclick="sortTable(3)" class="sort-icon">Hours</th>
+                                <th>Avg Time/Flight</th>
+                            </tr>
+                        </thead>
                         </table>
                     </div>
                     <div class="flight-table-body">
@@ -735,7 +744,7 @@ Dual: {{ entry.running_totals.dual_received }}</span>
                                     <th>Avg Time/Flight</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                        <tbody>
                                 {% for aircraft in aircraft_stats %}
                                 <tr>
                                     <td>
@@ -769,13 +778,13 @@ Dual: {{ entry.running_totals.dual_received }}</span>
                                             </div>
                                         </div>
                                     </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
+        </div>
         </div>
 
         <!-- Chart initialization -->
@@ -790,26 +799,26 @@ Dual: {{ entry.running_totals.dual_received }}</span>
                 function createChartData() {
                     return {
                         labels: aircraftData.registrations,
-                        datasets: [{
-                            label: 'Number of Flights',
+                datasets: [{
+                    label: 'Number of Flights',
                             data: aircraftData.flightCounts,
-                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 1
-                        }, {
-                            label: 'Total Hours',
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }, {
+                    label: 'Total Hours',
                             data: aircraftData.totalHours,
-                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            borderWidth: 1
-                        }]
-                    };
+                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }]
+            };
                 }
 
-                document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('DOMContentLoaded', function() {
                     var chartData = createChartData();
-                    initializeAircraftChart(chartData);
-                });
+                initializeAircraftChart(chartData);
+            });
             })();
         </script>
         {% endif %}
