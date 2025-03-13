@@ -551,127 +551,152 @@
         </div>
 
         <!-- Flight Entries Table -->
-        <div class="table-responsive">
-            <table class="flight-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Route</th>
-                        <th>Aircraft</th>
-                        <th>Total</th>
-                        <th>Day/Night</th>
-                        <th>Ldg</th>
-                        <th>Role</th>
-                        <th>PIC</th>
-                        <th>Dual Rcvd</th>
-                        <th>Status</th>
-                        <th class="text-end running-total">ASEL Time</th>
-                        <th class="text-end running-total">Day/Night</th>
-                        <th class="text-end running-total">PIC</th>
-                        <th class="text-end running-total">Dual Rcvd</th>
-                        <th class="text-end running-total">Sim Inst</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% if entries %}
-                    {% for entry in entries %}
-                    <tr id="entry-{{ loop.index }}" 
-                        class="{% if entry.error_explanation %}has-error{% endif %}
-                               {% if entry.pic_time > 0 and entry.dual_received == 0 %}pic-flight{% endif %}
-                               {% if entry.pic_time == 0 and entry.dual_received > 0 %}dual-only{% endif %}
-                               {% if entry.conditions.night > 0 and entry.conditions.day == 0 %}night-only{% endif %}
-                               {% if entry.pilot_role == 'SPLIT' %}split-role{% endif %}
-                               {% if entry.conditions.cross_country > 0 %}cross-country{% endif %}"
-                        data-has-error="{{ 'true' if entry.error_explanation else 'false' }}">
-                        <td class="flight-date">
-                            <span class="disclosure-triangle" data-target="flight-details-{{ loop.index }}">▶</span>
-                            {{ entry.date.strftime('%Y-%m-%d') }}
-                        </td>
-                        <td class="route">{{ entry.departure.identifier if entry.departure else '---' }} → {{ entry.destination.identifier if entry.destination else '---' }}</td>
-                        <td>{{ entry.aircraft.registration }}</td>
-                        <td>{{ "%.1f"|format(entry.total_time) }}</td>
-                        <td>{{ "%.1f"|format(entry.conditions.day) }}/{{ "%.1f"|format(entry.conditions.night) }}</td>
-                        <td>{{ entry.landings_day + entry.landings_night }}</td>
-                        <td class="{% if entry.pilot_role == 'SPLIT' %}split-role-text{% endif %}">{{ entry.pilot_role }}</td>
-                        <td>{{ "%.1f"|format(entry.pic_time) }}</td>
-                        <td>{{ "%.1f"|format(entry.dual_received) }}</td>
-                        <td>
-                            {% if entry.error_explanation %}
-                            <span class="badge bg-danger" data-bs-toggle="tooltip" title="{{ entry.error_explanation }}">
-                                Invalid
-                            </span>
-                            {% else %}
-                            <span class="badge bg-success">Valid</span>
-                            {% endif %}
-                            {% if entry.conditions.cross_country > 0 %}
-                            <span class="badge badge-xc" data-bs-toggle="tooltip" title="Cross-country flight">
-                                <i class="fas fa-plane"></i> XC
-                            </span>
-                            {% endif %}
-                        </td>
-                        <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.asel_time) }}</td>
-                        <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.day_time) }}/{{ "%.1f"|format(entry.running_totals.night_time) }}</td>
-                        <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.pic_time) }}</td>
-                        <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.dual_received) }}</td>
-                        <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.sim_instrument) }}</td>
-                    </tr>
-                    <tr>
-                        <td colspan="100%" class="details-row" id="flight-details-{{ loop.index }}">
-                            <div class="details-grid">
-                                <div class="detail-item">
-                                    <span class="detail-label">Aircraft Details</span>
-                                    <span class="detail-value">Registration: {{ entry.aircraft.registration }}
+        <div class="flight-table-container">
+            <div class="flight-table-header">
+                <table class="flight-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Route</th>
+                            <th>Aircraft</th>
+                            <th>Total</th>
+                            <th>Day/Night</th>
+                            <th>Ldg</th>
+                            <th>Role</th>
+                            <th>PIC</th>
+                            <th>Dual Rcvd</th>
+                            <th>Status</th>
+                            <th class="text-end running-total">ASEL Time</th>
+                            <th class="text-end running-total">Day/Night</th>
+                            <th class="text-end running-total">PIC</th>
+                            <th class="text-end running-total">Dual Rcvd</th>
+                            <th class="text-end running-total">Sim Inst</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+            <div class="flight-table-body">
+                <table class="flight-table">
+                    <thead style="visibility: hidden; position: absolute;">
+                        <tr>
+                            <th>Date</th>
+                            <th>Route</th>
+                            <th>Aircraft</th>
+                            <th>Total</th>
+                            <th>Day/Night</th>
+                            <th>Ldg</th>
+                            <th>Role</th>
+                            <th>PIC</th>
+                            <th>Dual Rcvd</th>
+                            <th>Status</th>
+                            <th class="text-end running-total">ASEL Time</th>
+                            <th class="text-end running-total">Day/Night</th>
+                            <th class="text-end running-total">PIC</th>
+                            <th class="text-end running-total">Dual Rcvd</th>
+                            <th class="text-end running-total">Sim Inst</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if entries %}
+                        {% for entry in entries %}
+                        <tr id="entry-{{ loop.index }}" 
+                            class="{% if entry.error_explanation %}has-error{% endif %}
+                                   {% if entry.pic_time > 0 and entry.dual_received == 0 %}pic-flight{% endif %}
+                                   {% if entry.pic_time == 0 and entry.dual_received > 0 %}dual-only{% endif %}
+                                   {% if entry.conditions.night > 0 and entry.conditions.day == 0 %}night-only{% endif %}
+                                   {% if entry.pilot_role == 'SPLIT' %}split-role{% endif %}
+                                   {% if entry.conditions.cross_country > 0 %}cross-country{% endif %}"
+                            data-has-error="{{ 'true' if entry.error_explanation else 'false' }}">
+                            <td class="flight-date">
+                                <span class="disclosure-triangle" data-target="flight-details-{{ loop.index }}">▶</span>
+                                {{ entry.date.strftime('%Y-%m-%d') }}
+                            </td>
+                            <td class="route">{{ entry.departure.identifier if entry.departure else '---' }} → {{ entry.destination.identifier if entry.destination else '---' }}</td>
+                            <td>{{ entry.aircraft.registration }}</td>
+                            <td>{{ "%.1f"|format(entry.total_time) }}</td>
+                            <td>{{ "%.1f"|format(entry.conditions.day) }}/{{ "%.1f"|format(entry.conditions.night) }}</td>
+                            <td>{{ entry.landings_day + entry.landings_night }}</td>
+                            <td class="{% if entry.pilot_role == 'SPLIT' %}split-role-text{% endif %}">{{ entry.pilot_role }}</td>
+                            <td>{{ "%.1f"|format(entry.pic_time) }}</td>
+                            <td>{{ "%.1f"|format(entry.dual_received) }}</td>
+                            <td>
+                                {% if entry.error_explanation %}
+                                <span class="badge bg-danger" data-bs-toggle="tooltip" title="{{ entry.error_explanation }}">
+                                    Invalid
+                                </span>
+                                {% else %}
+                                <span class="badge bg-success">Valid</span>
+                                {% endif %}
+                                {% if entry.conditions.cross_country > 0 %}
+                                <span class="badge badge-xc" data-bs-toggle="tooltip" title="Cross-country flight">
+                                    <i class="fas fa-plane"></i> XC
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.asel_time) }}</td>
+                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.day_time) }}/{{ "%.1f"|format(entry.running_totals.night_time) }}</td>
+                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.pic_time) }}</td>
+                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.dual_received) }}</td>
+                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.sim_instrument) }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="100%" class="details-row" id="flight-details-{{ loop.index }}">
+                                <div class="details-grid">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Aircraft Details</span>
+                                        <span class="detail-value">Registration: {{ entry.aircraft.registration }}
 Type: {{ entry.aircraft.type }}
 Category/Class: {{ entry.aircraft.category_class }}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Route Information</span>
-                                    <span class="detail-value">Departure: {{ entry.departure.identifier }}
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Route Information</span>
+                                        <span class="detail-value">Departure: {{ entry.departure.identifier }}
 Destination: {{ entry.destination.identifier }}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Flight Times</span>
-                                    <span class="detail-value">Total: {{ entry.total_time }}
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Flight Times</span>
+                                        <span class="detail-value">Total: {{ entry.total_time }}
 Day: {{ entry.conditions.day }}
 Night: {{ entry.conditions.night }}
 PIC: {{ entry.pic_time }}
 Dual Received: {{ entry.dual_received }}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Landings</span>
-                                    <span class="detail-value">Day: {{ entry.landings_day }}
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Landings</span>
+                                        <span class="detail-value">Day: {{ entry.landings_day }}
 Night: {{ entry.landings_night }}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Running Totals</span>
-                                    <span class="detail-value">Total Time: {{ entry.running_totals.asel_time }}
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Running Totals</span>
+                                        <span class="detail-value">Total Time: {{ entry.running_totals.asel_time }}
 Day: {{ entry.running_totals.day_time }}
 Night: {{ entry.running_totals.night_time }}
 PIC: {{ entry.running_totals.pic_time }}
 Dual: {{ entry.running_totals.dual_received }}</span>
+                                    </div>
+                                    {% if entry.remarks %}
+                                    <div class="detail-item">
+                                        <span class="detail-label">Remarks</span>
+                                        <span class="detail-value">{{ entry.remarks }}</span>
+                                    </div>
+                                    {% endif %}
                                 </div>
-                                {% if entry.remarks %}
-                                <div class="detail-item">
-                                    <span class="detail-label">Remarks</span>
-                                    <span class="detail-value">{{ entry.remarks }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="15" class="text-center p-5">
+                                <div class="alert alert-info mb-0">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Upload a ForeFlight logbook CSV file to view your flight data
                                 </div>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                    {% else %}
-                    <tr>
-                        <td colspan="15" class="text-center p-5">
-                            <div class="alert alert-info mb-0">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Upload a ForeFlight logbook CSV file to view your flight data
-                            </div>
-                        </td>
-                    </tr>
-                    {% endif %}
-                </tbody>
-            </table>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         {% if aircraft_stats %}
@@ -685,55 +710,70 @@ Dual: {{ entry.running_totals.dual_received }}</span>
                     <canvas id="aircraftChart"></canvas>
                 </div>
 
-                <div class="table-responsive">
-                    <table class="aircraft-stats-table">
-                        <thead>
-                            <tr>
-                                <th onclick="sortTable(0)" class="sort-icon">Registration</th>
-                                <th onclick="sortTable(1)" class="sort-icon">Type</th>
-                                <th onclick="sortTable(2)" class="sort-icon">Flights</th>
-                                <th onclick="sortTable(3)" class="sort-icon">Hours</th>
-                                <th>Avg Time/Flight</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for aircraft in aircraft_stats %}
-                            <tr>
-                                <td>
-                                    <span class="disclosure-triangle" data-target="aircraft-details-{{ loop.index }}">▶</span>
-                                    {{ aircraft.registration }}
-                                </td>
-                                <td>{{ aircraft.type }}</td>
-                                <td>{{ aircraft.count }}</td>
-                                <td>{{ "%.1f"|format(aircraft.total_time) }}</td>
-                                <td>{{ "%.1f"|format(aircraft.total_time / aircraft.count) }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="100%" class="details-row" id="aircraft-details-{{ loop.index }}">
-                                    <div class="details-grid">
-                                        <div class="detail-item">
-                                            <span class="detail-label">Aircraft Information</span>
-                                            <span class="detail-value">
-                                                Registration: {{ aircraft.registration }}<br>
-                                                Type: {{ aircraft.type }}<br>
-                                                Total Flights: {{ aircraft.count }}<br>
-                                                Total Time: {{ "%.1f"|format(aircraft.total_time) }}
-                                            </span>
+                <div class="flight-table-container">
+                    <div class="flight-table-header">
+                        <table class="aircraft-stats-table">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable(0)" class="sort-icon">Registration</th>
+                                    <th onclick="sortTable(1)" class="sort-icon">Type</th>
+                                    <th onclick="sortTable(2)" class="sort-icon">Flights</th>
+                                    <th onclick="sortTable(3)" class="sort-icon">Hours</th>
+                                    <th>Avg Time/Flight</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                    <div class="flight-table-body">
+                        <table class="aircraft-stats-table">
+                            <thead style="visibility: hidden; position: absolute;">
+                                <tr>
+                                    <th>Registration</th>
+                                    <th>Type</th>
+                                    <th>Flights</th>
+                                    <th>Hours</th>
+                                    <th>Avg Time/Flight</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for aircraft in aircraft_stats %}
+                                <tr>
+                                    <td>
+                                        <span class="disclosure-triangle" data-target="aircraft-details-{{ loop.index }}">▶</span>
+                                        {{ aircraft.registration }}
+                                    </td>
+                                    <td>{{ aircraft.type }}</td>
+                                    <td>{{ aircraft.count }}</td>
+                                    <td>{{ "%.1f"|format(aircraft.total_time) }}</td>
+                                    <td>{{ "%.1f"|format(aircraft.total_time / aircraft.count) }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="100%" class="details-row" id="aircraft-details-{{ loop.index }}">
+                                        <div class="details-grid">
+                                            <div class="detail-item">
+                                                <span class="detail-label">Aircraft Information</span>
+                                                <span class="detail-value">
+                                                    Registration: {{ aircraft.registration }}<br>
+                                                    Type: {{ aircraft.type }}<br>
+                                                    Total Flights: {{ aircraft.count }}<br>
+                                                    Total Time: {{ "%.1f"|format(aircraft.total_time) }}
+                                                </span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <span class="detail-label">Flight History</span>
+                                                <span class="detail-value">
+                                                    {% for entry in entries if entry.aircraft.registration == aircraft.registration %}
+                                                    {{ entry.date.strftime('%Y-%m-%d') }}: {{ entry.total_time }} hours<br>
+                                                    {% endfor %}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Flight History</span>
-                                            <span class="detail-value">
-                                                {% for entry in entries if entry.aircraft.registration == aircraft.registration %}
-                                                {{ entry.date.strftime('%Y-%m-%d') }}: {{ entry.total_time }} hours<br>
-                                                {% endfor %}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
