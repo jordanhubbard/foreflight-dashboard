@@ -459,13 +459,16 @@
                         <div class="stat-value">{{ "%.1f"|format(stats.total_time_asel) }}</div>
                     </div>
                     <div class="stats-card">
-                        <div class="stat-label">Total Time</div>
-                        <div class="stat-value">{{ "%.1f"|format(stats.total_time_tricycle) }}/{{ "%.1f"|format(stats.total_time_tailwheel) }}</div>
-                        <div class="stat-sublabel">Tricycle/Tailwheel</div>
+                        <div class="stat-label">Cross Country</div>
+                        <div class="stat-value">{{ "%.1f"|format(stats.total_cross_country) }}</div>
                     </div>
                     <div class="stats-card">
-                        <div class="stat-label">Day/Night</div>
-                        <div class="stat-value">{{ "%.1f"|format(stats.total_day) }}/{{ "%.1f"|format(stats.total_night) }}</div>
+                        <div class="stat-label">Day</div>
+                        <div class="stat-value">{{ "%.1f"|format(stats.total_day) }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">Night</div>
+                        <div class="stat-value">{{ "%.1f"|format(stats.total_night) }}</div>
                     </div>
                     <div class="stats-card">
                         <div class="stat-label">Sim Instrument</div>
@@ -482,6 +485,10 @@
                     <div class="stats-card">
                         <div class="stat-label">Takeoffs/Landings</div>
                         <div class="stat-value">{{ stats.total_takeoffs }}/{{ stats.total_landings }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">Tailwheel/Nosewheel</div>
+                        <div class="stat-value">{{ "%.1f"|format(stats.total_tailwheel) }}/{{ "%.1f"|format(stats.total_nosewheel) }}</div>
                     </div>
                 </div>
             </div>
@@ -501,13 +508,16 @@
                         <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_time_asel) }}</div>
                     </div>
                     <div class="stats-card">
-                        <div class="stat-label">Total Time</div>
-                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_time_tricycle) }}/{{ "%.1f"|format(all_time_stats.total_time_tailwheel) }}</div>
-                        <div class="stat-sublabel">Tricycle/Tailwheel</div>
+                        <div class="stat-label">Cross Country</div>
+                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_cross_country) }}</div>
                     </div>
                     <div class="stats-card">
-                        <div class="stat-label">Day/Night</div>
-                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_day) }}/{{ "%.1f"|format(all_time_stats.total_night) }}</div>
+                        <div class="stat-label">Day</div>
+                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_day) }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">Night</div>
+                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_night) }}</div>
                     </div>
                     <div class="stats-card">
                         <div class="stat-label">Sim Instrument</div>
@@ -524,6 +534,10 @@
                     <div class="stats-card">
                         <div class="stat-label">Takeoffs/Landings</div>
                         <div class="stat-value">{{ all_time_stats.total_takeoffs }}/{{ all_time_stats.total_landings }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">Tailwheel/Nosewheel</div>
+                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_tailwheel) }}/{{ "%.1f"|format(all_time_stats.total_nosewheel) }}</div>
                     </div>
                 </div>
             </div>
@@ -567,9 +581,10 @@
                             <th>Dual Rcvd</th>
                             <th>Status</th>
                             <th class="text-end running-total">Ground</th>
-                            <th class="text-end running-total">ASEL Time</th>
+                            <th class="text-end running-total">ASEL</th>
                             <th class="text-end running-total">XC</th>
-                            <th class="text-end running-total">Day/Night</th>
+                            <th class="text-end running-total">Day</th>
+                            <th class="text-end running-total">Night</th>
                             <th class="text-end running-total">Sim Inst</th>
                             <th class="text-end running-total">Dual Rcvd</th>
                             <th class="text-end running-total">PIC</th>
@@ -592,9 +607,10 @@
                             <th>Dual Rcvd</th>
                             <th>Status</th>
                             <th class="text-end running-total">Ground</th>
-                            <th class="text-end running-total">ASEL Time</th>
+                            <th class="text-end running-total">ASEL</th>
                             <th class="text-end running-total">XC</th>
-                            <th class="text-end running-total">Day/Night</th>
+                            <th class="text-end running-total">Day</th>
+                            <th class="text-end running-total">Night</th>
                             <th class="text-end running-total">Sim Inst</th>
                             <th class="text-end running-total">Dual Rcvd</th>
                             <th class="text-end running-total">PIC</th>
@@ -640,7 +656,8 @@
                             <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.ground_training) if entry.running_totals.ground_training else "0.0" }}</td>
                             <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.asel_time) }}</td>
                             <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.cross_country) if entry.running_totals.cross_country else "0.0" }}</td>
-                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.day_time) }}/{{ "%.1f"|format(entry.running_totals.night_time) }}</td>
+                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.day_time) }}</td>
+                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.night_time) }}</td>
                             <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.sim_instrument) }}</td>
                             <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.dual_received) }}</td>
                             <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.pic_time) }}</td>
@@ -675,14 +692,14 @@ Night: {{ entry.landings_night }}</span>
                                     <div class="detail-item">
                                         <span class="detail-label">Running Totals</span>
                                         <span class="detail-value">Ground: {{ entry.running_totals.ground_training if entry.running_totals.ground_training else "0.0" }}
-ASEL Time: {{ entry.running_totals.asel_time }}
+ASEL: {{ entry.running_totals.asel_time }}
 Cross Country: {{ entry.running_totals.cross_country if entry.running_totals.cross_country else "0.0" }}
 Day: {{ entry.running_totals.day_time }}
 Night: {{ entry.running_totals.night_time }}
 Sim Instrument: {{ entry.running_totals.sim_instrument }}
 Dual Received: {{ entry.running_totals.dual_received }}
 PIC: {{ entry.running_totals.pic_time }}</span>
-            </div>
+                                    </div>
                                     {% if entry.remarks %}
                                     <div class="detail-item">
                                         <span class="detail-label">Remarks</span>
@@ -695,11 +712,11 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                         {% endfor %}
                         {% else %}
                         <tr>
-                            <td colspan="17" class="text-center p-5">
+                            <td colspan="18" class="text-center p-5">
                                 <div class="alert alert-info mb-0">
                                     <i class="fas fa-info-circle me-2"></i>
                                     Upload a ForeFlight logbook CSV file to view your flight data
-                    </div>
+                                </div>
                             </td>
                         </tr>
                         {% endif %}
