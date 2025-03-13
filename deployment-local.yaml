@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: foreflight-logbook
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: foreflight-logs-pvc
+  namespace: foreflight-logbook
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: foreflight-uploads-pvc
+  namespace: foreflight-logbook
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: foreflight-logbook
+  namespace: foreflight-logbook
+  labels:
+    app: foreflight-logbook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: foreflight-logbook
+  template:
+    metadata:
+      labels:
+        app: foreflight-logbook
+    spec:
+      containers:
+      - name: foreflight-logbook
+        image: jordanhubbard/foreflight-logbook:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5050
+          name: http
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+        - name: uploads-volume
+          mountPath: /app/uploads
+      volumes:
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: foreflight-logs-pvc
+      - name: uploads-volume
+        persistentVolumeClaim:
+          claimName: foreflight-uploads-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: foreflight-logbook
+  namespace: foreflight-logbook
+spec:
+  selector:
+    app: foreflight-logbook
+  ports:
+  - port: 5050
+    targetPort: 5050
+    name: http
+  type: NodePort  # Using NodePort for local access 
