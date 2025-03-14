@@ -120,7 +120,8 @@ def calculate_stats_for_entries(entries):
         'total_dual_received': sum(float(e.dual_received) for e in entries),
         'total_ground_training': sum(float(e.ground_training) for e in entries),
         'total_takeoffs': sum(e.landings_day + e.landings_night for e in entries),
-        'total_landings': sum(e.landings_day + e.landings_night for e in entries)
+        'total_landings': sum(e.landings_day + e.landings_night for e in entries),
+        'total_cross_country': sum(float(e.conditions.cross_country) for e in entries)
     }
     return stats
 
