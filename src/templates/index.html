@@ -738,16 +738,16 @@ PIC: {{ entry.running_totals.pic_time }}</span>
 
                 <div class="flight-table-container">
                     <div class="flight-table-header">
-                    <table class="aircraft-stats-table">
-                        <thead>
-                            <tr>
-                                <th onclick="sortTable(0)" class="sort-icon">Registration</th>
-                                <th onclick="sortTable(1)" class="sort-icon">Type</th>
-                                <th onclick="sortTable(2)" class="sort-icon">Flights</th>
-                                <th onclick="sortTable(3)" class="sort-icon">Hours</th>
-                                <th>Avg Time/Flight</th>
-                            </tr>
-                        </thead>
+                        <table class="aircraft-stats-table">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable(0)" class="sort-icon">Registration</th>
+                                    <th onclick="sortTable(1)" class="sort-icon">Type</th>
+                                    <th onclick="sortTable(2)" class="sort-icon">Flights</th>
+                                    <th onclick="sortTable(3)" class="sort-icon">Hours</th>
+                                    <th>Avg Time/Flight</th>
+                                </tr>
+                            </thead>
                         </table>
                     </div>
                     <div class="flight-table-body">
@@ -761,7 +761,7 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                                     <th>Avg Time/Flight</th>
                                 </tr>
                             </thead>
-                        <tbody>
+                            <tbody>
                                 {% for aircraft in aircraft_stats %}
                                 <tr>
                                     <td>
@@ -795,49 +795,14 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                                             </div>
                                         </div>
                                     </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-        </div>
-
-        <!-- Chart initialization -->
-        <script type="text/javascript">
-            (function() {
-                var aircraftData = {
-                    registrations: {{ aircraft_stats|map(attribute='registration')|list|tojson|safe }},
-                    flightCounts: {{ aircraft_stats|map(attribute='count')|list|tojson|safe }},
-                    totalHours: {{ aircraft_stats|map(attribute='total_time')|list|tojson|safe }}
-                };
-
-                function createChartData() {
-                    return {
-                        labels: aircraftData.registrations,
-                datasets: [{
-                    label: 'Number of Flights',
-                            data: aircraftData.flightCounts,
-                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                }, {
-                    label: 'Total Hours',
-                            data: aircraftData.totalHours,
-                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    borderWidth: 1
-                }]
-            };
-                }
-
-            document.addEventListener('DOMContentLoaded', function() {
-                    var chartData = createChartData();
-                initializeAircraftChart(chartData);
-            });
-            })();
-        </script>
         {% endif %}
     </div>
 
