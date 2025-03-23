@@ -7,7 +7,7 @@ setup: venv
 	mkdir -p uploads logs
 
 venv:
-	python3 -m venv venv
+	python -m venv venv
 	. venv/bin/activate && pip install --upgrade pip
 	. venv/bin/activate && pip install -r requirements.txt
 	. venv/bin/activate && $(MAKE) install
@@ -48,9 +48,9 @@ run-dev: setup
 	FLASK_DEBUG=1 \
 	FLASK_ENV=development \
 	PYTHONPATH=. \
-	python3 -m flask run --host=0.0.0.0 --port=$(PORT) --reload & \
+	python -m flask run --host=0.0.0.0 --port=$(PORT) --reload & \
 	PYTHONPATH=. \
-	python3 -m uvicorn src.api.routes:app --host 0.0.0.0 --port=5051 --reload & \
+	python -m uvicorn src.api.routes:app --host 0.0.0.0 --port=5051 --reload & \
 	wait
 
 run: setup
@@ -59,9 +59,9 @@ run: setup
 	FLASK_DEBUG=1 \
 	FLASK_ENV=development \
 	PYTHONPATH=. \
-	python3 -m flask run --host=0.0.0.0 --port=$(PORT) --reload & \
+	python -m flask run --host=0.0.0.0 --port=$(PORT) --reload & \
 	PYTHONPATH=. \
-	python3 -m uvicorn src.api.routes:app --host 0.0.0.0 --port=5051 --reload & \
+	python -m uvicorn src.api.routes:app --host 0.0.0.0 --port=5051 --reload & \
 	wait
 
 # Service management targets
