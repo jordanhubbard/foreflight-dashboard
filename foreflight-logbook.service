@@ -8,6 +8,7 @@ User=jkh
 Group=jkh
 WorkingDirectory=/home/jkh/Src/foreflight-dashboard
 Environment="PATH=/home/jkh/Src/foreflight-dashboard/venv/bin"
+Environment="PYTHONPATH=/home/jkh/Src/foreflight-dashboard"
 ExecStart=/home/jkh/Src/foreflight-dashboard/venv/bin/python src/app.py
 Restart=always
 RestartSec=3
