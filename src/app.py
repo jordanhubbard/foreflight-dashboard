@@ -157,101 +157,48 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload and validation."""
-    logger.debug("\n=== Starting File Upload Processing ===")
-    
     if 'file' not in request.files:
-        logger.error("No file part in request")
         flash('No file uploaded')
         return redirect(url_for('index'))
     
     file = request.files['file']
     if file.filename == '':
-        logger.error("No file selected")
         flash('No file selected')
         return redirect(url_for('index'))
     
     if not file.filename.endswith('.csv'):
-        logger.error("Invalid file type")
         flash('Only CSV files are allowed')
         return redirect(url_for('index'))
     
     try:
-        # Save the file
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        logger.debug(f"Saving file to {filepath}")
+        # Save uploaded file
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
         file.save(filepath)
         
-        # Make a copy of the file for debugging
-        debug_filepath = os.path.join(app.config['UPLOAD_FOLDER'], 'debug_' + filename)
+        # Create debug copy
+        debug_filepath = os.path.join(app.config['UPLOAD_FOLDER'], 'debug_' + secure_filename(file.filename))
         shutil.copy2(filepath, debug_filepath)
-        logger.debug(f"Created debug copy at {debug_filepath}")
         
-        # Read and log the first few lines of the file
-        logger.debug("\nFile contents preview:")
-        with open(filepath, 'r') as f:
-            for i, line in enumerate(f):
-                if i < 10:
-                    logger.debug(f"Line {i+1}: {line.strip()}")
-                else:
-                    break
-        
-        # Validate the logbook
-        logger.debug("\n=== Starting Logbook Validation ===")
+        # Validate entries
         entries = validate_logbook(filepath)
-        logger.debug(f"\nValidation complete. Found {len(entries)} entries")
-        
-        if len(entries) == 0:
-            logger.error("No valid entries found in the logbook")
-            flash('No valid entries found in the logbook. Please check the file format.')
-            return redirect(url_for('index'))
         
         # Calculate running totals
-        logger.debug("\n=== Calculating Running Totals ===")
         entries = calculate_running_totals(entries)
         
         # Calculate statistics
-        logger.debug("\n=== Calculating Statistics ===")
-        stats = calculate_year_stats(entries)
-        all_time_stats = calculate_all_time_stats(entries)
+        stats = calculate_stats_for_entries([e for e in entries if e.date.year == datetime.now().year])
+        all_time_stats = calculate_stats_for_entries(entries)
         aircraft_stats = prepare_aircraft_stats(entries)
         
-        # Clean up the uploaded file
-        logger.debug(f"\nCleaning up uploaded file: {filepath}")
+        # Clean up uploaded file
         os.remove(filepath)
         
-        # Log detailed information about what we're passing to the template
-        logger.debug("\n=== Template Data ===")
-        logger.debug(f"Year Stats: {stats}")
-        logger.debug(f"All Time Stats: {all_time_stats}")
-        logger.debug(f"Aircraft stats: {aircraft_stats}")
-        logger.debug(f"Number of entries: {len(entries)}")
-        if entries:
-            logger.debug("\nFirst entry details:")
-            entry = entries[0]
-            logger.debug(f"  Date: {entry.date}")
-            logger.debug(f"  Route: {entry.departure.identifier} -> {entry.destination.identifier}")
-            logger.debug(f"  Aircraft: {entry.aircraft.registration}")
-            logger.debug(f"  Total time: {entry.total_time}")
-            logger.debug(f"  Day/Night: {entry.conditions.day}/{entry.conditions.night}")
-            logger.debug(f"  Landings: Day={entry.landings_day}, Night={entry.landings_night}")
-            logger.debug(f"  Running totals: {entry.running_totals}")
-        
-        try:
-            # Show the results
-            logger.debug("\n=== Rendering Template ===")
-            return render_template('index.html', 
-                                entries=entries, 
-                                stats=stats,
-                                all_time_stats=all_time_stats,
-                                aircraft_stats=aircraft_stats)
-        except Exception as template_error:
-            logger.error(f"\nTemplate rendering error: {str(template_error)}", exc_info=True)
-            flash('Error rendering results template')
-            return redirect(url_for('index'))
-    
+        return render_template('index.html',
+                             entries=entries,
+                             stats=stats,
+                             all_time_stats=all_time_stats,
+                             aircraft_stats=aircraft_stats)
     except Exception as e:
-        logger.error(f"\nError processing file: {str(e)}", exc_info=True)
         flash(f'Error processing file: {str(e)}')
         return redirect(url_for('index'))
 
