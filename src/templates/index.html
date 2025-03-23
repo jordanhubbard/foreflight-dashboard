@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ForeFlight Logbook Manager</title>
+    <title>ForeFlight Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         .error-entry {
             background-color: #fff3f3;
@@ -302,6 +304,33 @@
             font-size: 0.8em;
             margin-right: 0.2em;
         }
+        .badge-night {
+            background-color: #6f42c1;
+            margin-left: 0.25rem;
+        }
+        .badge-night i {
+            font-size: 0.8em;
+            margin-right: 0.2em;
+        }
+        .badge-solo {
+            background-color: #198754;
+            margin-left: 0.25rem;
+        }
+        
+        .badge-solo i {
+            font-size: 0.8em;
+            margin-right: 0.2em;
+        }
+
+        .badge-dual {
+            background-color: #fd7e14;
+            margin-left: 0.25rem;
+        }
+        
+        .badge-dual i {
+            font-size: 0.8em;
+            margin-right: 0.2em;
+        }
         .running-total {
             font-family: monospace;
             background-color: #f8f9fa;
@@ -413,11 +442,275 @@
             background: #f8f9fa;
             z-index: 10;
         }
+
+        /* Add examiner summary styles */
+        .examiner-category {
+            background: #fff;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .examiner-category h6 {
+            color: #0d6efd;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 0.5rem;
+        }
+        
+        .examiner-category h6 i {
+            margin-right: 0.5rem;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .examiner-categories {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .examiner-category .table {
+            margin-bottom: 0;
+            font-size: 0.9em;
+        }
+        
+        .examiner-category .table th {
+            background-color: #f8f9fa;
+            font-weight: 500;
+        }
+        
+        .examiner-category .table td {
+            vertical-align: middle;
+        }
+        
+        #examiner-summary {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        
+        .examiner-category .table-responsive {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        /* Print-specific styles */
+        @media print {
+            /* Hide elements we don't want in PDF */
+            .no-print, .upload-form, .nav-controls {
+                display: none !important;
+            }
+
+            /* Page setup */
+            @page {
+                size: landscape;
+                margin: 15mm;
+            }
+
+            /* General print styles */
+            body {
+                font-size: 9pt !important;
+                line-height: 1.3 !important;
+            }
+
+            /* Table styles */
+            .table {
+                font-size: 8pt !important;
+                width: 100% !important;
+                margin-bottom: 1rem !important;
+                break-inside: auto !important;
+                border-collapse: collapse !important;
+            }
+
+            .table th {
+                background-color: #f8f9fa !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                font-weight: 600 !important;
+                padding: 4px !important;
+                border: 1px solid #dee2e6 !important;
+                white-space: nowrap !important;
+            }
+
+            .table td {
+                padding: 4px !important;
+                border: 1px solid #dee2e6 !important;
+            }
+
+            /* Ensure table headers repeat on each page */
+            .table thead {
+                display: table-header-group !important;
+            }
+
+            /* Prevent rows from breaking across pages */
+            .table tr {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            /* Container and card styles */
+            .container-fluid {
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+            }
+
+            .card {
+                border: none !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                margin-bottom: 1rem !important;
+                box-shadow: none !important;
+            }
+
+            .card-body {
+                padding: 0 !important;
+            }
+
+            /* Section spacing and breaks */
+            .examiner-category {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                margin-bottom: 1rem !important;
+            }
+
+            h5.card-title, h6 {
+                margin-bottom: 0.5rem !important;
+                color: #000 !important;
+                font-weight: 600 !important;
+            }
+
+            /* Table container styles */
+            .table-responsive {
+                overflow: visible !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                margin-bottom: 1rem !important;
+            }
+
+            /* Flight table specific styles */
+            .flight-table {
+                font-size: 7.5pt !important;
+            }
+
+            .flight-table th {
+                padding: 3px !important;
+            }
+
+            .flight-table td {
+                padding: 3px !important;
+            }
+
+            /* Status badges */
+            .badge {
+                font-size: 7pt !important;
+                padding: 2px 4px !important;
+                margin: 0 1px !important;
+                border: none !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Flight details */
+            .details-row {
+                background-color: #f8f9fa !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Force page breaks */
+            .examiner-summary {
+                page-break-before: always !important;
+            }
+
+            #aircraft-stats {
+                page-break-before: always !important;
+            }
+
+            /* Ensure proper spacing between sections */
+            .mb-4 {
+                margin-bottom: 1rem !important;
+            }
+
+            /* Remove max-height constraints */
+            .table-responsive, .flight-table-body {
+                max-height: none !important;
+            }
+
+            /* Ensure proper text colors */
+            .text-end {
+                color: #000 !important;
+            }
+
+            .running-total {
+                color: #000 !important;
+            }
+
+            /* Background colors for different flight types */
+            .flight-table > tbody > tr.pic-flight {
+                background-color: #e8f5e9 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .flight-table > tbody > tr.dual-only {
+                background-color: #fff9c4 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .flight-table > tbody > tr.night-only {
+                background-color: #e3f2fd !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .flight-table > tbody > tr.split-role {
+                background-color: #f3e5f5 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .flight-table > tbody > tr.cross-country {
+                background-color: #fff3e0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
+        /* Add styles for statistics tables */
+        .table-sm th {
+            background-color: #f8f9fa;
+            font-weight: 500;
+            text-align: center;
+            vertical-align: middle;
+            border: 1px solid #dee2e6;
+            white-space: nowrap;
+        }
+        
+        .table-sm td {
+            text-align: center;
+            vertical-align: middle;
+            border: 1px solid #dee2e6;
+            font-family: monospace;
+            font-size: 0.95em;
+        }
+        
+        .table-responsive {
+            margin-bottom: 0;
+        }
+        
+        .card-title {
+            margin-bottom: 1rem;
+            color: #0d6efd;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
     <div class="container-fluid mt-4">
-        <h1 class="mb-4">ForeFlight Logbook Manager</h1>
+        <h1 class="mb-4">ForeFlight Dashboard</h1>
         
         <!-- Upload Form -->
         <div class="card mb-4">
@@ -438,7 +731,10 @@
                 <h5 class="card-title">Quick Navigation</h5>
                 <div class="d-flex gap-2 flex-wrap">
                     <button class="btn btn-outline-primary" onclick="document.getElementById('aircraft-stats').scrollIntoView({behavior: 'smooth'})">
-                        <i class="bi bi-airplane"></i> Aircraft Statistics
+                        <i class="fas fa-plane"></i> Aircraft Statistics
+                    </button>
+                    <button class="btn btn-outline-success" onclick="generatePDF()">
+                        <i class="fas fa-file-pdf"></i> Export to PDF
                     </button>
                 </div>
             </div>
@@ -449,48 +745,38 @@
         <div class="card mb-4">
             <div class="card-body">
                 <h5 class="card-title">Last Year Statistics</h5>
-                <div class="stats-dashboard">
-                    <div class="stats-card">
-                        <div class="stat-label">Ground Training</div>
-                        <div class="stat-value">{{ "%.1f"|format(stats.total_ground_training) }}</div>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Ground Training</th>
+                                <th>ASEL Time</th>
+                                <th>Cross Country</th>
+                                <th>Day</th>
+                                <th>Night</th>
+                                <th>Sim Instrument</th>
+                                <th>Dual Received</th>
+                                <th>PIC Time</th>
+                                <th>Takeoffs/Landings</th>
+                                <th>Tailwheel/Nosewheel</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>{{ "%.1f"|format(stats.total_ground_training) }}</td>
+                                <td>{{ "%.1f"|format(stats.total_time_asel) }}</td>
+                                <td>{{ "%.1f"|format(stats.total_cross_country) }}</td>
+                                <td>{{ "%.1f"|format(stats.total_day) }}</td>
+                                <td>{{ "%.1f"|format(stats.total_night) }}</td>
+                                <td>{{ "%.1f"|format(stats.total_sim_instrument) }}</td>
+                                <td>{{ "%.1f"|format(stats.total_dual_received) }}</td>
+                                <td>{{ "%.1f"|format(stats.total_pic) }}</td>
+                                <td>{{ stats.total_takeoffs }}/{{ stats.total_landings }}</td>
+                                <td>{{ "%.1f"|format(stats.total_time_tailwheel) }}/{{ "%.1f"|format(stats.total_time_tricycle) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                     </div>
-                    <div class="stats-card">
-                        <div class="stat-label">ASEL Time</div>
-                        <div class="stat-value">{{ "%.1f"|format(stats.total_time_asel) }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">Cross Country</div>
-                        <div class="stat-value">{{ "%.1f"|format(stats.total_cross_country) }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">Day</div>
-                        <div class="stat-value">{{ "%.1f"|format(stats.total_day) }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">Night</div>
-                        <div class="stat-value">{{ "%.1f"|format(stats.total_night) }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">Sim Instrument</div>
-                        <div class="stat-value">{{ "%.1f"|format(stats.total_sim_instrument) }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">Dual Received</div>
-                        <div class="stat-value">{{ "%.1f"|format(stats.total_dual_received) }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">PIC Time</div>
-                        <div class="stat-value">{{ "%.1f"|format(stats.total_pic) }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">Takeoffs/Landings</div>
-                        <div class="stat-value">{{ stats.total_takeoffs }}/{{ stats.total_landings }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">Tailwheel/Nosewheel</div>
-                        <div class="stat-value">{{ "%.1f"|format(stats.total_time_tailwheel) }}/{{ "%.1f"|format(stats.total_time_tricycle) }}</div>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -498,48 +784,38 @@
         <div class="card mb-4">
             <div class="card-body">
                 <h5 class="card-title">All Time Statistics</h5>
-                <div class="stats-dashboard">
-                    <div class="stats-card">
-                        <div class="stat-label">Ground Training</div>
-                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_ground_training) }}</div>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Ground Training</th>
+                                <th>ASEL Time</th>
+                                <th>Cross Country</th>
+                                <th>Day</th>
+                                <th>Night</th>
+                                <th>Sim Instrument</th>
+                                <th>Dual Received</th>
+                                <th>PIC Time</th>
+                                <th>Takeoffs/Landings</th>
+                                <th>Tailwheel/Nosewheel</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>{{ "%.1f"|format(all_time_stats.total_ground_training) }}</td>
+                                <td>{{ "%.1f"|format(all_time_stats.total_time_asel) }}</td>
+                                <td>{{ "%.1f"|format(all_time_stats.total_cross_country) }}</td>
+                                <td>{{ "%.1f"|format(all_time_stats.total_day) }}</td>
+                                <td>{{ "%.1f"|format(all_time_stats.total_night) }}</td>
+                                <td>{{ "%.1f"|format(all_time_stats.total_sim_instrument) }}</td>
+                                <td>{{ "%.1f"|format(all_time_stats.total_dual_received) }}</td>
+                                <td>{{ "%.1f"|format(all_time_stats.total_pic) }}</td>
+                                <td>{{ all_time_stats.total_takeoffs }}/{{ all_time_stats.total_landings }}</td>
+                                <td>{{ "%.1f"|format(all_time_stats.total_time_tailwheel) }}/{{ "%.1f"|format(all_time_stats.total_time_tricycle) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                     </div>
-                    <div class="stats-card">
-                        <div class="stat-label">ASEL Time</div>
-                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_time_asel) }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">Cross Country</div>
-                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_cross_country) }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">Day</div>
-                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_day) }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">Night</div>
-                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_night) }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">Sim Instrument</div>
-                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_sim_instrument) }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">Dual Received</div>
-                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_dual_received) }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">PIC Time</div>
-                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_pic) }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">Takeoffs/Landings</div>
-                        <div class="stat-value">{{ all_time_stats.total_takeoffs }}/{{ all_time_stats.total_landings }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stat-label">Tailwheel/Nosewheel</div>
-                        <div class="stat-value">{{ "%.1f"|format(all_time_stats.total_time_tailwheel) }}/{{ "%.1f"|format(all_time_stats.total_time_tricycle) }}</div>
-                    </div>
-                </div>
             </div>
         </div>
         {% endif %}
@@ -563,6 +839,257 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- Examiner Summary Section -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <span class="disclosure-triangle" data-target="examiner-summary">▶</span>
+                    DPE Review Summary
+                </h5>
+                <div id="examiner-summary" class="details-row">
+                    <div class="examiner-categories">
+                        {% if entries %}
+                        <!-- PIC Time Section -->
+                        <div class="examiner-category mb-4">
+                            <h6><i class="fas fa-user-tie"></i> Pilot-in-Command (PIC) Time</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Route</th>
+                                            <th>Aircraft</th>
+                                            <th>PIC Time</th>
+                                            <th>Running Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for entry in entries if entry.pic_time > 0 %}
+                                        <tr>
+                                            <td>{{ entry.date.strftime('%Y-%m-%d') }}</td>
+                                            <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
+                                            <td>{{ entry.aircraft.registration }}</td>
+                                            <td>{{ "%.1f"|format(entry.pic_time) }}</td>
+                                            <td>{{ "%.1f"|format(entry.running_totals.pic_time) }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+            </div>
+            
+                        <!-- Dual Instruction Section -->
+                        <div class="examiner-category mb-4">
+                            <h6><i class="fas fa-chalkboard-teacher"></i> Dual Instruction Received</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Route</th>
+                                            <th>Aircraft</th>
+                                            <th>Dual Time</th>
+                                            <th>Running Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for entry in entries if entry.dual_received > 0 %}
+                                        <tr>
+                                            <td>{{ entry.date.strftime('%Y-%m-%d') }}</td>
+                                            <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
+                                            <td>{{ entry.aircraft.registration }}</td>
+                                            <td>{{ "%.1f"|format(entry.dual_received) }}</td>
+                                            <td>{{ "%.1f"|format(entry.running_totals.dual_received) }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+            </div>
+
+                        <!-- Cross Country Section -->
+                        <div class="examiner-category mb-4">
+                            <h6><i class="fas fa-route"></i> Cross-Country Time</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Route</th>
+                                            <th>Aircraft</th>
+                                            <th>XC Time</th>
+                                            <th>Distance</th>
+                                            <th>Running Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for entry in entries if entry.conditions.cross_country > 0 %}
+                                        <tr>
+                                            <td>{{ entry.date.strftime('%Y-%m-%d') }}</td>
+                                            <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
+                                            <td>{{ entry.aircraft.registration }}</td>
+                                            <td>{{ "%.1f"|format(entry.conditions.cross_country) }}</td>
+                                            <td>{% if 'Distance:' in entry.remarks %}{{ entry.remarks.split('Distance: ')[1].split('nm')[0].strip() }} NM{% else %}{% if 'Distance:' in entry.remarks %}{{ entry.remarks.split('Distance:')[1].split('nm')[0].strip() }} NM{% else %}N/A{% endif %}{% endif %}</td>
+                                            <td>{{ "%.1f"|format(entry.running_totals.cross_country) }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+            </div>
+
+                        <!-- Night Time Section -->
+                        <div class="examiner-category mb-4">
+                            <h6><i class="fas fa-moon"></i> Night Time</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Route</th>
+                                            <th>Aircraft</th>
+                                            <th>Night Time</th>
+                                            <th>Night Landings</th>
+                                            <th>Running Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for entry in entries if entry.conditions.night > 0 %}
+                                        <tr>
+                                            <td>{{ entry.date.strftime('%Y-%m-%d') }}</td>
+                                            <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
+                                            <td>{{ entry.aircraft.registration }}</td>
+                                            <td>{{ "%.1f"|format(entry.conditions.night) }}</td>
+                                            <td>{{ entry.landings_night }}</td>
+                                            <td>{{ "%.1f"|format(entry.running_totals.night_time) }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+            </div>
+
+                        <!-- Instrument Time Section -->
+                        <div class="examiner-category mb-4">
+                            <h6><i class="fas fa-tachometer-alt"></i> Instrument Time</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Route</th>
+                                            <th>Aircraft</th>
+                                            <th>Actual</th>
+                                            <th>Simulated</th>
+                                            <th>Running Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for entry in entries if entry.conditions.actual_instrument > 0 or entry.conditions.simulated_instrument > 0 %}
+                                        <tr>
+                                            <td>{{ entry.date.strftime('%Y-%m-%d') }}</td>
+                                            <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
+                                            <td>{{ entry.aircraft.registration }}</td>
+                                            <td>{{ "%.1f"|format(entry.conditions.actual_instrument) }}</td>
+                                            <td>{{ "%.1f"|format(entry.conditions.simulated_instrument) }}</td>
+                                            <td>{{ "%.1f"|format(entry.running_totals.sim_instrument) }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+            </div>
+
+                        <!-- Checkride Endorsements Section -->
+                        <div class="examiner-category mb-4">
+                            <h6><i class="fas fa-certificate"></i> Required Endorsements</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Endorsement Type</th>
+                                            <th>Date</th>
+                                            <th>Instructor Signature</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>61.39 Checkride Endorsement</td>
+                                            <td>_____________</td>
+                                            <td>_________________________</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+            </div>
+
+                        <!-- Long Solo XC Section -->
+                        <div class="examiner-category mb-4">
+                            <h6><i class="fas fa-plane"></i> Long Solo Cross-Country</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Route</th>
+                                            <th>Aircraft</th>
+                                            <th>XC Time</th>
+                                            <th>Distance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for entry in entries if entry.conditions.cross_country > 0 and entry.pic_time > 0 and entry.dual_received == 0 %}
+                                        <tr>
+                                            <td>{{ entry.date.strftime('%Y-%m-%d') }}</td>
+                                            <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
+                                            <td>{{ entry.aircraft.registration }}</td>
+                                            <td>{{ "%.1f"|format(entry.conditions.cross_country) }}</td>
+                                            <td>{% if entry.distance %}{{ "%.1f"|format(entry.distance) }} NM{% else %}N/A{% endif %}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Recent Experience Section -->
+                        <div class="examiner-category mb-4">
+                            <h6><i class="fas fa-history"></i> Recent Experience (Last 90 Days)</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Route</th>
+                                            <th>Aircraft</th>
+                                            <th>Takeoffs</th>
+                                            <th>Landings</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for entry in entries[-90:] if entry.landings_day + entry.landings_night > 0 %}
+                                        <tr>
+                                            <td>{{ entry.date.strftime('%Y-%m-%d') }}</td>
+                                            <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
+                                            <td>{{ entry.aircraft.registration }}</td>
+                                            <td>{{ entry.landings_day + entry.landings_night }}</td>
+                                            <td>{{ entry.landings_day + entry.landings_night }}</td>
+                                        </tr>
+                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Upload a logbook to view DPE review summary
+            </div>
+            {% endif %}
+                    </div>
+                    </div>
+                    </div>
+                    </div>
 
         <!-- Flight Entries Table -->
         <div class="flight-table-container">
@@ -591,7 +1118,7 @@
                         </tr>
                     </thead>
                 </table>
-            </div>
+                    </div>
             <div class="flight-table-body">
                 <table class="flight-table">
                     <thead style="visibility: hidden; position: absolute;">
@@ -652,6 +1179,21 @@
                                     <i class="fas fa-plane"></i> XC
                                 </span>
                                 {% endif %}
+                                {% if entry.conditions.night > 0 %}
+                                <span class="badge badge-night" data-bs-toggle="tooltip" title="Night flight">
+                                    <i class="fas fa-moon"></i> Night
+                                </span>
+                                {% endif %}
+                                {% if entry.pic_time > 0 and entry.dual_received == 0 %}
+                                <span class="badge badge-solo" data-bs-toggle="tooltip" title="Solo flight">
+                                    <i class="fas fa-user"></i> Solo
+                                </span>
+                                {% endif %}
+                                {% if entry.dual_received > 0 %}
+                                <span class="badge badge-dual" data-bs-toggle="tooltip" title="Dual instruction received">
+                                    <i class="fas fa-users"></i> Dual
+                                </span>
+                                {% endif %}
                             </td>
                             <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.ground_training) if entry.running_totals.ground_training else "0.0" }}</td>
                             <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.asel_time) }}</td>
@@ -670,12 +1212,12 @@
                                         <span class="detail-value">Registration: {{ entry.aircraft.registration }}
 Type: {{ entry.aircraft.type }}
 Category/Class: {{ entry.aircraft.category_class }}</span>
-            </div>
+                    </div>
                                     <div class="detail-item">
                                         <span class="detail-label">Route Information</span>
                                         <span class="detail-value">Departure: {{ entry.departure.identifier }}
 Destination: {{ entry.destination.identifier }}</span>
-            </div>
+                    </div>
                                     <div class="detail-item">
                                         <span class="detail-label">Flight Times</span>
                                         <span class="detail-value">Total: {{ entry.total_time }}
@@ -683,7 +1225,7 @@ Day: {{ entry.conditions.day }}
 Night: {{ entry.conditions.night }}
 PIC: {{ entry.pic_time }}
 Dual Received: {{ entry.dual_received }}</span>
-            </div>
+                </div>
                                     <div class="detail-item">
                                         <span class="detail-label">Landings</span>
                                         <span class="detail-value">Day: {{ entry.landings_day }}
@@ -706,10 +1248,10 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                                         <span class="detail-value">{{ entry.remarks }}</span>
             </div>
             {% endif %}
-                    </div>
+        </div>
                             </td>
                         </tr>
-                        {% endfor %}
+        {% endfor %}
                         {% else %}
                         <tr>
                             <td colspan="18" class="text-center p-5">
@@ -736,20 +1278,62 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                     <canvas id="aircraftChart"></canvas>
                 </div>
 
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        // Initialize aircraft chart
+                        const aircraftLabels = {{ aircraft_stats|map(attribute='registration')|list|tojson|safe }};
+                        const aircraftHours = {{ aircraft_stats|map(attribute='total_time')|list|tojson|safe }};
+                        
+                        const ctx = document.getElementById('aircraftChart').getContext('2d');
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: aircraftLabels,
+                                datasets: [{
+                                    label: 'Total Hours',
+                                    data: aircraftHours,
+                                    backgroundColor: 'rgba(13, 110, 253, 0.5)',
+                                    borderColor: 'rgba(13, 110, 253, 1)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Hours'
+                                        }
+                                    }
+                                },
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: 'Aircraft Usage Statistics'
+                                    }
+                                }
+                            }
+                        });
+                    });
+                </script>
+
                 <div class="flight-table-container">
                     <div class="flight-table-header">
-                        <table class="aircraft-stats-table">
-                            <thead>
-                                <tr>
-                                    <th onclick="sortTable(0)" class="sort-icon">Registration</th>
-                                    <th onclick="sortTable(1)" class="sort-icon">Type</th>
-                                    <th onclick="sortTable(2)" class="sort-icon">Flights</th>
-                                    <th onclick="sortTable(3)" class="sort-icon">Hours</th>
-                                    <th>Avg Time/Flight</th>
-                                </tr>
-                            </thead>
-                        </table>
-                    </div>
+                    <table class="aircraft-stats-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable(0)" class="sort-icon">Registration</th>
+                                <th onclick="sortTable(1)" class="sort-icon">Type</th>
+                                <th onclick="sortTable(2)" class="sort-icon">Flights</th>
+                                <th onclick="sortTable(3)" class="sort-icon">Hours</th>
+                                <th>Avg Time/Flight</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
                     <div class="flight-table-body">
                         <table class="aircraft-stats-table">
                             <thead style="visibility: hidden; position: absolute;">
@@ -759,9 +1343,9 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                                     <th>Flights</th>
                                     <th>Hours</th>
                                     <th>Avg Time/Flight</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                        </tr>
+                    </thead>
+                    <tbody>
                                 {% for aircraft in aircraft_stats %}
                                 <tr>
                                     <td>
@@ -795,15 +1379,15 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                                             </div>
                                         </div>
                                     </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
                     </div>
-                </div>
             </div>
         </div>
-        {% endif %}
+    </div>
+    {% endif %}
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -849,32 +1433,6 @@ PIC: {{ entry.running_totals.pic_time }}</span>
         // Initialize error counter
         if (errorEntries.length > 0) {
             updateErrorCounter();
-        }
-
-        // Chart initialization
-        function initializeAircraftChart(data) {
-            const chartOptions = {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                },
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Aircraft Usage Statistics'
-                    }
-                }
-            };
-
-            const ctx = document.getElementById('aircraftChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: data,
-                options: chartOptions
-            });
         }
 
         // Table sorting
@@ -965,6 +1523,102 @@ PIC: {{ entry.running_totals.pic_time }}</span>
             syncColumnWidths();
             window.addEventListener('resize', syncColumnWidths);
         });
+
+        // PDF Generation
+        async function generatePDF() {
+            // Show loading indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'position-fixed top-50 start-50 translate-middle p-3 bg-white rounded shadow';
+            loadingDiv.innerHTML = '<div class="d-flex align-items-center"><div class="spinner-border text-primary me-2"></div>Generating PDF...</div>';
+            document.body.appendChild(loadingDiv);
+
+            try {
+                // Hide elements we don't want in the PDF
+                const elementsToHide = document.querySelectorAll('.upload-form, .nav-controls');
+                elementsToHide.forEach(el => el.style.display = 'none');
+
+                // Open all disclosure triangles
+                document.querySelectorAll('.disclosure-triangle').forEach(triangle => {
+                    const detailsId = triangle.getAttribute('data-target');
+                    const details = document.getElementById(detailsId);
+                    if (details && !details.classList.contains('show')) {
+                        details.classList.add('show');
+                    }
+                    triangle.classList.add('open');
+                });
+
+                // Remove max-height constraints temporarily
+                const tableContainers = document.querySelectorAll('.table-responsive, .flight-table-body');
+                tableContainers.forEach(container => {
+                    container.style.maxHeight = 'none';
+                    container.style.overflow = 'visible';
+                });
+
+                // Configure PDF options
+                const opt = {
+                    margin: [15, 15],
+                    filename: 'logbook-report.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { 
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        letterRendering: true,
+                        allowTaint: true
+                    },
+                    jsPDF: { 
+                        unit: 'mm', 
+                        format: 'a4', 
+                        orientation: 'landscape',
+                        compress: true
+                    },
+                    pagebreak: {
+                        mode: ['avoid-all', 'css', 'legacy'],
+                        before: ['.card', '.examiner-category', '#aircraft-stats'],
+                        after: ['.table-responsive', '.flight-table-container']
+                    }
+                };
+
+                // Get the container without the upload form
+                const container = document.querySelector('.container-fluid');
+                const uploadForm = container.querySelector('.upload-form').parentElement;
+                const navControls = container.querySelector('.nav-controls');
+                
+                // Hide elements we don't want in PDF
+                if (uploadForm) uploadForm.style.display = 'none';
+                if (navControls) navControls.style.display = 'none';
+
+                // Generate PDF
+                await html2pdf().set(opt).from(container).save();
+
+                // Restore visibility
+                if (uploadForm) uploadForm.style.display = '';
+                if (navControls) navControls.style.display = '';
+
+                // Restore original state
+                document.querySelectorAll('.disclosure-triangle').forEach(triangle => {
+                    const detailsId = triangle.getAttribute('data-target');
+                    const details = document.getElementById(detailsId);
+                    if (details) {
+                        details.classList.remove('show');
+                    }
+                    triangle.classList.remove('open');
+                });
+
+                // Restore max-height constraints
+                tableContainers.forEach(container => {
+                    container.style.maxHeight = '';
+                    container.style.overflow = '';
+                });
+
+            } catch (error) {
+                console.error('PDF generation failed:', error);
+                alert('Failed to generate PDF. Please try again.');
+            } finally {
+                // Remove loading indicator
+                document.body.removeChild(loadingDiv);
+            }
+        }
     </script>
 </body>
 </html> 
