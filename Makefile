@@ -50,7 +50,7 @@ run-dev: setup
 	PYTHONPATH=. \
 	python3 -m flask run --host=0.0.0.0 --port=$(PORT) --reload & \
 	PYTHONPATH=. \
-	uvicorn src.api.routes:app --host 0.0.0.0 --port=5051 --reload & \
+	python3 -m uvicorn src.api.routes:app --host 0.0.0.0 --port=5051 --reload & \
 	wait
 
 run: setup
@@ -61,5 +61,5 @@ run: setup
 	PYTHONPATH=. \
 	python3 -m flask run --host=0.0.0.0 --port=$(PORT) --reload & \
 	PYTHONPATH=. \
-	uvicorn src.api.routes:app --host 0.0.0.0 --port=5051 --reload & \
+	python3 -m uvicorn src.api.routes:app --host 0.0.0.0 --port=5051 --reload & \
 	wait
