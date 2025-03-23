@@ -63,3 +63,20 @@ run: setup
 	PYTHONPATH=. \
 	python3 -m uvicorn src.api.routes:app --host 0.0.0.0 --port=5051 --reload & \
 	wait
+
+# Service management targets
+service-install:
+	sudo cp foreflight-logbook.service /etc/systemd/system/
+	sudo systemctl daemon-reload
+	sudo systemctl enable foreflight-logbook.service
+
+service-remove:
+	sudo systemctl disable foreflight-logbook.service
+	sudo rm /etc/systemd/system/foreflight-logbook.service
+	sudo systemctl daemon-reload
+
+service-start:
+	sudo systemctl start foreflight-logbook.service
+
+service-stop:
+	sudo systemctl stop foreflight-logbook.service
