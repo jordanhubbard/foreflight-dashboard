@@ -6,9 +6,9 @@ After=network.target
 Type=simple
 User=jkh
 Group=jkh
-WorkingDirectory=/home/jkh/foreflight-dashboard
-Environment="PATH=/home/jkh/foreflight-dashboard/venv/bin"
-ExecStart=/home/jkh/foreflight-dashboard/venv/bin/python src/app.py
+WorkingDirectory=/home/jkh/Src/foreflight-dashboard
+Environment="PATH=/home/jkh/Src/foreflight-dashboard/venv/bin"
+ExecStart=/home/jkh/Src/foreflight-dashboard/venv/bin/python src/app.py
 Restart=always
 RestartSec=3
 
