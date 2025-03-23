@@ -1,5 +1,8 @@
 .PHONY: install test format lint check clean run run-dev setup
 
+# Default port for Flask UI
+PORT ?= 5050
+
 setup: venv
 	mkdir -p uploads logs
 
@@ -45,7 +48,10 @@ run-dev: setup
 	FLASK_DEBUG=1 \
 	FLASK_ENV=development \
 	PYTHONPATH=. \
-	python3 -m flask run --host=0.0.0.0 --port=5050 --reload
+	python3 -m flask run --host=0.0.0.0 --port=$(PORT) --reload & \
+	PYTHONPATH=. \
+	uvicorn src.api.routes:app --host 0.0.0.0 --port=5051 --reload & \
+	wait
 
 run: setup
 	. venv/bin/activate && \
@@ -53,4 +59,7 @@ run: setup
 	FLASK_DEBUG=1 \
 	FLASK_ENV=development \
 	PYTHONPATH=. \
-	python3 -m flask run --host=0.0.0.0 --port=5050 --reload
+	python3 -m flask run --host=0.0.0.0 --port=$(PORT) --reload & \
+	PYTHONPATH=. \
+	uvicorn src.api.routes:app --host 0.0.0.0 --port=5051 --reload & \
+	wait
