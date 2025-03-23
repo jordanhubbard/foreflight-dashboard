@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
-User=foreflight
-Group=foreflight
+User=jkh
+Group=jkh
 WorkingDirectory=/opt/foreflight-logbook-dashboard
 Environment="PATH=/opt/foreflight-logbook-dashboard/venv/bin"
 ExecStart=/opt/foreflight-logbook-dashboard/venv/bin/python src/app.py
