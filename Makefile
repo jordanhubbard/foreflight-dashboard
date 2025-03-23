@@ -41,6 +41,7 @@ clean:
 	find . -type d -name "dist" -exec rm -r {} +
 	rm -f logs/*
 	rm -f uploads/*
+	rm -rf venv
 
 run-dev: setup
 	. venv/bin/activate && \
