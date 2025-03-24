@@ -90,6 +90,21 @@ def calculate_30_day_stats(entries):
     recent_entries = [e for e in entries if e.date >= thirty_days_ago]
     return calculate_stats_for_entries(recent_entries)
 
+def calculate_recent_experience(entries):
+    """Calculate statistics for the last 2 calendar months."""
+    today = datetime.now()
+    # Get the first day of the current month
+    first_day_current = today.replace(day=1)
+    # Get the first day of the previous month
+    if first_day_current.month == 1:
+        first_day_previous = first_day_current.replace(year=first_day_current.year - 1, month=12)
+    else:
+        first_day_previous = first_day_current.replace(month=first_day_current.month - 1)
+    
+    # Filter entries for the last 2 calendar months
+    recent_entries = [e for e in entries if e.date >= first_day_previous]
+    return calculate_stats_for_entries(recent_entries)
+
 def calculate_year_stats(entries):
     """Calculate statistics for the last year."""
     one_year_ago = datetime.now(timezone.utc) - timedelta(days=365)
@@ -188,6 +203,7 @@ def upload_file():
         # Calculate statistics
         stats = calculate_stats_for_entries([e for e in entries if e.date.year == datetime.now().year])
         all_time_stats = calculate_stats_for_entries(entries)
+        recent_experience = calculate_recent_experience(entries)
         aircraft_stats = prepare_aircraft_stats(entries)
         
         # Clean up uploaded file
@@ -197,6 +213,7 @@ def upload_file():
                              entries=entries,
                              stats=stats,
                              all_time_stats=all_time_stats,
+                             recent_experience=recent_experience,
                              aircraft_stats=aircraft_stats)
     except Exception as e:
         flash(f'Error processing file: {str(e)}')
