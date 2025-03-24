@@ -576,6 +576,71 @@
                     <button class="btn btn-outline-success" id="toggleTables">
                         <i class="fas fa-expand"></i> <span>Expand Tables</span>
                     </button>
+                    {% if entries %}
+                    <button class="btn btn-outline-warning" onclick="verifyPICEndorsements()">
+                        <i class="fas fa-check-circle"></i> Verify PIC Endorsements
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructor Endorsements -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <span class="disclosure-triangle" data-target="endorsements-table">▶</span>
+                    Instructor Endorsements
+                </h5>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <form action="{{ url_for('add_endorsement_route') }}" method="post" class="d-flex gap-2">
+                            <input type="date" class="form-control" name="start_date" required>
+                            <button type="submit" class="btn btn-primary">Add Endorsement</button>
+                        </form>
+                    </div>
+                </div>
+                <div id="endorsements-table" class="details-row">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Start Date</th>
+                                    <th>Expiration Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if endorsements %}
+                                {% for endorsement in endorsements %}
+                                <tr>
+                                    <td>{{ endorsement.start_date.split('T')[0] }}</td>
+                                    <td>{{ endorsement.expiration_date.split('T')[0] }}</td>
+                                    <td>
+                                        {% if endorsement.expiration_date >= now %}
+                                        <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Expired</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <form action="{{ url_for('delete_endorsement_route', endorsement_id=endorsement.id) }}" method="post" style="display: inline;">
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No endorsements found</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -711,6 +776,12 @@
                     <span class="badge {% if error_count > 0 %}bg-danger{% else %}bg-success{% endif %}">
                         Issues: {{ error_count }}
                     </span>
+                    {% if entries %}
+                    {% set pic_solo_flights = entries|selectattr('pic_time', '>', 0)|list %}
+                    <span class="badge bg-info ms-2">
+                        PIC/Solo Flights: {{ pic_solo_flights|length }}
+                    </span>
+                    {% endif %}
                 </div>
                 {% if error_count > 0 %}
                 <span id="errorCounter" class="text-muted"></span>
@@ -718,6 +789,26 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- Endorsement Validation Summary -->
+        {% if entries %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Endorsement Validation Summary</h5>
+                <div class="d-flex gap-3 flex-wrap">
+                    <div class="validation-stats">
+                        {% set pic_solo_flights = entries|selectattr('pic_time', '>', 0)|list %}
+                        <span class="badge bg-primary me-2">Total PIC/Solo Flights: {{ pic_solo_flights|length }}</span>
+                        <span id="validEndorsementCount" class="badge bg-success me-2">Valid Endorsements: --</span>
+                        <span id="invalidEndorsementCount" class="badge bg-danger">Missing Endorsements: --</span>
+                    </div>
+                    <button class="btn-sm btn-outline-primary" onclick="verifyPICEndorsements()">
+                        <i class="fas fa-sync-alt"></i> Refresh Validation
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Examiner Summary Section -->
         <div class="card mb-4">
@@ -748,7 +839,7 @@
                                     <tbody>
                                         {% for entry in entries if entry.conditions.cross_country > 0 and entry.pic_time > 0 %}
                                         <tr>
-                                            <td>{{ entry.date.strftime('%Y-%m-%d') }}</td>
+                                            <td>{{ entry.date.split('T')[0] }}</td>
                                             <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
                                             <td>{{ entry.aircraft.registration }}</td>
                                             <td>{{ "%.1f"|format(entry.conditions.cross_country) }}</td>
@@ -784,7 +875,7 @@
                                     <tbody>
                                         {% for entry in entries if entry.pic_time > 0 and entry.conditions.cross_country == 0 %}
                                         <tr>
-                                            <td>{{ entry.date.strftime('%Y-%m-%d') }}</td>
+                                            <td>{{ entry.date.split('T')[0] }}</td>
                                             <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
                                             <td>{{ entry.aircraft.registration }}</td>
                                             <td>{{ "%.1f"|format(entry.pic_time) }}</td>
@@ -820,7 +911,7 @@
                                     <tbody>
                                         {% for entry in entries if entry.conditions.cross_country > 0 and entry.pic_time > 0 and entry.dual_received == 0 %}
                                         <tr>
-                                            <td>{{ entry.date.strftime('%Y-%m-%d') }}</td>
+                                            <td>{{ entry.date.split('T')[0] }}</td>
                                             <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
                                             <td>{{ entry.aircraft.registration }}</td>
                                             <td>{{ "%.1f"|format(entry.conditions.cross_country) }}</td>
@@ -859,7 +950,7 @@
                                     <tbody>
                                         {% for entry in entries if entry.pic_time > 0 and entry.dual_received == 0 and entry.conditions.cross_country == 0 %}
                                         <tr>
-                                            <td>{{ entry.date.strftime('%Y-%m-%d') }}</td>
+                                            <td>{{ entry.date.split('T')[0] }}</td>
                                             <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
                                             <td>{{ entry.aircraft.registration }}</td>
                                             <td>{{ "%.1f"|format(entry.total_time) }}</td>
@@ -895,7 +986,7 @@
                                     <tbody>
                                         {% for entry in entries if entry.conditions.night > 0 and entry.dual_received > 0 %}
                                         <tr>
-                                            <td>{{ entry.date.strftime('%Y-%m-%d') }}</td>
+                                            <td>{{ entry.date.split('T')[0] }}</td>
                                             <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
                                             <td>{{ entry.aircraft.registration }}</td>
                                             <td>{{ "%.1f"|format(entry.conditions.night) }}</td>
@@ -934,7 +1025,7 @@
                                     <tbody>
                                         {% for entry in entries if entry.conditions.simulated_instrument > 0 and entry.dual_received > 0 %}
                                         <tr>
-                                            <td>{{ entry.date.strftime('%Y-%m-%d') }}</td>
+                                            <td>{{ entry.date.split('T')[0] }}</td>
                                             <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
                                             <td>{{ entry.aircraft.registration }}</td>
                                             <td>{{ "%.1f"|format(entry.conditions.simulated_instrument) }}</td>
@@ -961,148 +1052,124 @@
         </div>
 
         <!-- Flight Entries Table -->
-        <div class="flight-table-container">
-            <div class="flight-table-header">
-                <table class="flight-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Route</th>
-                            <th>Aircraft</th>
-                            <th>Total</th>
-                            <th>Day/Night</th>
-                            <th>Ldg</th>
-                            <th>Role</th>
-                            <th>PIC</th>
-                            <th>Dual Rcvd</th>
-                            <th>Status</th>
-                            <th class="text-end running-total">Ground</th>
-                            <th class="text-end running-total">ASEL</th>
-                            <th class="text-end running-total">XC</th>
-                            <th class="text-end running-total">Day</th>
-                            <th class="text-end running-total">Night</th>
-                            <th class="text-end running-total">Sim Inst</th>
-                            <th class="text-end running-total">Dual Rcvd</th>
-                            <th class="text-end running-total">PIC</th>
-                        </tr>
-                    </thead>
-                </table>
-                    </div>
-            <div class="flight-table-body">
-                <table class="flight-table">
-                    <thead style="visibility: hidden; position: absolute;">
-                        <tr>
-                            <th>Date</th>
-                            <th>Route</th>
-                            <th>Aircraft</th>
-                            <th>Total</th>
-                            <th>Day/Night</th>
-                            <th>Ldg</th>
-                            <th>Role</th>
-                            <th>PIC</th>
-                            <th>Dual Rcvd</th>
-                            <th>Status</th>
-                            <th class="text-end running-total">Ground</th>
-                            <th class="text-end running-total">ASEL</th>
-                            <th class="text-end running-total">XC</th>
-                            <th class="text-end running-total">Day</th>
-                            <th class="text-end running-total">Night</th>
-                            <th class="text-end running-total">Sim Inst</th>
-                            <th class="text-end running-total">Dual Rcvd</th>
-                            <th class="text-end running-total">PIC</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if entries %}
-                        {% for entry in entries %}
-                        <tr id="entry-{{ loop.index }}" 
-                            class="{% if entry.error_explanation %}has-error{% endif %}
-                                   {% if entry.pic_time > 0 and entry.dual_received == 0 %}pic-flight{% endif %}
-                                   {% if entry.pic_time == 0 and entry.dual_received > 0 %}dual-only{% endif %}
-                                   {% if entry.conditions.night > 0 and entry.conditions.day == 0 %}night-only{% endif %}
-                                   {% if entry.pilot_role == 'SPLIT' %}split-role{% endif %}
-                                   {% if entry.conditions.cross_country > 0 %}cross-country{% endif %}"
-                            data-has-error="{{ 'true' if entry.error_explanation else 'false' }}">
-                            <td class="flight-date">
-                                <span class="disclosure-triangle" data-target="flight-details-{{ loop.index }}">▶</span>
-                                {{ entry.date.strftime('%Y-%m-%d') }}
-                            </td>
-                            <td class="route">{{ entry.departure.identifier if entry.departure else '---' }} → {{ entry.destination.identifier if entry.destination else '---' }}</td>
-                            <td>{{ entry.aircraft.registration }}</td>
-                            <td>{{ "%.1f"|format(entry.total_time) }}</td>
-                            <td>{{ "%.1f"|format(entry.conditions.day) }}/{{ "%.1f"|format(entry.conditions.night) }}</td>
-                            <td>{{ entry.landings_day + entry.landings_night }}</td>
-                            <td class="{% if entry.pilot_role == 'SPLIT' %}split-role-text{% endif %}">{{ entry.pilot_role }}</td>
-                            <td>{{ "%.1f"|format(entry.pic_time) }}</td>
-                            <td>{{ "%.1f"|format(entry.dual_received) }}</td>
-                            <td>
-                                {% if entry.error_explanation %}
-                                <span class="badge bg-danger" data-bs-toggle="tooltip" title="{{ entry.error_explanation }}">
-                                    Invalid
-                                </span>
-                                {% else %}
-                                <span class="badge bg-success">Valid</span>
-                                {% endif %}
-                                {% if entry.conditions.cross_country > 0 %}
-                                <span class="badge badge-xc" data-bs-toggle="tooltip" title="Cross-country flight">
-                                    <i class="fas fa-plane"></i> XC
-                                </span>
-                                {% endif %}
-                                {% if entry.conditions.night > 0 %}
-                                <span class="badge badge-night" data-bs-toggle="tooltip" title="Night flight">
-                                    <i class="fas fa-moon"></i> Night
-                                </span>
-                                {% endif %}
-                                {% if entry.pic_time > 0 and entry.dual_received == 0 %}
-                                <span class="badge badge-solo" data-bs-toggle="tooltip" title="Solo flight">
-                                    <i class="fas fa-user"></i> Solo
-                                </span>
-                                {% endif %}
-                                {% if entry.dual_received > 0 %}
-                                <span class="badge badge-dual" data-bs-toggle="tooltip" title="Dual instruction received">
-                                    <i class="fas fa-users"></i> Dual
-                                </span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.ground_training) if entry.running_totals.ground_training else "0.0" }}</td>
-                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.asel_time) }}</td>
-                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.cross_country) if entry.running_totals.cross_country else "0.0" }}</td>
-                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.day_time) }}</td>
-                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.night_time) }}</td>
-                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.sim_instrument) }}</td>
-                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.dual_received) }}</td>
-                            <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.pic_time) }}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="100%" class="details-row" id="flight-details-{{ loop.index }}">
-                                <div class="details-grid">
-                                    <div class="detail-item">
-                                        <span class="detail-label">Aircraft Details</span>
-                                        <span class="detail-value">Registration: {{ entry.aircraft.registration }}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Flight Entries</h5>
+                <div class="table-responsive">
+                    <table class="flight-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Route</th>
+                                <th>Aircraft</th>
+                                <th>Total</th>
+                                <th>Day/Night</th>
+                                <th>Ldg</th>
+                                <th>Role</th>
+                                <th>PIC</th>
+                                <th>Dual Rcvd</th>
+                                <th>Status</th>
+                                <th class="text-end running-total">Ground</th>
+                                <th class="text-end running-total">ASEL</th>
+                                <th class="text-end running-total">XC</th>
+                                <th class="text-end running-total">Day</th>
+                                <th class="text-end running-total">Night</th>
+                                <th class="text-end running-total">Sim Inst</th>
+                                <th class="text-end running-total">Dual Rcvd</th>
+                                <th class="text-end running-total">PIC</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if entries %}
+                            {% for entry in entries %}
+                            <tr id="entry-{{ loop.index }}" 
+                                class="{% if entry.error_explanation %}has-error{% endif %}
+                                       {% if entry.pic_time > 0 and entry.dual_received == 0 %}pic-flight{% endif %}
+                                       {% if entry.pic_time == 0 and entry.dual_received > 0 %}dual-only{% endif %}
+                                       {% if entry.conditions.night > 0 and entry.conditions.day == 0 %}night-only{% endif %}
+                                       {% if entry.pilot_role == 'SPLIT' %}split-role{% endif %}
+                                       {% if entry.conditions.cross_country > 0 %}cross-country{% endif %}"
+                                data-has-error="{{ 'true' if entry.error_explanation else 'false' }}">
+                                <td class="flight-date">
+                                    <span class="disclosure-triangle" data-target="flight-details-{{ loop.index }}">▶</span>
+                                    {{ entry.date.split('T')[0] }}
+                                </td>
+                                <td class="route">{{ entry.departure.identifier if entry.departure else '---' }} → {{ entry.destination.identifier if entry.destination else '---' }}</td>
+                                <td>{{ entry.aircraft.registration }}</td>
+                                <td>{{ "%.1f"|format(entry.total_time) }}</td>
+                                <td>{{ "%.1f"|format(entry.conditions.day) }}/{{ "%.1f"|format(entry.conditions.night) }}</td>
+                                <td>{{ entry.landings_day + entry.landings_night }}</td>
+                                <td class="{% if entry.pilot_role == 'SPLIT' %}split-role-text{% endif %}">{{ entry.pilot_role }}</td>
+                                <td>{{ "%.1f"|format(entry.pic_time) }}</td>
+                                <td>{{ "%.1f"|format(entry.dual_received) }}</td>
+                                <td>
+                                    {% if entry.error_explanation %}
+                                    <span class="badge bg-danger" data-bs-toggle="tooltip" title="{{ entry.error_explanation }}">
+                                        Invalid
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-success">Valid</span>
+                                    {% endif %}
+                                    {% if entry.conditions.cross_country > 0 %}
+                                    <span class="badge badge-xc" data-bs-toggle="tooltip" title="Cross-country flight">
+                                        <i class="fas fa-plane"></i> XC
+                                    </span>
+                                    {% endif %}
+                                    {% if entry.conditions.night > 0 %}
+                                    <span class="badge badge-night" data-bs-toggle="tooltip" title="Night flight">
+                                        <i class="fas fa-moon"></i> Night
+                                    </span>
+                                    {% endif %}
+                                    {% if entry.pic_time > 0 and entry.dual_received == 0 %}
+                                    <span class="badge badge-solo" data-bs-toggle="tooltip" title="Solo flight">
+                                        <i class="fas fa-user"></i> Solo
+                                    </span>
+                                    {% endif %}
+                                    {% if entry.dual_received > 0 %}
+                                    <span class="badge badge-dual" data-bs-toggle="tooltip" title="Dual instruction received">
+                                        <i class="fas fa-users"></i> Dual
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.ground_training) if entry.running_totals.ground_training else "0.0" }}</td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.asel_time) }}</td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.cross_country) if entry.running_totals.cross_country else "0.0" }}</td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.day_time) }}</td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.night_time) }}</td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.sim_instrument) }}</td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.dual_received) }}</td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.pic_time) }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="100%" class="details-row" id="flight-details-{{ loop.index }}">
+                                    <div class="details-grid">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Aircraft Details</span>
+                                            <span class="detail-value">Registration: {{ entry.aircraft.registration }}
 Type: {{ entry.aircraft.type }}
 Category/Class: {{ entry.aircraft.category_class }}</span>
-                    </div>
-                                    <div class="detail-item">
-                                        <span class="detail-label">Route Information</span>
-                                        <span class="detail-value">Departure: {{ entry.departure.identifier }}
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Route Information</span>
+                                            <span class="detail-value">Departure: {{ entry.departure.identifier }}
 Destination: {{ entry.destination.identifier }}</span>
-                    </div>
-                                    <div class="detail-item">
-                                        <span class="detail-label">Flight Times</span>
-                                        <span class="detail-value">Total: {{ entry.total_time }}
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Flight Times</span>
+                                            <span class="detail-value">Total: {{ entry.total_time }}
 Day: {{ entry.conditions.day }}
 Night: {{ entry.conditions.night }}
 PIC: {{ entry.pic_time }}
 Dual Received: {{ entry.dual_received }}</span>
-                </div>
-                                    <div class="detail-item">
-                                        <span class="detail-label">Landings</span>
-                                        <span class="detail-value">Day: {{ entry.landings_day }}
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Landings</span>
+                                            <span class="detail-value">Day: {{ entry.landings_day }}
 Night: {{ entry.landings_night }}</span>
-            </div>
-                                    <div class="detail-item">
-                                        <span class="detail-label">Running Totals</span>
-                                        <span class="detail-value">Ground: {{ entry.running_totals.ground_training if entry.running_totals.ground_training else "0.0" }}
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Running Totals</span>
+                                            <span class="detail-value">Ground: {{ entry.running_totals.ground_training if entry.running_totals.ground_training else "0.0" }}
 ASEL: {{ entry.running_totals.asel_time }}
 Cross Country: {{ entry.running_totals.cross_country if entry.running_totals.cross_country else "0.0" }}
 Day: {{ entry.running_totals.day_time }}
@@ -1110,29 +1177,30 @@ Night: {{ entry.running_totals.night_time }}
 Sim Instrument: {{ entry.running_totals.sim_instrument }}
 Dual Received: {{ entry.running_totals.dual_received }}
 PIC: {{ entry.running_totals.pic_time }}</span>
+                                        </div>
+                                        {% if entry.remarks %}
+                                        <div class="detail-item">
+                                            <span class="detail-label">Remarks</span>
+                                            <span class="detail-value">{{ entry.remarks }}</span>
+                                        </div>
+                                        {% endif %}
                                     </div>
-                                    {% if entry.remarks %}
-                                    <div class="detail-item">
-                                        <span class="detail-label">Remarks</span>
-                                        <span class="detail-value">{{ entry.remarks }}</span>
-            </div>
-            {% endif %}
-        </div>
-                            </td>
-                        </tr>
-        {% endfor %}
-                        {% else %}
-                        <tr>
-                            <td colspan="18" class="text-center p-5">
-                                <div class="alert alert-info mb-0">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    Upload a ForeFlight logbook CSV file to view your flight data
-                                </div>
-                            </td>
-                        </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="18" class="text-center p-5">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Upload a ForeFlight logbook CSV file to view your flight data
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -1151,7 +1219,8 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                     document.addEventListener('DOMContentLoaded', function() {
                         // Initialize aircraft chart
                         const aircraftLabels = {{ aircraft_stats|map(attribute='registration')|list|tojson|safe }};
-                        const aircraftHours = {{ aircraft_stats|map(attribute='total_time')|list|tojson|safe }};
+                        const soloHours = {{ aircraft_stats|map(attribute='solo_time')|list|tojson|safe }};
+                        const dualHours = {{ aircraft_stats|map(attribute='dual_time')|list|tojson|safe }};
                         
                         const ctx = document.getElementById('aircraftChart').getContext('2d');
                         new Chart(ctx, {
@@ -1159,10 +1228,17 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                             data: {
                                 labels: aircraftLabels,
                                 datasets: [{
-                                    label: 'Total Hours',
-                                    data: aircraftHours,
-                                    backgroundColor: 'rgba(13, 110, 253, 0.5)',
-                                    borderColor: 'rgba(13, 110, 253, 1)',
+                                    label: 'Solo Hours',
+                                    data: soloHours,
+                                    backgroundColor: 'rgba(40, 167, 69, 0.5)',  // Green for solo
+                                    borderColor: 'rgba(40, 167, 69, 1)',
+                                    borderWidth: 1
+                                },
+                                {
+                                    label: 'Dual Hours',
+                                    data: dualHours,
+                                    backgroundColor: 'rgba(255, 193, 7, 0.5)',  // Yellow for dual
+                                    borderColor: 'rgba(255, 193, 7, 1)',
                                     borderWidth: 1
                                 }]
                             },
@@ -1170,7 +1246,11 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                                 responsive: true,
                                 maintainAspectRatio: false,
                                 scales: {
+                                    x: {
+                                        stacked: true
+                                    },
                                     y: {
+                                        stacked: true,
                                         beginAtZero: true,
                                         title: {
                                             display: true,
@@ -1182,6 +1262,15 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                                     title: {
                                         display: true,
                                         text: 'Aircraft Usage Statistics'
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            afterTitle: function(context) {
+                                                const idx = context[0].dataIndex;
+                                                const total = soloHours[idx] + dualHours[idx];
+                                                return `Total: ${total.toFixed(1)} hours`;
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1197,12 +1286,14 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                                 <th onclick="sortTable(0)" class="sort-icon">Registration</th>
                                 <th onclick="sortTable(1)" class="sort-icon">Type</th>
                                 <th onclick="sortTable(2)" class="sort-icon">Flights</th>
-                                <th onclick="sortTable(3)" class="sort-icon">Hours</th>
+                                <th onclick="sortTable(3)" class="sort-icon">Total Hours</th>
+                                <th onclick="sortTable(4)" class="sort-icon">Solo Hours</th>
+                                <th onclick="sortTable(5)" class="sort-icon">Dual Hours</th>
                                 <th>Avg Time/Flight</th>
                             </tr>
                         </thead>
                     </table>
-                </div>
+                
                     <div class="flight-table-body">
                         <table class="aircraft-stats-table">
                             <thead style="visibility: hidden; position: absolute;">
@@ -1210,11 +1301,13 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                                     <th>Registration</th>
                                     <th>Type</th>
                                     <th>Flights</th>
-                                    <th>Hours</th>
+                                    <th>Total Hours</th>
+                                    <th>Solo Hours</th>
+                                    <th>Dual Hours</th>
                                     <th>Avg Time/Flight</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                                </tr>
+                            </thead>
+                            <tbody>
                                 {% for aircraft in aircraft_stats %}
                                 <tr>
                                     <td>
@@ -1224,6 +1317,8 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                                     <td>{{ aircraft.type }}</td>
                                     <td>{{ aircraft.count }}</td>
                                     <td>{{ "%.1f"|format(aircraft.total_time) }}</td>
+                                    <td>{{ "%.1f"|format(aircraft.solo_time) }}</td>
+                                    <td>{{ "%.1f"|format(aircraft.dual_time) }}</td>
                                     <td>{{ "%.1f"|format(aircraft.total_time / aircraft.count) }}</td>
                                 </tr>
                                 <tr>
@@ -1235,24 +1330,27 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                                                     Registration: {{ aircraft.registration }}<br>
                                                     Type: {{ aircraft.type }}<br>
                                                     Total Flights: {{ aircraft.count }}<br>
-                                                    Total Time: {{ "%.1f"|format(aircraft.total_time) }}
+                                                    Total Time: {{ "%.1f"|format(aircraft.total_time) }}<br>
+                                                    Solo Time: {{ "%.1f"|format(aircraft.solo_time) }}<br>
+                                                    Dual Time: {{ "%.1f"|format(aircraft.dual_time) }}
                                                 </span>
                                             </div>
                                             <div class="detail-item">
                                                 <span class="detail-label">Flight History</span>
                                                 <span class="detail-value">
                                                     {% for entry in entries if entry.aircraft.registration == aircraft.registration %}
-                                                    {{ entry.date.strftime('%Y-%m-%d') }}: {{ entry.total_time }} hours<br>
+                                                    {{ entry.date.split('T')[0] }}: {{ entry.total_time }} hours ({% if entry.dual_received > 0 %}Dual{% else %}Solo{% endif %})<br>
                                                     {% endfor %}
                                                 </span>
                                             </div>
                                         </div>
                                     </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1266,6 +1364,33 @@ PIC: {{ entry.running_totals.pic_time }}</span>
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         })
+
+        // Disclosure triangle handling
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get all disclosure triangles
+            const triangles = document.querySelectorAll('.disclosure-triangle');
+            
+            // Add click handler to each triangle
+            triangles.forEach(triangle => {
+                triangle.addEventListener('click', function() {
+                    // Get the target element
+                    const targetId = this.getAttribute('data-target');
+                    const targetElement = document.getElementById(targetId);
+                    
+                    // Toggle visibility
+                    if (targetElement) {
+                        const isVisible = targetElement.style.display !== 'none';
+                        targetElement.style.display = isVisible ? 'none' : 'block';
+                        this.textContent = isVisible ? '▶' : '▼';
+                    }
+                });
+            });
+            
+            // Initially hide all detail rows
+            document.querySelectorAll('.details-row').forEach(row => {
+                row.style.display = 'none';
+            });
+        });
 
         // Error navigation
         let currentErrorIndex = -1;
@@ -1419,6 +1544,102 @@ PIC: {{ entry.running_totals.pic_time }}</span>
 
             toggleButton.addEventListener('click', toggleTableExpansion);
         });
+
+        function verifyPICEndorsements() {
+            const entries = {{ entries|tojson|safe }};
+            fetch('/verify-pic', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ entries: entries }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+                
+                // Update validation counters
+                const totalPicSolo = entries.filter(entry => entry.pic_time > 0).length;
+                const invalidCount = data.unendorsed_flights.length;
+                const validCount = totalPicSolo - invalidCount;
+                
+                document.getElementById('validEndorsementCount').textContent = `Valid Endorsements: ${validCount}`;
+                document.getElementById('invalidEndorsementCount').textContent = `Missing Endorsements: ${invalidCount}`;
+                
+                let message = '';
+                
+                // Show endorsement gaps
+                if (data.gaps && data.gaps.length > 0) {
+                    message += 'Gaps in Endorsement Coverage:\n';
+                    data.gaps.forEach(gap => {
+                        const start = new Date(gap.start).toLocaleDateString();
+                        const end = new Date(gap.end).toLocaleDateString();
+                        message += `• ${start} to ${end}\n`;
+                    });
+                    message += '\n';
+                } else {
+                    message += 'No gaps in endorsement coverage.\n\n';
+                }
+                
+                // Show unendorsed flights
+                if (data.unendorsed_flights.length === 0) {
+                    message += 'All PIC/Solo flights have valid endorsements!';
+                } else {
+                    message += `Found ${data.total_invalid} flights without valid endorsements:\n`;
+                    data.unendorsed_flights.forEach(flight => {
+                        const date = new Date(flight.date).toLocaleDateString();
+                        message += `• ${date}: ${flight.route} (${flight.pic_time} hours) - ${flight.type.toUpperCase()}\n`;
+                    });
+                }
+                
+                // Create a modal to display the results
+                const modalHtml = `
+                    <div class="modal fade" id="endorsementCheckModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Endorsement Check Results</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <div class="d-flex gap-2 mb-3">
+                                            <span class="badge bg-primary">Total PIC/Solo Flights: ${totalPicSolo}</span>
+                                            <span class="badge bg-success">Valid Endorsements: ${validCount}</span>
+                                            <span class="badge bg-danger">Missing Endorsements: ${invalidCount}</span>
+                                        </div>
+                                        <pre style="white-space: pre-wrap;">${message}</pre>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Remove any existing modal
+                const existingModal = document.getElementById('endorsementCheckModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+                
+                // Add the new modal to the document
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                
+                // Show the modal
+                const modal = new bootstrap.Modal(document.getElementById('endorsementCheckModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error verifying PIC endorsements');
+            });
+        }
     </script>
 </body>
 </html> 

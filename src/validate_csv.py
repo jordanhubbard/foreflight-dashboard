@@ -27,34 +27,33 @@ def parse_int(value, default=0):
     if not value:
         return default
     try:
-        return int(float(value))
+        return int(value)
     except (ValueError, TypeError):
         return default
 
 def determine_pilot_role(row):
-    """Determine pilot role based on flight data."""
-    if parse_float(row.get('DualGiven', 0)) > 0:
-        return "INSTRUCTOR"
+    """Determine the pilot role based on flight data."""
     if parse_float(row.get('DualReceived', 0)) > 0:
         return "STUDENT"
-    if parse_float(row.get('PIC', 0)) > 0:
+    elif parse_float(row.get('PIC', 0)) > 0:
         return "PIC"
-    if parse_float(row.get('SIC', 0)) > 0:
+    elif parse_float(row.get('SIC', 0)) > 0:
         return "SIC"
-    return "PIC"  # Default to PIC if no other role is clear
+    else:
+        return "PIC"
 
 def validate_logbook(csv_path):
     """Validate all entries in the logbook CSV file."""
     with open(csv_path, 'r') as f:
         content = f.readlines()
 
-    # Find the Aircraft and Flights tables
+    # Skip ForeFlight header and empty lines
     aircraft_start = flights_start = -1
     for i, line in enumerate(content):
-        if line.strip().startswith('AircraftID,'):
-            aircraft_start = i
-        elif line.strip().startswith('Date,'):
-            flights_start = i
+        if line.strip().startswith('Aircraft Table'):
+            aircraft_start = i + 1  # Skip to the headers line
+        elif line.strip().startswith('Flights Table'):
+            flights_start = i + 1  # Skip to the headers line
             break
 
     if aircraft_start == -1 or flights_start == -1:
@@ -64,15 +63,21 @@ def validate_logbook(csv_path):
     aircraft_headers = content[aircraft_start].strip().split(',')
     aircraft_data = {}
 
-    for line in content[aircraft_start + 1:flights_start]:
-        if not line.strip():
+    for line in content[aircraft_start + 1:flights_start - 1]:  # -1 to skip the Flights Table line
+        if not line.strip() or line.strip().startswith('Flights Table'):
             continue
 
-        row = dict(zip(aircraft_headers, line.strip().split(',')))
-        aircraft_data[row['AircraftID']] = {
-            'type': row.get('Model', 'UNKNOWN'),
-            'category_class': 'airplane_single_engine_land',  # Default to ASEL
-            'gear_type': row.get('GearType', 'fixed_tricycle')
+        # Split the line and handle any extra commas
+        parts = line.strip().split(',')
+        row = dict(zip(aircraft_headers, parts[:len(aircraft_headers)]))
+        
+        if 'AircraftID' not in row or not row['AircraftID'].strip():
+            continue
+
+        aircraft_data[row['AircraftID'].strip()] = {
+            'type': row.get('Model', 'UNKNOWN').strip(),
+            'category_class': row.get('aircraftClass (FAA)', 'airplane_single_engine_land').strip(),
+            'gear_type': row.get('GearType', 'fixed_tricycle').strip()
         }
 
     # Process Flights Table
@@ -87,13 +92,19 @@ def validate_logbook(csv_path):
 
         row_count += 1
         try:
-            row = dict(zip(flight_headers, line.strip().split(',')))
+            # Split the line and handle any extra commas
+            parts = line.strip().split(',')
+            row = dict(zip(flight_headers, parts[:len(flight_headers)]))
 
             if not row.get('Date'):
                 error_count += 1
                 continue
 
-            aircraft_id = row.get('AircraftID') or "UNKNOWN"
+            aircraft_id = row.get('AircraftID', '').strip()
+            if not aircraft_id:
+                error_count += 1
+                continue
+
             aircraft_info = aircraft_data.get(aircraft_id, {
                 'type': 'UNKNOWN',
                 'category_class': 'airplane_single_engine_land',
@@ -132,13 +143,16 @@ def validate_logbook(csv_path):
                 ground_training=parse_float(row.get('GroundTraining', 0))
             )
 
-            # Validate the entry but always add it to entries
+            # Validate the entry
             entry.validate_entry()
             entries.append(entry)
 
         except Exception as e:
             error_count += 1
             continue
+
+    if not entries:
+        raise ValueError("No valid entries found in the logbook")
 
     return entries
 

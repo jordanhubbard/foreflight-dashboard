@@ -1,15 +1,17 @@
 """ForeFlight Logbook Manager web application."""
 
 import csv
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 from src.validate_csv import validate_logbook
 from src.core.models import RunningTotals
+from src.db import init_db, add_endorsement, get_all_endorsements, delete_endorsement, verify_pic_endorsements
 import logging.handlers
 import shutil
+import time
 
 # Create logs directory if it doesn't exist
 os.makedirs('logs', exist_ok=True)
@@ -50,6 +52,9 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# Initialize the database
+init_db()
 
 def calculate_running_totals(entries):
     """Calculate running totals for each entry."""
@@ -142,13 +147,25 @@ def calculate_stats_for_entries(entries):
 
 def prepare_aircraft_stats(entries):
     """Prepare aircraft statistics for display."""
-    aircraft_stats = defaultdict(lambda: {'count': 0, 'total_time': 0.0, 'registration': '', 'type': ''})
+    aircraft_stats = defaultdict(lambda: {
+        'count': 0,
+        'total_time': 0.0,
+        'solo_time': 0.0,
+        'dual_time': 0.0,
+        'registration': '',
+        'type': ''
+    })
     
     for entry in entries:
         aircraft = entry.aircraft
         key = aircraft.registration
         aircraft_stats[key]['count'] += 1
         aircraft_stats[key]['total_time'] += float(entry.total_time)
+        # Track solo time (PIC without dual received) and dual time separately
+        if entry.dual_received > 0:
+            aircraft_stats[key]['dual_time'] += float(entry.total_time)
+        else:
+            aircraft_stats[key]['solo_time'] += float(entry.total_time)
         aircraft_stats[key]['registration'] = aircraft.registration
         aircraft_stats[key]['type'] = aircraft.type
     
@@ -158,7 +175,9 @@ def prepare_aircraft_stats(entries):
             'registration': stats['registration'],
             'type': stats['type'],
             'count': stats['count'],
-            'total_time': stats['total_time']
+            'total_time': stats['total_time'],
+            'solo_time': stats['solo_time'],
+            'dual_time': stats['dual_time']
         }
         for stats in aircraft_stats.values()
     ]
@@ -167,21 +186,34 @@ def prepare_aircraft_stats(entries):
 @app.route('/')
 def index():
     """Render the main page."""
-    return render_template('index.html', entries=None, stats=None, all_time_stats=None, aircraft_stats=None)
+    endorsements = get_all_endorsements()
+    endorsements_dict = [e.to_dict() for e in endorsements]
+    return render_template('index.html', 
+                         entries=None, 
+                         stats=None, 
+                         all_time_stats=None, 
+                         aircraft_stats=None, 
+                         endorsements=endorsements_dict,
+                         now=datetime.now().isoformat())
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload and validation."""
+    logger.info("Starting file upload process")
+    
     if 'file' not in request.files:
+        logger.warning("No file part in request")
         flash('No file uploaded')
         return redirect(url_for('index'))
     
     file = request.files['file']
     if file.filename == '':
+        logger.warning("No selected file")
         flash('No file selected')
         return redirect(url_for('index'))
     
     if not file.filename.endswith('.csv'):
+        logger.warning(f"Invalid file type: {file.filename}")
         flash('Only CSV files are allowed')
         return redirect(url_for('index'))
     
@@ -189,35 +221,128 @@ def upload_file():
         # Save uploaded file
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
         file.save(filepath)
+        logger.info(f"Saved uploaded file to {filepath}")
         
         # Create debug copy
         debug_filepath = os.path.join(app.config['UPLOAD_FOLDER'], 'debug_' + secure_filename(file.filename))
         shutil.copy2(filepath, debug_filepath)
+        logger.info(f"Created debug copy at {debug_filepath}")
         
         # Validate entries
+        logger.info("Starting logbook validation")
         entries = validate_logbook(filepath)
+        logger.info(f"Successfully validated {len(entries)} entries")
+        
+        if not entries:
+            logger.warning("No entries found in logbook")
+            flash('No valid entries found in the logbook file')
+            return redirect(url_for('index'))
         
         # Calculate running totals
+        logger.info("Calculating running totals")
         entries = calculate_running_totals(entries)
         
         # Calculate statistics
+        logger.info("Calculating statistics")
         stats = calculate_stats_for_entries([e for e in entries if e.date.year == datetime.now().year])
         all_time_stats = calculate_stats_for_entries(entries)
         recent_experience = calculate_recent_experience(entries)
         aircraft_stats = prepare_aircraft_stats(entries)
         
+        # Get endorsements
+        logger.info("Retrieving endorsements")
+        endorsements = get_all_endorsements()
+        endorsements_dict = [e.to_dict() for e in endorsements]
+        
         # Clean up uploaded file
         os.remove(filepath)
+        logger.info("Cleaned up uploaded file")
         
+        # Convert entries to dictionaries for JSON serialization
+        entries_dict = [entry.to_dict() for entry in entries]
+        
+        logger.info("Rendering template with processed data")
         return render_template('index.html',
-                             entries=entries,
+                             entries=entries_dict,
                              stats=stats,
                              all_time_stats=all_time_stats,
                              recent_experience=recent_experience,
-                             aircraft_stats=aircraft_stats)
+                             aircraft_stats=aircraft_stats,
+                             endorsements=endorsements_dict,
+                             now=datetime.now().isoformat())
+    except ValueError as e:
+        logger.error(f"Validation error: {str(e)}")
+        flash(f'Error validating logbook: {str(e)}')
+        return redirect(url_for('index'))
     except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         flash(f'Error processing file: {str(e)}')
         return redirect(url_for('index'))
+
+@app.route('/endorsements/add', methods=['POST'])
+def add_endorsement_route():
+    """Add a new endorsement."""
+    try:
+        start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d')
+        endorsement = add_endorsement(start_date)
+        flash('Endorsement added successfully')
+    except Exception as e:
+        flash(f'Error adding endorsement: {str(e)}')
+    return redirect(url_for('index'))
+
+@app.route('/endorsements/delete/<int:endorsement_id>', methods=['POST'])
+def delete_endorsement_route(endorsement_id):
+    """Delete an endorsement."""
+    try:
+        if delete_endorsement(endorsement_id):
+            flash('Endorsement deleted successfully')
+        else:
+            flash('Endorsement not found')
+    except Exception as e:
+        flash(f'Error deleting endorsement: {str(e)}')
+    return redirect(url_for('index'))
+
+@app.route('/verify-pic', methods=['POST'])
+def verify_pic():
+    """Verify PIC endorsements for all entries."""
+    try:
+        data = request.get_json()
+        if not data or 'entries' not in data:
+            return jsonify({'error': 'No entries provided'}), 400
+            
+        entries = []
+        for entry_data in data['entries']:
+            try:
+                # Convert the dictionary back to a LogbookEntry object
+                entry = LogbookEntry(
+                    date=datetime.fromisoformat(entry_data['date']),
+                    departure_time=time.fromisoformat(entry_data['departure_time']) if entry_data.get('departure_time') else None,
+                    arrival_time=time.fromisoformat(entry_data['arrival_time']) if entry_data.get('arrival_time') else None,
+                    total_time=entry_data['total_time'],
+                    aircraft=Aircraft(**entry_data['aircraft']),
+                    departure=Airport(**entry_data['departure']) if entry_data.get('departure') else None,
+                    destination=Airport(**entry_data['destination']) if entry_data.get('destination') else None,
+                    conditions=FlightConditions(**entry_data['conditions']),
+                    remarks=entry_data.get('remarks'),
+                    pilot_role=entry_data['pilot_role'],
+                    dual_received=entry_data['dual_received'],
+                    pic_time=entry_data['pic_time'],
+                    solo_time=entry_data.get('solo_time', 0.0),
+                    ground_training=entry_data.get('ground_training', 0.0),
+                    landings_day=entry_data['landings_day'],
+                    landings_night=entry_data['landings_night']
+                )
+                entries.append(entry)
+            except Exception as e:
+                logger.error(f"Error converting entry: {str(e)}")
+                continue
+                
+        results = verify_pic_endorsements(entries)
+        return jsonify(results)
+        
+    except Exception as e:
+        logger.error(f"Error verifying PIC endorsements: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     # Enable hot reloading

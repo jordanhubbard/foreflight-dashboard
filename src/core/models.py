@@ -1,8 +1,9 @@
 """Data models for the ForeFlight Logbook Manager."""
 
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timezone, timedelta
 from typing import Optional, List, Dict, Annotated
 from pydantic import BaseModel, Field, validator, ConfigDict, model_validator
+from dataclasses import dataclass
 
 class Airport(BaseModel):
     """Airport information."""
@@ -43,21 +44,17 @@ class FlightConditions(BaseModel):
         description="Flight conditions information"
     )
     
-class RunningTotals(BaseModel):
-    """Running totals for logbook entries."""
-    ground_training: float = 0.0
-    asel_time: float = 0.0
-    day_time: float = 0.0
-    night_time: float = 0.0
-    sim_instrument: float = 0.0
-    dual_received: float = 0.0
-    pic_time: float = 0.0
-    cross_country: float = 0.0
-    
-    model_config = ConfigDict(
-        title="RunningTotals",
-        description="Running totals for logbook entries"
-    )
+@dataclass
+class RunningTotals:
+    """Running totals for various flight metrics."""
+    ground_training: float
+    asel_time: float
+    day_time: float
+    night_time: float
+    sim_instrument: float
+    dual_received: float
+    pic_time: float
+    cross_country: float
 
 class LogbookEntry(BaseModel):
     """Main logbook entry model."""
@@ -95,6 +92,57 @@ class LogbookEntry(BaseModel):
     
     # Validation error explanation
     error_explanation: Optional[str] = None
+    
+    def to_dict(self) -> dict:
+        """Convert the entry to a dictionary for JSON serialization."""
+        running_totals_dict = None
+        if self.running_totals:
+            running_totals_dict = {
+                'ground_training': self.running_totals.ground_training,
+                'asel_time': self.running_totals.asel_time,
+                'day_time': self.running_totals.day_time,
+                'night_time': self.running_totals.night_time,
+                'sim_instrument': self.running_totals.sim_instrument,
+                'dual_received': self.running_totals.dual_received,
+                'pic_time': self.running_totals.pic_time,
+                'cross_country': self.running_totals.cross_country
+            }
+        
+        return {
+            'id': self.id,
+            'date': self.date.isoformat(),
+            'departure_time': self.departure_time.isoformat() if self.departure_time else None,
+            'arrival_time': self.arrival_time.isoformat() if self.arrival_time else None,
+            'total_time': self.total_time,
+            'aircraft': {
+                'registration': self.aircraft.registration,
+                'type': self.aircraft.type,
+                'category_class': self.aircraft.category_class,
+                'gear_type': self.aircraft.gear_type
+            },
+            'departure': {'identifier': self.departure.identifier} if self.departure else None,
+            'destination': {'identifier': self.destination.identifier} if self.destination else None,
+            'alternate': {'identifier': self.alternate.identifier} if self.alternate else None,
+            'conditions': {
+                'day': self.conditions.day,
+                'night': self.conditions.night,
+                'actual_instrument': self.conditions.actual_instrument,
+                'simulated_instrument': self.conditions.simulated_instrument,
+                'cross_country': self.conditions.cross_country
+            },
+            'remarks': self.remarks,
+            'pilot_role': self.pilot_role,
+            'dual_received': self.dual_received,
+            'pic_time': self.pic_time,
+            'solo_time': self.solo_time,
+            'ground_training': self.ground_training,
+            'landings_day': self.landings_day,
+            'landings_night': self.landings_night,
+            'instructor_name': self.instructor_name,
+            'instructor_comments': self.instructor_comments,
+            'running_totals': running_totals_dict,
+            'error_explanation': self.error_explanation
+        }
     
     model_config = ConfigDict(
         title="LogbookEntry",
@@ -216,3 +264,27 @@ class LogbookEntry(BaseModel):
             self.error_explanation = "; ".join(issues)
         else:
             self.error_explanation = None 
+
+@dataclass
+class InstructorEndorsement:
+    """Flight instructor endorsement for solo flight."""
+    id: int
+    start_date: datetime
+    expiration_date: datetime
+
+    @staticmethod
+    def calculate_expiration(start_date: datetime) -> datetime:
+        """Calculate the expiration date (90 days from start date)."""
+        return start_date + timedelta(days=90)
+
+    def is_valid_for_date(self, flight_date: datetime) -> bool:
+        """Check if the endorsement is valid for a given flight date."""
+        return self.start_date <= flight_date <= self.expiration_date
+
+    def to_dict(self) -> dict:
+        """Convert the endorsement to a dictionary for JSON serialization."""
+        return {
+            'id': self.id,
+            'start_date': self.start_date.isoformat(),
+            'expiration_date': self.expiration_date.isoformat()
+        } 
