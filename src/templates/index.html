@@ -560,6 +560,12 @@
                     <div class="mb-3">
                         <input type="file" class="form-control" name="file" accept=".csv">
                     </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="studentPilotCheck" name="student_pilot">
+                        <label class="form-check-label" for="studentPilotCheck">
+                            I am a student pilot
+                        </label>
+                    </div>
                     <button type="submit" class="btn btn-primary">Upload and Validate</button>
                 </form>
             </div>
@@ -576,17 +582,15 @@
                     <button class="btn btn-outline-success" id="toggleTables">
                         <i class="fas fa-expand"></i> <span>Expand Tables</span>
                     </button>
-                    {% if entries %}
-                    <button class="btn btn-outline-warning" onclick="verifyPICEndorsements()">
+                    <button class="btn btn-outline-warning" id="verifyPICButton" style="display: none;" onclick="verifyPICEndorsements()">
                         <i class="fas fa-check-circle"></i> Verify PIC Endorsements
                     </button>
-                    {% endif %}
                 </div>
             </div>
         </div>
 
         <!-- Instructor Endorsements -->
-        <div class="card mb-4">
+        <div class="card mb-4" id="endorsementsSection" style="display: none;">
             <div class="card-body">
                 <h5 class="card-title">
                     <span class="disclosure-triangle" data-target="endorsements-table">▶</span>
@@ -1640,6 +1644,27 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                 alert('Error verifying PIC endorsements');
             });
         }
+
+        // Add this at the beginning of your script section
+        document.addEventListener('DOMContentLoaded', function() {
+            const studentPilotCheck = document.getElementById('studentPilotCheck');
+            const endorsementsSection = document.getElementById('endorsementsSection');
+            const verifyPICButton = document.getElementById('verifyPICButton');
+            
+            // Function to update UI based on student pilot status
+            function updateUIForStudentPilot(isStudentPilot) {
+                endorsementsSection.style.display = isStudentPilot ? 'block' : 'none';
+                verifyPICButton.style.display = isStudentPilot ? 'inline-block' : 'none';
+            }
+            
+            // Set initial state
+            updateUIForStudentPilot(studentPilotCheck.checked);
+            
+            // Add change event listener
+            studentPilotCheck.addEventListener('change', function() {
+                updateUIForStudentPilot(this.checked);
+            });
+        });
     </script>
 </body>
 </html> 

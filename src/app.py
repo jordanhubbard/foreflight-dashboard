@@ -53,8 +53,11 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Initialize the database
-init_db()
+# Initialize the database only if it doesn't exist
+def init_db_if_needed():
+    """Initialize the database only if it doesn't exist."""
+    if not os.path.exists('endorsements.db'):
+        init_db()
 
 def calculate_running_totals(entries):
     """Calculate running totals for each entry."""
@@ -186,15 +189,32 @@ def prepare_aircraft_stats(entries):
 @app.route('/')
 def index():
     """Render the main page."""
-    endorsements = get_all_endorsements()
-    endorsements_dict = [e.to_dict() for e in endorsements]
+    # Check if the database exists and initialize it if needed
+    init_db_if_needed()
+    
+    # Get student pilot status from session
+    is_student_pilot = request.args.get('student_pilot', 'false').lower() == 'true'
+    
+    # Only get endorsements if student pilot
+    endorsements = []
+    if is_student_pilot:
+        try:
+            endorsements = get_all_endorsements()
+            endorsements_dict = [e.to_dict() for e in endorsements]
+        except Exception as e:
+            logger.warning(f"Could not load endorsements: {str(e)}")
+            endorsements_dict = []
+    else:
+        endorsements_dict = []
+    
     return render_template('index.html', 
                          entries=None, 
                          stats=None, 
                          all_time_stats=None, 
                          aircraft_stats=None, 
                          endorsements=endorsements_dict,
-                         now=datetime.now().isoformat())
+                         now=datetime.now().isoformat(),
+                         is_student_pilot=is_student_pilot)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -249,10 +269,21 @@ def upload_file():
         recent_experience = calculate_recent_experience(entries)
         aircraft_stats = prepare_aircraft_stats(entries)
         
-        # Get endorsements
-        logger.info("Retrieving endorsements")
-        endorsements = get_all_endorsements()
-        endorsements_dict = [e.to_dict() for e in endorsements]
+        # Get student pilot status from form
+        is_student_pilot = request.form.get('student_pilot') == 'on'
+        
+        # Get endorsements only if student pilot
+        endorsements = []
+        if is_student_pilot:
+            try:
+                init_db_if_needed()
+                endorsements = get_all_endorsements()
+                endorsements_dict = [e.to_dict() for e in endorsements]
+            except Exception as e:
+                logger.warning(f"Could not load endorsements: {str(e)}")
+                endorsements_dict = []
+        else:
+            endorsements_dict = []
         
         # Clean up uploaded file
         os.remove(filepath)
@@ -269,7 +300,8 @@ def upload_file():
                              recent_experience=recent_experience,
                              aircraft_stats=aircraft_stats,
                              endorsements=endorsements_dict,
-                             now=datetime.now().isoformat())
+                             now=datetime.now().isoformat(),
+                             is_student_pilot=is_student_pilot)
     except ValueError as e:
         logger.error(f"Validation error: {str(e)}")
         flash(f'Error validating logbook: {str(e)}')
@@ -283,6 +315,11 @@ def upload_file():
 def add_endorsement_route():
     """Add a new endorsement."""
     try:
+        # Check if student pilot
+        if not request.args.get('student_pilot', 'false').lower() == 'true':
+            flash('Endorsements are only available for student pilots')
+            return redirect(url_for('index'))
+            
         start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d')
         endorsement = add_endorsement(start_date)
         flash('Endorsement added successfully')
@@ -294,6 +331,11 @@ def add_endorsement_route():
 def delete_endorsement_route(endorsement_id):
     """Delete an endorsement."""
     try:
+        # Check if student pilot
+        if not request.args.get('student_pilot', 'false').lower() == 'true':
+            flash('Endorsements are only available for student pilots')
+            return redirect(url_for('index'))
+            
         if delete_endorsement(endorsement_id):
             flash('Endorsement deleted successfully')
         else:
@@ -306,6 +348,10 @@ def delete_endorsement_route(endorsement_id):
 def verify_pic():
     """Verify PIC endorsements for all entries."""
     try:
+        # Check if student pilot
+        if not request.args.get('student_pilot', 'false').lower() == 'true':
+            return jsonify({'error': 'Endorsement verification is only available for student pilots'}), 403
+            
         data = request.get_json()
         if not data or 'entries' not in data:
             return jsonify({'error': 'No entries provided'}), 400
