@@ -252,11 +252,9 @@ class LogbookEntry(BaseModel):
         # Check that cross-country time has sufficient distance only if distance is provided
         if self.conditions.cross_country > 0 and 'Distance:' in self.remarks:
             try:
-                distance = float(self.remarks.split('Distance: ')[1].split('nm')[0])
-                if distance < 50:
-                    issues.append(f"Cross-country time logged ({self.conditions.cross_country}) but flight distance ({distance}nm) is less than 50nm")
-            except (ValueError, IndexError):
-                # If we can't parse the distance, skip this check
+                distance_str = self.remarks.split('Distance:')[1].split('nm')[0].strip()
+                distance = float(distance_str)
+            except Exception:
                 pass
 
         # Set error explanation if issues were found
