@@ -1,7 +1,13 @@
 # syntax=docker/dockerfile:1.4
 
+# Build arguments
+ARG PYTHON_VERSION=3.11
+ARG BUILDKIT_INLINE_CACHE=1
+ARG FLASK_DEBUG=1
+ARG FLASK_ENV=development
+
 # Base stage with common dependencies
-FROM python:3.11-slim AS base
+FROM python:${PYTHON_VERSION}-slim AS base
 WORKDIR /app
 
 # Set environment variables
@@ -23,6 +29,12 @@ COPY requirements.txt .
 # Development stage with testing tools
 FROM base AS development
 
+# Pass build arguments to environment
+ARG FLASK_DEBUG
+ARG FLASK_ENV
+ENV FLASK_DEBUG=${FLASK_DEBUG} \
+    FLASK_ENV=${FLASK_ENV}
+
 # Install development and testing dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install pytest pytest-cov flake8 black isort
@@ -34,10 +46,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Copy the application code
 COPY . .
 
-# Set development environment variables
-ENV FLASK_APP=src/app.py \
-    FLASK_DEBUG=1 \
-    FLASK_ENV=development
+# Set Flask app environment variable
+ENV FLASK_APP=src/app.py
 
 # Expose ports for Flask and FastAPI
 EXPOSE 5050 5051
@@ -45,8 +55,24 @@ EXPOSE 5050 5051
 # Use the entrypoint script
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
+# Testing stage for running tests
+FROM development AS testing
+
+# Set testing environment variables
+ENV FLASK_DEBUG=0 \
+    FLASK_ENV=testing
+
+# Default command for testing
+CMD ["pytest", "tests/", "-v"]
+
 # Production stage - optimized for smaller size and security
 FROM base AS production
+
+# Pass build arguments to environment
+ARG FLASK_DEBUG=0
+ARG FLASK_ENV=production
+ENV FLASK_DEBUG=${FLASK_DEBUG} \
+    FLASK_ENV=${FLASK_ENV}
 
 # Install only production dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
@@ -54,12 +80,12 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Copy only necessary files for production
 COPY src/ /app/src/
+COPY templates/ /app/templates/
 COPY static/ /app/static/
+COPY docker-entrypoint.sh /docker-entrypoint.sh
 
-# Set production environment variables
-ENV FLASK_APP=src/app.py \
-    FLASK_DEBUG=0 \
-    FLASK_ENV=production
+# Set Flask app environment variable
+ENV FLASK_APP=src/app.py
 
 # Expose ports for Flask and FastAPI
 EXPOSE 5050 5051

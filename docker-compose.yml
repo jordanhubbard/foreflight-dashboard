@@ -1,12 +1,15 @@
-version: '3.8'
-
 services:
   foreflight-dashboard:
-    image: foreflight-dashboard:latest-dev
+    image: foreflight-dashboard:dev
     build:
       context: .
       dockerfile: Dockerfile
       target: development
+      args:
+        PYTHON_VERSION: ${PYTHON_VERSION:-3.11}
+        FLASK_DEBUG: 1
+        FLASK_ENV: development
+        BUILDKIT_INLINE_CACHE: 1
     ports:
       - "5050:5050"  # Flask UI
       - "5051:5051"  # FastAPI backend
@@ -15,6 +18,8 @@ services:
       - ./uploads:/app/uploads
       - ./logs:/app/logs
       - ./tests:/app/tests  # Mount tests directory
+      - ./templates:/app/templates  # Mount templates for hot reloading
+      - ./static:/app/static  # Mount static files for hot reloading
     restart: unless-stopped
     environment:
       - PYTHONPATH=/app
