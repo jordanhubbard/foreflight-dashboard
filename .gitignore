@@ -7,6 +7,11 @@ __pycache__/
 logs/
 uploads/
 
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
 # Virtual environment
 venv/
 env/

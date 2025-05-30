@@ -1,31 +1,48 @@
-.PHONY: install test format lint check clean run run-dev setup
+.PHONY: build test format lint check clean run run-dev stop logs shell
 
 # Default port for Flask UI
 PORT ?= 5050
 
-setup: venv
+# Docker image and container names
+IMAGE_NAME = foreflight-dashboard
+CONTAINER_NAME = foreflight-dashboard
+
+# Ensure directories exist
+setup:
 	mkdir -p uploads logs
 
-venv:
-	python -m venv venv
-	. venv/bin/activate && pip install --upgrade pip
-	. venv/bin/activate && pip install -r requirements.txt
-	. venv/bin/activate && $(MAKE) install
+# Build the Docker image
+build: setup
+	docker build -t $(IMAGE_NAME) .
 
-test: setup
-	. venv/bin/activate && pytest tests/ -v
+# Run tests in Docker
+test: build
+	docker run --rm \
+		-v $(PWD)/tests:/app/tests \
+		-v $(PWD)/logs:/app/logs \
+		$(IMAGE_NAME) \
+		pytest tests/ -v
 
-format: setup
-	. venv/bin/activate && black src/ tests/
-	. venv/bin/activate && isort src/ tests/
+# Format code in Docker
+format: build
+	docker run --rm \
+		-v $(PWD)/src:/app/src \
+		-v $(PWD)/tests:/app/tests \
+		$(IMAGE_NAME) \
+		sh -c "black src/ tests/ && isort src/ tests/"
 
-lint: setup
-	. venv/bin/activate && flake8 src/ tests/
-	. venv/bin/activate && black --check src/ tests/
-	. venv/bin/activate && isort --check-only src/ tests/
+# Lint code in Docker
+lint: build
+	docker run --rm \
+		-v $(PWD)/src:/app/src \
+		-v $(PWD)/tests:/app/tests \
+		$(IMAGE_NAME) \
+		sh -c "flake8 src/ tests/ && black --check src/ tests/ && isort --check-only src/ tests/"
 
+# Run all checks
 check: lint test
 
+# Clean up project files
 clean:
 	find . -type d -name "__pycache__" -exec rm -r {} +
 	find . -type f -name "*.pyc" -delete
@@ -41,43 +58,38 @@ clean:
 	find . -type d -name "dist" -exec rm -r {} +
 	rm -f logs/*
 	rm -f uploads/*
-	rm -rf venv
 
+# Clean Docker resources
+docker-clean: stop
+	docker rmi $(IMAGE_NAME) || true
+
+# Run development mode with code reloading using docker-compose
 run-dev: setup
-	. venv/bin/activate && \
-	FLASK_APP=src/app.py \
-	FLASK_DEBUG=1 \
-	FLASK_ENV=development \
-	PYTHONPATH=. \
-	python -m flask run --host=0.0.0.0 --port=$(PORT) --reload & \
-	PYTHONPATH=. \
-	python -m uvicorn src.api.routes:app --host 0.0.0.0 --port=5051 --reload & \
-	wait
+	docker-compose up --build
 
-run: setup
-	. venv/bin/activate && \
-	FLASK_APP=src/app.py \
-	FLASK_DEBUG=1 \
-	FLASK_ENV=development \
-	PYTHONPATH=. \
-	python -m flask run --host=0.0.0.0 --port=$(PORT) --reload & \
-	PYTHONPATH=. \
-	python -m uvicorn src.api.routes:app --host 0.0.0.0 --port=5051 --reload & \
-	wait
+# Run production mode
+run: build
+	docker run -d \
+		--name $(CONTAINER_NAME) \
+		-p $(PORT):5050 \
+		-p 5051:5051 \
+		-v $(PWD)/uploads:/app/uploads \
+		-v $(PWD)/logs:/app/logs \
+		--restart unless-stopped \
+		$(IMAGE_NAME)
 
-# Service management targets
-service-install:
-	sudo cp foreflight-logbook.service /etc/systemd/system/
-	sudo systemctl daemon-reload
-	sudo systemctl enable foreflight-logbook.service
+# Stop the running container
+stop:
+	docker stop $(CONTAINER_NAME) || true
+	docker rm $(CONTAINER_NAME) || true
 
-service-remove:
-	sudo systemctl disable foreflight-logbook.service
-	sudo rm /etc/systemd/system/foreflight-logbook.service
-	sudo systemctl daemon-reload
+# View logs from the container
+logs:
+	docker logs -f $(CONTAINER_NAME)
 
-service-start:
-	sudo systemctl start foreflight-logbook.service
-
-service-stop:
-	sudo systemctl stop foreflight-logbook.service
+# Get a shell inside the container
+shell: build
+	docker run --rm -it \
+		-v $(PWD):/app \
+		$(IMAGE_NAME) \
+		/bin/bash
