@@ -2,9 +2,11 @@ version: '3.8'
 
 services:
   foreflight-dashboard:
+    image: foreflight-dashboard:latest-dev
     build:
       context: .
       dockerfile: Dockerfile
+      target: development
     ports:
       - "5050:5050"  # Flask UI
       - "5051:5051"  # FastAPI backend
@@ -19,6 +21,15 @@ services:
       - FLASK_APP=src/app.py
       - FLASK_DEBUG=1
       - FLASK_ENV=development
+      - BUILDKIT_PROGRESS=plain
+      - DOCKER_BUILDKIT=1
     # Use tty and stdin_open for interactive debugging if needed
     tty: true
     stdin_open: true
+    # Set healthcheck to ensure container is running properly
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5050/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

@@ -1,4 +1,4 @@
-.PHONY: build test format lint check clean run run-dev stop logs shell
+.PHONY: build build-dev build-prod test format lint check clean run run-dev stop logs shell
 
 # Default port for Flask UI
 PORT ?= 5050
@@ -7,68 +7,70 @@ PORT ?= 5050
 IMAGE_NAME = foreflight-dashboard
 CONTAINER_NAME = foreflight-dashboard
 
+# Docker BuildKit settings
+EXPORT_DOCKER_BUILDKIT = 1
+
 # Ensure directories exist
 setup:
 	mkdir -p uploads logs
 
-# Build the Docker image
-build: setup
-	docker build -t $(IMAGE_NAME) .
+# Build the Docker image using Bake (development target)
+build-dev: setup
+	BUILDKIT_PROGRESS=plain docker buildx bake dev
+
+# Build the Docker image using Bake (production target)
+build-prod: setup
+	BUILDKIT_PROGRESS=plain docker buildx bake prod
+
+# Default build target (development)
+build: build-dev
 
 # Run tests in Docker
-test: build
+test: build-dev
 	docker run --rm \
 		-v $(PWD)/tests:/app/tests \
 		-v $(PWD)/logs:/app/logs \
-		$(IMAGE_NAME) \
+		$(IMAGE_NAME):latest-dev \
 		pytest tests/ -v
 
+# Run tests with coverage
+test-cov: build-dev
+	docker run --rm \
+		-v $(PWD)/tests:/app/tests \
+		-v $(PWD)/logs:/app/logs \
+		-v $(PWD)/.coverage:/app/.coverage \
+		$(IMAGE_NAME):latest-dev \
+		pytest tests/ --cov=src -v
+
 # Format code in Docker
-format: build
+format: build-dev
 	docker run --rm \
 		-v $(PWD)/src:/app/src \
 		-v $(PWD)/tests:/app/tests \
-		$(IMAGE_NAME) \
+		$(IMAGE_NAME):latest-dev \
 		sh -c "black src/ tests/ && isort src/ tests/"
 
 # Lint code in Docker
-lint: build
+lint: build-dev
 	docker run --rm \
 		-v $(PWD)/src:/app/src \
 		-v $(PWD)/tests:/app/tests \
-		$(IMAGE_NAME) \
+		$(IMAGE_NAME):latest-dev \
 		sh -c "flake8 src/ tests/ && black --check src/ tests/ && isort --check-only src/ tests/"
 
 # Run all checks
 check: lint test
 
-# Clean up project files
-clean:
-	find . -type d -name "__pycache__" -exec rm -r {} +
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.pyo" -delete
-	find . -type f -name "*.pyd" -delete
-	find . -type f -name ".coverage" -delete
-	find . -type d -name "*.egg-info" -exec rm -r {} +
-	find . -type d -name "*.egg" -exec rm -r {} +
-	find . -type d -name ".pytest_cache" -exec rm -r {} +
-	find . -type d -name ".coverage" -exec rm -r {} +
-	find . -type d -name "htmlcov" -exec rm -r {} +
-	find . -type d -name "build" -exec rm -r {} +
-	find . -type d -name "dist" -exec rm -r {} +
-	rm -f logs/*
-	rm -f uploads/*
-
 # Clean Docker resources
-docker-clean: stop
-	docker rmi $(IMAGE_NAME) || true
+clean: stop
+	docker rmi $(IMAGE_NAME):latest-dev $(IMAGE_NAME):latest || true
 
 # Run development mode with code reloading using docker-compose
-run-dev: setup
-	docker-compose up --build
+run-dev: build-dev
+	EXPORT_DOCKER_BUILDKIT=1 docker-compose up
 
 # Run production mode
-run: build
+run: build-prod
 	docker run -d \
 		--name $(CONTAINER_NAME) \
 		-p $(PORT):5050 \
@@ -76,10 +78,11 @@ run: build
 		-v $(PWD)/uploads:/app/uploads \
 		-v $(PWD)/logs:/app/logs \
 		--restart unless-stopped \
-		$(IMAGE_NAME)
+		$(IMAGE_NAME):latest
 
 # Stop the running container
 stop:
+	docker-compose down || true
 	docker stop $(CONTAINER_NAME) || true
 	docker rm $(CONTAINER_NAME) || true
 
@@ -88,8 +91,8 @@ logs:
 	docker logs -f $(CONTAINER_NAME)
 
 # Get a shell inside the container
-shell: build
+shell: build-dev
 	docker run --rm -it \
 		-v $(PWD):/app \
-		$(IMAGE_NAME) \
+		$(IMAGE_NAME):latest-dev \
 		/bin/bash
