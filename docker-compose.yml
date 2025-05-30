@@ -9,11 +9,16 @@ services:
       - "5050:5050"  # Flask UI
       - "5051:5051"  # FastAPI backend
     volumes:
+      - ./src:/app/src  # Mount source code for hot reloading
       - ./uploads:/app/uploads
       - ./logs:/app/logs
+      - ./tests:/app/tests  # Mount tests directory
     restart: unless-stopped
     environment:
       - PYTHONPATH=/app
       - FLASK_APP=src/app.py
       - FLASK_DEBUG=1
       - FLASK_ENV=development
+    # Use tty and stdin_open for interactive debugging if needed
+    tty: true
+    stdin_open: true
