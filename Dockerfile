@@ -80,8 +80,6 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Copy only necessary files for production
 COPY src/ /app/src/
-COPY templates/ /app/templates/
-COPY static/ /app/static/
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 
 # Set Flask app environment variable

@@ -18,8 +18,6 @@ services:
       - ./uploads:/app/uploads
       - ./logs:/app/logs
       - ./tests:/app/tests  # Mount tests directory
-      - ./templates:/app/templates  # Mount templates for hot reloading
-      - ./static:/app/static  # Mount static files for hot reloading
     restart: unless-stopped
     environment:
       - PYTHONPATH=/app
