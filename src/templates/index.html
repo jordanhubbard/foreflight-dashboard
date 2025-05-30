@@ -354,6 +354,17 @@
             transform: rotate(90deg);
         }
         
+        .d-none {
+            display: none !important;
+        }
+        
+        /* Search highlight styles */
+        .search-highlight {
+            background-color: #fff3cd;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+        
         .details-row {
             display: none;
             background-color: #f8f9fa;
@@ -590,6 +601,7 @@
         </div>
 
         <!-- Instructor Endorsements -->
+        {% if is_student_pilot %}
         <div class="card mb-4" id="endorsementsSection" style="display: none;">
             <div class="card-body">
                 <h5 class="card-title">
@@ -648,6 +660,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         {% if stats %}
         <!-- Recent Experience (Last 2 Calendar Months) -->
@@ -814,251 +827,53 @@
         </div>
         {% endif %}
 
-        <!-- Examiner Summary Section -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <span class="disclosure-triangle" data-target="examiner-summary">▶</span>
-                    DPE Review Summary
-                </h5>
-                <div id="examiner-summary" class="details-row">
-                    <div class="examiner-categories">
-                        {% if entries %}
-                        <!-- PIC Cross Country Section -->
-                        <div class="examiner-category mb-4">
-                            <h6><i class="fas fa-route"></i> Total PIC Cross Country Time</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Date</th>
-                                            <th>Route</th>
-                                            <th>Aircraft</th>
-                                            <th>XC Time</th>
-                                            <th>Distance</th>
-                                            <th>Running Total</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for entry in entries if entry.conditions.cross_country > 0 and entry.pic_time > 0 %}
-                                        <tr>
-                                            <td>{{ entry.date.split('T')[0] }}</td>
-                                            <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
-                                            <td>{{ entry.aircraft.registration }}</td>
-                                            <td>{{ "%.1f"|format(entry.conditions.cross_country) }}</td>
-                                            <td>{% if 'Distance:' in entry.remarks %}{{ entry.remarks.split('Distance: ')[1].split('nm')[0].strip() }} NM{% else %}{{ entry.remarks.split('Distance:')[1].split('nm')[0].strip() if 'Distance:' in entry.remarks else entry.remarks.split('Distance:')[1].split('NM')[0].strip() if 'Distance:' in entry.remarks else entry.remarks.split('Distance:')[1].split('nautical')[0].strip() if 'Distance:' in entry.remarks else '---' }}{% endif %}</td>
-                                            <td>{{ "%.1f"|format(entry.running_totals.cross_country) }}</td>
-                                            <td>
-                                                <span class="badge badge-xc" data-bs-toggle="tooltip" title="Cross-country flight">
-                                                    <i class="fas fa-plane"></i> XC
-                                                </span>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- PIC Non-Cross Country Section -->
-                        <div class="examiner-category mb-4">
-                            <h6><i class="fas fa-plane"></i> Total PIC Non-Cross Country Time</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Date</th>
-                                            <th>Route</th>
-                                            <th>Aircraft</th>
-                                            <th>Total Time</th>
-                                            <th>Running Total</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for entry in entries if entry.pic_time > 0 and entry.conditions.cross_country == 0 %}
-                                        <tr>
-                                            <td>{{ entry.date.split('T')[0] }}</td>
-                                            <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
-                                            <td>{{ entry.aircraft.registration }}</td>
-                                            <td>{{ "%.1f"|format(entry.pic_time) }}</td>
-                                            <td>{{ "%.1f"|format(entry.running_totals.pic_time) }}</td>
-                                            <td>
-                                                <span class="badge badge-solo" data-bs-toggle="tooltip" title="PIC flight">
-                                                    <i class="fas fa-user"></i> PIC
-                                                </span>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Cross Country Solo Section -->
-                        <div class="examiner-category mb-4">
-                            <h6><i class="fas fa-route"></i> Cross Country Solo Flights</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Date</th>
-                                            <th>Route</th>
-                                            <th>Aircraft</th>
-                                            <th>XC Time</th>
-                                            <th>Distance</th>
-                                            <th>Running Total</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for entry in entries if entry.conditions.cross_country > 0 and entry.pic_time > 0 and entry.dual_received == 0 %}
-                                        <tr>
-                                            <td>{{ entry.date.split('T')[0] }}</td>
-                                            <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
-                                            <td>{{ entry.aircraft.registration }}</td>
-                                            <td>{{ "%.1f"|format(entry.conditions.cross_country) }}</td>
-                                            <td>{% if 'Distance:' in entry.remarks %}{{ entry.remarks.split('Distance: ')[1].split('nm')[0].strip() }} NM{% else %}{{ entry.remarks.split('Distance:')[1].split('nm')[0].strip() if 'Distance:' in entry.remarks else entry.remarks.split('Distance:')[1].split('NM')[0].strip() if 'Distance:' in entry.remarks else entry.remarks.split('Distance:')[1].split('nautical')[0].strip() if 'Distance:' in entry.remarks else '---' }}{% endif %}</td>
-                                            <td>{{ "%.1f"|format(entry.running_totals.cross_country) }}</td>
-                                            <td>
-                                                <span class="badge badge-xc" data-bs-toggle="tooltip" title="Cross-country flight">
-                                                    <i class="fas fa-plane"></i> XC
-                                                </span>
-                                                <span class="badge badge-solo" data-bs-toggle="tooltip" title="Solo flight">
-                                                    <i class="fas fa-user"></i> Solo
-                                                </span>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Non-Cross Country Solo Section -->
-                        <div class="examiner-category mb-4">
-                            <h6><i class="fas fa-user"></i> Solo Flights (Non-Cross Country)</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Date</th>
-                                            <th>Route</th>
-                                            <th>Aircraft</th>
-                                            <th>Total Time</th>
-                                            <th>Running Total</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for entry in entries if entry.pic_time > 0 and entry.dual_received == 0 and entry.conditions.cross_country == 0 %}
-                                        <tr>
-                                            <td>{{ entry.date.split('T')[0] }}</td>
-                                            <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
-                                            <td>{{ entry.aircraft.registration }}</td>
-                                            <td>{{ "%.1f"|format(entry.total_time) }}</td>
-                                            <td>{{ "%.1f"|format(entry.running_totals.pic_time) }}</td>
-                                            <td>
-                                                <span class="badge badge-solo" data-bs-toggle="tooltip" title="Solo flight">
-                                                    <i class="fas fa-user"></i> Solo
-                                                </span>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Night Dual Instruction Section -->
-                        <div class="examiner-category mb-4">
-                            <h6><i class="fas fa-moon"></i> Dual Instruction for Night</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Date</th>
-                                            <th>Route</th>
-                                            <th>Aircraft</th>
-                                            <th>Night Time</th>
-                                            <th>Night Landings</th>
-                                            <th>Running Total</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for entry in entries if entry.conditions.night > 0 and entry.dual_received > 0 %}
-                                        <tr>
-                                            <td>{{ entry.date.split('T')[0] }}</td>
-                                            <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
-                                            <td>{{ entry.aircraft.registration }}</td>
-                                            <td>{{ "%.1f"|format(entry.conditions.night) }}</td>
-                                            <td>{{ entry.landings_night }}</td>
-                                            <td>{{ "%.1f"|format(entry.running_totals.night_time) }}</td>
-                                            <td>
-                                                <span class="badge badge-night" data-bs-toggle="tooltip" title="Night flight">
-                                                    <i class="fas fa-moon"></i> Night
-                                                </span>
-                                                <span class="badge badge-dual" data-bs-toggle="tooltip" title="Dual instruction received">
-                                                    <i class="fas fa-users"></i> Dual
-                                                </span>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Simulated Instrument Dual Section -->
-                        <div class="examiner-category mb-4">
-                            <h6><i class="fas fa-tachometer-alt"></i> Dual Instruction with Simulated Instrument Time</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Date</th>
-                                            <th>Route</th>
-                                            <th>Aircraft</th>
-                                            <th>Simulated</th>
-                                            <th>Running Total</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for entry in entries if entry.conditions.simulated_instrument > 0 and entry.dual_received > 0 %}
-                                        <tr>
-                                            <td>{{ entry.date.split('T')[0] }}</td>
-                                            <td>{{ entry.departure.identifier }} → {{ entry.destination.identifier }}</td>
-                                            <td>{{ entry.aircraft.registration }}</td>
-                                            <td>{{ "%.1f"|format(entry.conditions.simulated_instrument) }}</td>
-                                            <td>{{ "%.1f"|format(entry.running_totals.sim_instrument) }}</td>
-                                            <td>
-                                                <span class="badge badge-dual" data-bs-toggle="tooltip" title="Dual instruction received">
-                                                    <i class="fas fa-users"></i> Dual
-                                                </span>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        {% else %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i> Upload a logbook to view DPE review summary
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Flight Entries Table -->
         <div class="card mb-4">
             <div class="card-body">
                 <h5 class="card-title">Flight Entries</h5>
+                
+                <!-- Search and Filter Controls -->
+                <div class="row mb-3">
+                    <div class="col-md-6 mb-2">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" id="flight-search" placeholder="Search flights..." aria-label="Search flights">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex flex-wrap" id="flight-type-filter">
+                            <label class="form-label fw-bold me-3 pt-1">Filter by Type:</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-all" checked>
+                                <label class="form-check-label" for="filter-all">All</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-pic">
+                                <label class="form-check-label" for="filter-pic">PIC</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-dual">
+                                <label class="form-check-label" for="filter-dual">Dual</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-solo">
+                                <label class="form-check-label" for="filter-solo">Solo</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-night">
+                                <label class="form-check-label" for="filter-night">Night</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-xc">
+                                <label class="form-check-label" for="filter-xc">Cross Country</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-instrument">
+                                <label class="form-check-label" for="filter-instrument">Instrument</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="flight-table">
                         <thead>
@@ -1143,6 +958,9 @@
                                 <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.sim_instrument) }}</td>
                                 <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.dual_received) }}</td>
                                 <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.pic_time) }}</td>
+                                <td class="d-none solo-time">{{ entry.solo_time }}</td>
+                                <td class="d-none xc-time">{{ entry.conditions.cross_country }}</td>
+                                <td class="d-none instrument-time">{{ entry.conditions.simulated_instrument + entry.conditions.actual_instrument }}</td>
                             </tr>
                             <tr>
                                 <td colspan="100%" class="details-row" id="flight-details-{{ loop.index }}">
@@ -1196,7 +1014,7 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                             <tr>
                                 <td colspan="18" class="text-center p-5">
                                     <div class="alert alert-info mb-0">
-                                        <i class="fas fa-info-circle me-2"></i>
+                                        <i class="fas fa-info-circle"></i>
                                         Upload a ForeFlight logbook CSV file to view your flight data
                                     </div>
                                 </td>
@@ -1378,114 +1196,62 @@ PIC: {{ entry.running_totals.pic_time }}</span>
             triangles.forEach(triangle => {
                 triangle.addEventListener('click', function() {
                     // Get the target element
-                    const targetId = this.getAttribute('data-target');
-                    const targetElement = document.getElementById(targetId);
-                    
-                    // Toggle visibility
-                    if (targetElement) {
-                        const isVisible = targetElement.style.display !== 'none';
-                        targetElement.style.display = isVisible ? 'none' : 'block';
-                        this.textContent = isVisible ? '▶' : '▼';
-                    }
-                });
             });
-            
-            // Initially hide all detail rows
-            document.querySelectorAll('.details-row').forEach(row => {
-                row.style.display = 'none';
-            });
-        });
 
-        // Error navigation
-        let currentErrorIndex = -1;
-        const errorEntries = Array.from(document.querySelectorAll('tr[data-has-error="true"]'));
-        
-        function updateErrorCounter() {
-            const counter = document.getElementById('errorCounter');
-            if (!counter) return;
-            
-            if (errorEntries.length > 0 && currentErrorIndex >= 0) {
-                counter.textContent = `Error ${currentErrorIndex + 1} of ${errorEntries.length}`;
-            } else {
-                counter.textContent = `${errorEntries.length} Errors Found`;
-            }
-        }
+            // Error navigation
+            const errorEntries = document.querySelectorAll('.has-error');
+            let currentErrorIndex = 0;
 
-        function navigateError(direction) {
-            if (errorEntries.length === 0) return;
-
-            if (currentErrorIndex >= 0) {
-                errorEntries[currentErrorIndex].classList.remove('current-error');
-            }
-
-            currentErrorIndex += direction;
-            if (currentErrorIndex >= errorEntries.length) currentErrorIndex = 0;
-            if (currentErrorIndex < 0) currentErrorIndex = errorEntries.length - 1;
-
-            const targetEntry = errorEntries[currentErrorIndex];
-            targetEntry.classList.add('current-error');
-            targetEntry.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            updateErrorCounter();
-        }
-
-        // Initialize error counter
-        if (errorEntries.length > 0) {
-            updateErrorCounter();
-        }
-
-        // Table sorting
-        function sortTable(columnIndex) {
-            const table = document.querySelector('.aircraft-stats-table');
-            const headers = table.querySelectorAll('th');
-            const tbody = table.querySelector('tbody');
-            const rows = Array.from(tbody.querySelectorAll('tr'));
-            
-            headers.forEach(header => {
-                header.classList.remove('sort-asc', 'sort-desc');
-                header.classList.add('sort-icon');
-            });
-            
-            const currentHeader = headers[columnIndex];
-            const isAscending = !currentHeader.classList.contains('sort-asc');
-            
-            currentHeader.classList.remove('sort-icon');
-            currentHeader.classList.add(isAscending ? 'sort-asc' : 'sort-desc');
-            
-            rows.sort((rowA, rowB) => {
-                const cellA = rowA.cells[columnIndex].textContent;
-                const cellB = rowB.cells[columnIndex].textContent;
-                
-                if (columnIndex >= 2) {
-                    return isAscending ? 
-                        parseFloat(cellA) - parseFloat(cellB) : 
-                        parseFloat(cellB) - parseFloat(cellA);
+            function updateErrorCounter() {
+                const counter = document.getElementById('error-counter');
+                if (counter) {
+                    counter.textContent = `${currentErrorIndex + 1}/${errorEntries.length}`;
                 }
-                
-                return isAscending ? 
-                    cellA.localeCompare(cellB) : 
-                    cellB.localeCompare(cellA);
-            });
-            
-            rows.forEach(row => tbody.appendChild(row));
-        }
-
-        // Keyboard navigation
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowLeft') {
-                navigateError(-1);
-            } else if (e.key === 'ArrowRight') {
-                navigateError(1);
             }
-        });
 
-        // Add JavaScript for handling disclosure triangles
-        document.addEventListener('DOMContentLoaded', function() {
+            function navigateError(direction) {
+                if (errorEntries.length === 0) return;
+                
+                // Remove highlight from current error
+                errorEntries[currentErrorIndex].classList.remove('current-error');
+                
+                // Update index
+                currentErrorIndex = (currentErrorIndex + direction + errorEntries.length) % errorEntries.length;
+                
+                // Highlight new current error and scroll to it
+                errorEntries[currentErrorIndex].classList.add('current-error');
+                errorEntries[currentErrorIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                updateErrorCounter();
+            }
+
+            // Initialize error counter
+            if (errorEntries.length > 0) {
+                updateErrorCounter();
+            }
+
+            // Keyboard navigation
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowLeft') {
+                    navigateError(-1);
+                } else if (e.key === 'ArrowRight') {
+                    navigateError(1);
+                }
+            });
+
             // Function to toggle details
             function toggleDetails(triangle, detailsId) {
-                const details = document.getElementById(detailsId);
-                if (details) {
-                    triangle.classList.toggle('open');
-                    details.classList.toggle('show');
+                const detailsElement = document.getElementById(detailsId);
+                if (!detailsElement) return;
+                
+                if (detailsElement.style.display === 'block') {
+                    detailsElement.style.display = 'none';
+                    detailsElement.classList.remove('show');
+                    triangle.textContent = '▶';
+                } else {
+                    detailsElement.style.display = 'block';
+                    detailsElement.classList.add('show');
+                    triangle.textContent = '▼';
                 }
             }
 
@@ -1496,160 +1262,243 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                     toggleDetails(this, detailsId);
                 });
             });
-        });
 
-        // Add script to synchronize column widths between header and body tables
-        document.addEventListener('DOMContentLoaded', function() {
-            const headerTable = document.querySelector('.flight-table-header .flight-table');
-            const bodyTable = document.querySelector('.flight-table-body .flight-table');
-            
-            // Function to synchronize column widths
-            function syncColumnWidths() {
-                const headerCells = headerTable.querySelectorAll('th');
-                const bodyCells = bodyTable.querySelectorAll('tr:first-child td');
+            // Add click handlers to all flight rows
+            document.querySelectorAll('.flight-table tbody tr:not(.details-row)').forEach(row => {
+                row.addEventListener('click', function(e) {
+                    // Don't toggle if clicking on a link or checkbox
+                    if (e.target.tagName === 'A' || e.target.tagName === 'INPUT') {
+                        return;
+                    }
+                    
+                    const rowId = this.id.split('-')[1];
+                    const detailsRow = document.getElementById(`flight-details-${rowId}`);
+                    const triangle = this.querySelector('.disclosure-triangle');
+                    if (triangle && detailsRow) {
+                        toggleDetails(triangle, detailsRow.id);
+                    }
+                });
+            });
+
+            // Table sorting
+            function sortTable(columnIndex) {
+                const table = document.querySelector('.flight-table');
+                if (!table) return;
                 
-                headerCells.forEach((cell, index) => {
-                    if (bodyCells[index]) {
-                        const width = Math.max(cell.offsetWidth, bodyCells[index].offsetWidth);
-                        cell.style.width = width + 'px';
-                        bodyCells[index].style.width = width + 'px';
+                const tbody = table.querySelector('tbody');
+                if (!tbody) return;
+                
+                const rows = Array.from(tbody.querySelectorAll('tr:not(.details-row)'));
+                if (rows.length === 0) return;
+                
+                // Get current sort direction
+                const th = table.querySelectorAll('th')[columnIndex];
+                if (!th) return;
+                
+                const currentDirection = th.getAttribute('data-sort') === 'asc' ? 'desc' : 'asc';
+                
+                // Update all headers
+                table.querySelectorAll('th').forEach(header => {
+                    header.removeAttribute('data-sort');
+                    const indicator = header.querySelector('.sort-indicator');
+                    if (indicator) indicator.remove();
+                });
+                
+                // Set new sort direction and indicator
+                th.setAttribute('data-sort', currentDirection);
+                const indicator = document.createElement('span');
+                indicator.className = 'sort-indicator ms-1';
+                indicator.innerHTML = currentDirection === 'asc' ? '▲' : '▼';
+                th.appendChild(indicator);
+                
+                // Sort rows
+                rows.sort((a, b) => {
+                    const aCells = a.querySelectorAll('td');
+                    const bCells = b.querySelectorAll('td');
+                    
+                    if (columnIndex >= aCells.length || columnIndex >= bCells.length) return 0;
+                    
+                    const aValue = aCells[columnIndex].textContent.trim();
+                    const bValue = bCells[columnIndex].textContent.trim();
+                    
+                    // Handle numeric values
+                    if (!isNaN(parseFloat(aValue)) && !isNaN(parseFloat(bValue))) {
+                        return currentDirection === 'asc' ? 
+                            parseFloat(aValue) - parseFloat(bValue) : 
+                            parseFloat(bValue) - parseFloat(aValue);
+                    }
+                    
+                    // Handle dates (in format YYYY-MM-DD)
+                    if (aValue.match(/^\d{4}-\d{2}-\d{2}$/) && bValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        return currentDirection === 'asc' ? 
+                            new Date(aValue) - new Date(bValue) : 
+                            new Date(bValue) - new Date(aValue);
+                    }
+                    
+                    // Handle strings
+                    return currentDirection === 'asc' ? 
+                        aValue.localeCompare(bValue) : 
+                        bValue.localeCompare(aValue);
+                });
+                
+                // Reorder rows in the DOM
+                rows.forEach(row => {
+                    const rowId = row.id.split('-')[1];
+                    const detailsRow = document.getElementById(`flight-details-${rowId}`);
+                    tbody.appendChild(row);
+                    if (detailsRow) {
+                        tbody.appendChild(detailsRow);
                     }
                 });
             }
-            
+
+            // Add click handlers to table headers for sorting
+            document.querySelectorAll('.flight-table th').forEach((th, index) => {
+                th.addEventListener('click', function() {
+                    sortTable(index);
+                });
+            });
+
+            // Function to synchronize column widths
+            function syncColumnWidths() {
+                const headerCells = document.querySelectorAll('.flight-table thead th');
+                const firstRowCells = document.querySelectorAll('.flight-table tbody tr:first-child td');
+                
+                if (headerCells.length === 0 || firstRowCells.length === 0) return;
+                
+                headerCells.forEach((cell, index) => {
+                    if (index < firstRowCells.length) {
+                        cell.style.width = firstRowCells[index].offsetWidth + 'px';
+                    }
+                });
+            }
+                
             // Sync widths initially and on window resize
             syncColumnWidths();
             window.addEventListener('resize', syncColumnWidths);
-        });
 
-        // Remove the generatePDF function and add table toggle functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const toggleButton = document.getElementById('toggleTables');
-            const buttonText = toggleButton.querySelector('span');
-            const buttonIcon = toggleButton.querySelector('i');
-            let tablesExpanded = false;
-
-            function toggleTableExpansion() {
-                const tableContainers = document.querySelectorAll('.table-responsive, .flight-table-body, .flight-table-container');
-                tablesExpanded = !tablesExpanded;
-
-                tableContainers.forEach(container => {
-                    if (tablesExpanded) {
-                        container.classList.add('expanded');
+            // Toggle table expansion
+            const toggleButton = document.getElementById('toggle-table-expansion');
+            if (toggleButton) {
+                function toggleTableExpansion() {
+                    const table = document.querySelector('.flight-table');
+                    if (!table) return;
+                    
+                    const isExpanded = table.classList.contains('expanded');
+                    
+                    if (isExpanded) {
+                        table.classList.remove('expanded');
+                        toggleButton.textContent = 'Show All Columns';
+                        toggleButton.classList.remove('btn-secondary');
+                        toggleButton.classList.add('btn-primary');
                     } else {
-                        container.classList.remove('expanded');
+                        table.classList.add('expanded');
+                        toggleButton.textContent = 'Show Fewer Columns';
+                        toggleButton.classList.remove('btn-primary');
+                        toggleButton.classList.add('btn-secondary');
                     }
-                });
+                }
 
-                // Update button text and icon
-                buttonText.textContent = tablesExpanded ? 'Collapse Tables' : 'Expand Tables';
-                buttonIcon.className = tablesExpanded ? 'fas fa-compress' : 'fas fa-expand';
+                toggleButton.addEventListener('click', toggleTableExpansion);
             }
 
-            toggleButton.addEventListener('click', toggleTableExpansion);
-        });
-
-        function verifyPICEndorsements() {
-            const entries = {{ entries|tojson|safe }};
-            fetch('/verify-pic', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ entries: entries }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert('Error: ' + data.error);
-                    return;
-                }
+            // Search and filter functionality
+            function filterAndSearchFlights() {
+                const searchInput = document.getElementById('flight-search');
+                const searchText = searchInput ? searchInput.value.toLowerCase() : '';
                 
-                // Update validation counters
-                const totalPicSolo = entries.filter(entry => entry.pic_time > 0).length;
-                const invalidCount = data.unendorsed_flights.length;
-                const validCount = totalPicSolo - invalidCount;
+                const allCheckbox = document.getElementById('filter-all');
+                const picCheckbox = document.getElementById('filter-pic');
+                const dualCheckbox = document.getElementById('filter-dual');
+                const soloCheckbox = document.getElementById('filter-solo');
+                const nightCheckbox = document.getElementById('filter-night');
+                const xcCheckbox = document.getElementById('filter-xc');
+                const instrumentCheckbox = document.getElementById('filter-instrument');
                 
-                document.getElementById('validEndorsementCount').textContent = `Valid Endorsements: ${validCount}`;
-                document.getElementById('invalidEndorsementCount').textContent = `Missing Endorsements: ${invalidCount}`;
+                const allChecked = allCheckbox && allCheckbox.checked;
+                const picChecked = picCheckbox && picCheckbox.checked;
+                const dualChecked = dualCheckbox && dualCheckbox.checked;
+                const soloChecked = soloCheckbox && soloCheckbox.checked;
+                const nightChecked = nightCheckbox && nightCheckbox.checked;
+                const xcChecked = xcCheckbox && xcCheckbox.checked;
+                const instrumentChecked = instrumentCheckbox && instrumentCheckbox.checked;
                 
-                let message = '';
+                const rows = document.querySelectorAll('.flight-table tbody tr:not(.details-row)');
                 
-                // Show endorsement gaps
-                if (data.gaps && data.gaps.length > 0) {
-                    message += 'Gaps in Endorsement Coverage:\n';
-                    data.gaps.forEach(gap => {
-                        const start = new Date(gap.start).toLocaleDateString();
-                        const end = new Date(gap.end).toLocaleDateString();
-                        message += `• ${start} to ${end}\n`;
+                rows.forEach(row => {
+                    // Skip detail rows
+                    if (row.classList.contains('details-row')) return;
+                    
+                    const rowId = row.id.split('-')[1];
+                    const detailsRow = document.getElementById(`flight-details-${rowId}`);
+                    let showRow = false;
+                    
+                    // If 'All' is checked, show all rows that match the search
+                    if (allChecked) {
+                        showRow = true;
+                    } else {
+                        // Check if row matches any of the selected filters
+                        if (picChecked && row.classList.contains('pic-flight')) showRow = true;
+                        if (dualChecked && row.classList.contains('dual-only')) showRow = true;
+                        if (soloChecked && row.querySelector('.solo-time') && parseFloat(row.querySelector('.solo-time').textContent) > 0) showRow = true;
+                        if (nightChecked && row.classList.contains('night-only')) showRow = true;
+                        if (xcChecked && row.querySelector('.xc-time') && parseFloat(row.querySelector('.xc-time').textContent) > 0) showRow = true;
+                        if (instrumentChecked && row.querySelector('.instrument-time') && parseFloat(row.querySelector('.instrument-time').textContent) > 0) showRow = true;
+                    }
+                    
+                    // Apply search filter if there's search text
+                    if (searchText && showRow) {
+                        const rowText = row.textContent.toLowerCase();
+                        const detailsText = detailsRow ? detailsRow.textContent.toLowerCase() : '';
+                        showRow = (rowText.includes(searchText) || detailsText.includes(searchText));
+                    }
+                    
+                    // Show/hide the row and its details
+                    row.style.display = showRow ? '' : 'none';
+                    if (detailsRow) {
+                        detailsRow.style.display = (showRow && detailsRow.classList.contains('show')) ? '' : 'none';
+                    }
+                });
+            }
+            
+            // Setup search and filtering
+            const searchInput = document.getElementById('flight-search');
+            const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
+            
+            if (searchInput) {
+                searchInput.addEventListener('input', filterAndSearchFlights);
+            }
+            
+            filterCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    // If 'All' is checked, uncheck other filters
+                    if (this.id === 'filter-all' && this.checked) {
+                        filterCheckboxes.forEach(cb => {
+                            if (cb.id !== 'filter-all') cb.checked = false;
+                        });
+                    }
+                    // If any other filter is checked, uncheck 'All'
+                    else if (this.id !== 'filter-all' && this.checked) {
+                        const allCheckbox = document.getElementById('filter-all');
+                        if (allCheckbox) allCheckbox.checked = false;
+                    }
+                    // If no filters are checked, check 'All'
+                    let anyChecked = false;
+                    filterCheckboxes.forEach(cb => {
+                        if (cb.checked) anyChecked = true;
                     });
-                    message += '\n';
-                } else {
-                    message += 'No gaps in endorsement coverage.\n\n';
-                }
-                
-                // Show unendorsed flights
-                if (data.unendorsed_flights.length === 0) {
-                    message += 'All PIC/Solo flights have valid endorsements!';
-                } else {
-                    message += `Found ${data.total_invalid} flights without valid endorsements:\n`;
-                    data.unendorsed_flights.forEach(flight => {
-                        const date = new Date(flight.date).toLocaleDateString();
-                        message += `• ${date}: ${flight.route} (${flight.pic_time} hours) - ${flight.type.toUpperCase()}\n`;
-                    });
-                }
-                
-                // Create a modal to display the results
-                const modalHtml = `
-                    <div class="modal fade" id="endorsementCheckModal" tabindex="-1">
-                        <div class="modal-dialog modal-lg">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Endorsement Check Results</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="mb-3">
-                                        <div class="d-flex gap-2 mb-3">
-                                            <span class="badge bg-primary">Total PIC/Solo Flights: ${totalPicSolo}</span>
-                                            <span class="badge bg-success">Valid Endorsements: ${validCount}</span>
-                                            <span class="badge bg-danger">Missing Endorsements: ${invalidCount}</span>
-                                        </div>
-                                        <pre style="white-space: pre-wrap;">${message}</pre>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                // Remove any existing modal
-                const existingModal = document.getElementById('endorsementCheckModal');
-                if (existingModal) {
-                    existingModal.remove();
-                }
-                
-                // Add the new modal to the document
-                document.body.insertAdjacentHTML('beforeend', modalHtml);
-                
-                // Show the modal
-                const modal = new bootstrap.Modal(document.getElementById('endorsementCheckModal'));
-                modal.show();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error verifying PIC endorsements');
+                    if (!anyChecked) {
+                        const allCheckbox = document.getElementById('filter-all');
+                        if (allCheckbox) allCheckbox.checked = true;
+                    }
+                    
+                    filterAndSearchFlights();
+                });
             });
-        }
-
-        // Add this at the beginning of your script section
-        document.addEventListener('DOMContentLoaded', function() {
-            const studentPilotCheck = document.getElementById('studentPilotCheck');
-            const endorsementsSection = document.getElementById('endorsementsSection');
-            const verifyPICButton = document.getElementById('verifyPICButton');
+            
+            // Initial filter
+            filterAndSearchFlights();
+        });
             
             // Function to update UI based on student pilot status
             function updateUIForStudentPilot(isStudentPilot) {
@@ -1665,6 +1514,52 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                 updateUIForStudentPilot(this.checked);
             });
         });
+
+        // Flight type filter logic
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkboxes = document.querySelectorAll('.flight-type-checkbox');
+            const tableRows = document.querySelectorAll('.flight-table tbody tr');
+
+            function filterRows() {
+                // Get all checked types
+                const checkedTypes = Array.from(checkboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.value);
+                tableRows.forEach(row => {
+                    // Only filter main entry rows (not details rows)
+                    if (row.classList.contains('details-row')) return;
+                    // If no type is checked, show all
+                    if (checkedTypes.length === 0) {
+                        row.style.display = '';
+                        return;
+                    }
+                    // If row matches any of the selected filters
+                    if (picChecked && row.classList.contains('pic-flight')) showRow = true;
+                    if (dualChecked && row.classList.contains('dual-only')) showRow = true;
+                    if (soloChecked && row.querySelector('.solo-time') && parseFloat(row.querySelector('.solo-time').textContent) > 0) showRow = true;
+                    if (nightChecked && row.classList.contains('night-only')) showRow = true;
+                    if (xcChecked && row.querySelector('.xc-time') && parseFloat(row.querySelector('.xc-time').textContent) > 0) showRow = true;
+                    if (instrumentChecked && row.querySelector('.instrument-time') && parseFloat(row.querySelector('.instrument-time').textContent) > 0) showRow = true;
+                }
+                
+                // Apply search filter if there's search text
+                if (searchText) {
+                    const rowText = row.textContent.toLowerCase();
+                    const detailsText = detailsRow ? detailsRow.textContent.toLowerCase() : '';
+                    showRow = showRow && (rowText.includes(searchText) || detailsText.includes(searchText));
+                }
+                
+                // Show/hide the row and its details
+                row.style.display = showRow ? '' : 'none';
+                if (detailsRow) {
+                    detailsRow.style.display = (showRow && detailsRow.classList.contains('show')) ? '' : 'none';
+                }
+            });
+        }
+        
+
+        
+
     </script>
 </body>
-</html> 
+</html>

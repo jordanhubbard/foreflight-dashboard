@@ -1,8 +1,8 @@
 """Data models for the ForeFlight Logbook Manager."""
 
 from datetime import datetime, time, timezone, timedelta
-from typing import Optional, List, Dict, Annotated
-from pydantic import BaseModel, Field, validator, ConfigDict, model_validator
+from typing import Optional, List, Dict
+from pydantic import BaseModel, Field, validator
 from dataclasses import dataclass
 
 class Airport(BaseModel):
@@ -10,10 +10,9 @@ class Airport(BaseModel):
     identifier: Optional[str] = None
     name: Optional[str] = None
     
-    model_config = ConfigDict(
-        title="Airport",
-        description="Airport information"
-    )
+    class Config:
+        title = "Airport"
+        description = "Airport information"
 
     def __bool__(self):
         """Return True if the airport has an identifier."""
@@ -26,10 +25,9 @@ class Aircraft(BaseModel):
     category_class: str
     gear_type: str = "tricycle"  # Default to tricycle gear since it's more common
     
-    model_config = ConfigDict(
-        title="Aircraft",
-        description="Aircraft information"
-    )
+    class Config:
+        title = "Aircraft"
+        description = "Aircraft information"
     
 class FlightConditions(BaseModel):
     """Flight conditions information."""
@@ -39,10 +37,9 @@ class FlightConditions(BaseModel):
     simulated_instrument: float = 0.0
     cross_country: float = 0.0
     
-    model_config = ConfigDict(
-        title="FlightConditions",
-        description="Flight conditions information"
-    )
+    class Config:
+        title = "FlightConditions"
+        description = "Flight conditions information"
     
 @dataclass
 class RunningTotals:
@@ -144,10 +141,10 @@ class LogbookEntry(BaseModel):
             'error_explanation': self.error_explanation
         }
     
-    model_config = ConfigDict(
-        title="LogbookEntry",
-        description="Main logbook entry model",
-        json_schema_extra={
+    class Config:
+        title = "LogbookEntry"
+        description = "Main logbook entry model"
+        schema_extra = {
             "example": {
                 "date": "2023-11-01T14:00:00Z",
                 "departure_time": "14:00:00",
@@ -181,15 +178,14 @@ class LogbookEntry(BaseModel):
                 "error_explanation": None
             }
         }
-    )
 
-    @model_validator(mode='after')
-    def validate_date_not_future(self) -> 'LogbookEntry':
+    @validator('date')
+    def validate_date_not_future(cls, v):
         """Validate that the date is not in the future using UTC."""
         current_utc = datetime.now(timezone.utc)
-        if self.date.replace(tzinfo=timezone.utc) > current_utc:
+        if v.replace(tzinfo=timezone.utc) > current_utc:
             raise ValueError("Flight date cannot be in the future")
-        return self
+        return v
 
     def validate_entry(self) -> None:
         """Validate the entry and set error explanation if issues are found."""
