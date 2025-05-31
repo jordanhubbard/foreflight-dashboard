@@ -530,7 +530,45 @@
             vertical-align: middle;
             border: 1px solid #dee2e6;
             font-family: monospace;
+        }
+        
+        /* Checkbox animation */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse-animation {
+            animation: pulse 0.3s ease-in-out;
+        }
+        
+        .filter-checkbox {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .filter-checkbox:hover {
+            transform: scale(1.1);
             font-size: 0.95em;
+        }
+        
+        /* Filter indicator */
+        .filter-indicator {
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            font-size: 0.8rem;
+        }
+        
+        .filter-indicator.active {
+            opacity: 1;
+            animation: pulse-green 0.5s ease-in-out;
+        }
+        
+        @keyframes pulse-green {
+            0% { transform: scale(1); background-color: #28a745; }
+            50% { transform: scale(1.1); background-color: #218838; }
+            100% { transform: scale(1); background-color: #28a745; }
         }
         
         .table-responsive {
@@ -663,14 +701,15 @@
         {% endif %}
 
         {% if stats %}
-        <!-- Recent Experience (Last 2 Calendar Months) -->
+        <!-- Combined Flight Statistics -->
         <div class="card mb-4">
             <div class="card-body">
-                <h5 class="card-title">Recent Experience (Last 2 Calendar Months)</h5>
+                <h5 class="card-title">Flight Statistics</h5>
                 <div class="table-responsive">
-                    <table class="table table-sm">
+                    <table class="table table-sm table-hover">
                         <thead>
                             <tr>
+                                <th class="text-start">Time Period</th>
                                 <th>Ground Training</th>
                                 <th>ASEL Time</th>
                                 <th>Cross Country</th>
@@ -680,11 +719,11 @@
                                 <th>Dual Received</th>
                                 <th>PIC Time</th>
                                 <th>Takeoffs/Landings</th>
-                                <th>Tailwheel/Nosewheel</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
+                            <tr class="table-info">
+                                <td class="fw-bold text-start">Recent (2 Months)</td>
                                 <td>{{ "%.1f"|format(recent_experience.total_ground_training) }}</td>
                                 <td>{{ "%.1f"|format(recent_experience.total_time_asel) }}</td>
                                 <td>{{ "%.1f"|format(recent_experience.total_cross_country) }}</td>
@@ -694,36 +733,9 @@
                                 <td>{{ "%.1f"|format(recent_experience.total_dual_received) }}</td>
                                 <td>{{ "%.1f"|format(recent_experience.total_pic) }}</td>
                                 <td>{{ recent_experience.total_takeoffs }}/{{ recent_experience.total_landings }}</td>
-                                <td>{{ "%.1f"|format(recent_experience.total_time_tailwheel) }}/{{ "%.1f"|format(recent_experience.total_time_tricycle) }}</td>
                             </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Last Year Statistics -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <h5 class="card-title">Last Year Statistics</h5>
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Ground Training</th>
-                                <th>ASEL Time</th>
-                                <th>Cross Country</th>
-                                <th>Day</th>
-                                <th>Night</th>
-                                <th>Sim Instrument</th>
-                                <th>Dual Received</th>
-                                <th>PIC Time</th>
-                                <th>Takeoffs/Landings</th>
-                                <th>Tailwheel/Nosewheel</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
+                            <tr class="table-warning">
+                                <td class="fw-bold text-start">Last Year</td>
                                 <td>{{ "%.1f"|format(stats.total_ground_training) }}</td>
                                 <td>{{ "%.1f"|format(stats.total_time_asel) }}</td>
                                 <td>{{ "%.1f"|format(stats.total_cross_country) }}</td>
@@ -733,50 +745,50 @@
                                 <td>{{ "%.1f"|format(stats.total_dual_received) }}</td>
                                 <td>{{ "%.1f"|format(stats.total_pic) }}</td>
                                 <td>{{ stats.total_takeoffs }}/{{ stats.total_landings }}</td>
-                                <td>{{ "%.1f"|format(stats.total_time_tailwheel) }}/{{ "%.1f"|format(stats.total_time_tricycle) }}</td>
+                            </tr>
+                            <tr class="table-success">
+                                <td class="fw-bold text-start">All Time</td>
+                                <td>{{ "%.1f"|format(all_time.total_ground_training) }}</td>
+                                <td>{{ "%.1f"|format(all_time.total_time_asel) }}</td>
+                                <td>{{ "%.1f"|format(all_time.total_cross_country) }}</td>
+                                <td>{{ "%.1f"|format(all_time.total_day) }}</td>
+                                <td>{{ "%.1f"|format(all_time.total_night) }}</td>
+                                <td>{{ "%.1f"|format(all_time.total_sim_instrument) }}</td>
+                                <td>{{ "%.1f"|format(all_time.total_dual_received) }}</td>
+                                <td>{{ "%.1f"|format(all_time.total_pic) }}</td>
+                                <td>{{ all_time.total_takeoffs }}/{{ all_time.total_landings }}</td>
                             </tr>
                         </tbody>
                     </table>
+                </div>
+                
+                <!-- Additional statistics toggle button -->
+                <button class="btn btn-sm btn-outline-secondary mt-2" type="button" data-bs-toggle="collapse" data-bs-target="#additionalStats" aria-expanded="false" aria-controls="additionalStats">
+                    <i class="fas fa-chart-bar"></i> Show Additional Statistics
+                </button>
+                
+                <!-- Collapsible additional statistics -->
+                <div class="collapse mt-3" id="additionalStats">
+                    <div class="card card-body bg-light">
+                        <h6 class="card-subtitle mb-2 text-muted">Aircraft Type Breakdown</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Tailwheel Time:</strong> 
+                                    <span class="badge bg-secondary">Recent: {{ "%.1f"|format(recent_experience.total_time_tailwheel) }}</span>
+                                    <span class="badge bg-warning text-dark">Year: {{ "%.1f"|format(stats.total_time_tailwheel) }}</span>
+                                    <span class="badge bg-success">All: {{ "%.1f"|format(all_time.total_time_tailwheel) }}</span>
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Nosewheel Time:</strong> 
+                                    <span class="badge bg-secondary">Recent: {{ "%.1f"|format(recent_experience.total_time_tricycle) }}</span>
+                                    <span class="badge bg-warning text-dark">Year: {{ "%.1f"|format(stats.total_time_tricycle) }}</span>
+                                    <span class="badge bg-success">All: {{ "%.1f"|format(all_time.total_time_tricycle) }}</span>
+                                </p>
+                            </div>
+                        </div>
                     </div>
-            </div>
-        </div>
-
-        <!-- All Time Statistics -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <h5 class="card-title">All Time Statistics</h5>
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Ground Training</th>
-                                <th>ASEL Time</th>
-                                <th>Cross Country</th>
-                                <th>Day</th>
-                                <th>Night</th>
-                                <th>Sim Instrument</th>
-                                <th>Dual Received</th>
-                                <th>PIC Time</th>
-                                <th>Takeoffs/Landings</th>
-                                <th>Tailwheel/Nosewheel</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>{{ "%.1f"|format(all_time_stats.total_ground_training) }}</td>
-                                <td>{{ "%.1f"|format(all_time_stats.total_time_asel) }}</td>
-                                <td>{{ "%.1f"|format(all_time_stats.total_cross_country) }}</td>
-                                <td>{{ "%.1f"|format(all_time_stats.total_day) }}</td>
-                                <td>{{ "%.1f"|format(all_time_stats.total_night) }}</td>
-                                <td>{{ "%.1f"|format(all_time_stats.total_sim_instrument) }}</td>
-                                <td>{{ "%.1f"|format(all_time_stats.total_dual_received) }}</td>
-                                <td>{{ "%.1f"|format(all_time_stats.total_pic) }}</td>
-                                <td>{{ all_time_stats.total_takeoffs }}/{{ all_time_stats.total_landings }}</td>
-                                <td>{{ "%.1f"|format(all_time_stats.total_time_tailwheel) }}/{{ "%.1f"|format(all_time_stats.total_time_tricycle) }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    </div>
+                </div>
             </div>
         </div>
         {% endif %}
@@ -841,34 +853,35 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="d-flex flex-wrap" id="flight-type-filter">
+                        <div class="d-flex flex-wrap align-items-center" id="flight-type-filter">
+                            <span id="filter-indicator" class="badge bg-success me-2 filter-indicator">Filtering...</span>
                             <label class="form-label fw-bold me-3 pt-1">Filter by Type:</label>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-all" checked>
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-all" checked onclick="handleFilterClick(this)">
                                 <label class="form-check-label" for="filter-all">All</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-pic">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-pic" onclick="handleFilterClick(this)">
                                 <label class="form-check-label" for="filter-pic">PIC</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-dual">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-dual" onclick="handleFilterClick(this)">
                                 <label class="form-check-label" for="filter-dual">Dual</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-solo">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-solo" onclick="handleFilterClick(this)">
                                 <label class="form-check-label" for="filter-solo">Solo</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-night">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-night" onclick="handleFilterClick(this)">
                                 <label class="form-check-label" for="filter-night">Night</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-xc">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-xc" onclick="handleFilterClick(this)">
                                 <label class="form-check-label" for="filter-xc">Cross Country</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-instrument">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-instrument" onclick="handleFilterClick(this)">
                                 <label class="form-check-label" for="filter-instrument">Instrument</label>
                             </div>
                         </div>
@@ -1037,67 +1050,111 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                     <canvas id="aircraftChart"></canvas>
                 </div>
 
+                {% if aircraft_stats %}
+                <script type="text/javascript">
+                    // Define chart data in a separate script block to avoid template/JS conflicts
+                    const aircraftChartData = {
+                        labels: {{ aircraft_stats|map(attribute='registration')|list|tojson|safe }},
+                        datasets: [
+                            {
+                                label: 'Solo Hours',
+                                data: {{ aircraft_stats|map(attribute='solo_time')|list|tojson|safe }},
+                                backgroundColor: 'rgba(40, 167, 69, 0.5)',
+                                borderColor: 'rgba(40, 167, 69, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Dual Hours',
+                                data: {{ aircraft_stats|map(attribute='dual_time')|list|tojson|safe }},
+                                backgroundColor: 'rgba(255, 193, 7, 0.5)',
+                                borderColor: 'rgba(255, 193, 7, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    };
+                </script>
+                {% endif %}
+                
                 <script>
                     document.addEventListener('DOMContentLoaded', function() {
-                        // Initialize aircraft chart
-                        const aircraftLabels = {{ aircraft_stats|map(attribute='registration')|list|tojson|safe }};
-                        const soloHours = {{ aircraft_stats|map(attribute='solo_time')|list|tojson|safe }};
-                        const dualHours = {{ aircraft_stats|map(attribute='dual_time')|list|tojson|safe }};
-                        
-                        const ctx = document.getElementById('aircraftChart').getContext('2d');
-                        new Chart(ctx, {
-                            type: 'bar',
-                            data: {
-                                labels: aircraftLabels,
-                                datasets: [{
-                                    label: 'Solo Hours',
-                                    data: soloHours,
-                                    backgroundColor: 'rgba(40, 167, 69, 0.5)',  // Green for solo
-                                    borderColor: 'rgba(40, 167, 69, 1)',
-                                    borderWidth: 1
-                                },
-                                {
-                                    label: 'Dual Hours',
-                                    data: dualHours,
-                                    backgroundColor: 'rgba(255, 193, 7, 0.5)',  // Yellow for dual
-                                    borderColor: 'rgba(255, 193, 7, 1)',
-                                    borderWidth: 1
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: {
-                                    x: {
-                                        stacked: true
+                        // Initialize aircraft chart if it exists
+                        const chartCanvas = document.getElementById('aircraftChart');
+                        if (chartCanvas && typeof aircraftChartData !== 'undefined') {
+                            const ctx = chartCanvas.getContext('2d');
+                            new Chart(ctx, {
+                                type: 'bar',
+                                data: aircraftChartData,
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: {
+                                        x: {
+                                            stacked: true
+                                        },
+                                        y: {
+                                            stacked: true,
+                                            beginAtZero: true,
+                                            title: {
+                                                display: true,
+                                                text: 'Hours'
+                                            }
+                                        }
                                     },
-                                    y: {
-                                        stacked: true,
-                                        beginAtZero: true,
+                                    plugins: {
                                         title: {
                                             display: true,
-                                            text: 'Hours'
-                                        }
-                                    }
-                                },
-                                plugins: {
-                                    title: {
-                                        display: true,
-                                        text: 'Aircraft Usage Statistics'
-                                    },
-                                    tooltip: {
-                                        callbacks: {
-                                            afterTitle: function(context) {
-                                                const idx = context[0].dataIndex;
-                                                const total = soloHours[idx] + dualHours[idx];
-                                                return `Total: ${total.toFixed(1)} hours`;
+                                            text: 'Aircraft Usage Statistics'
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                afterTitle: function(context) {
+                                                    const idx = context[0].dataIndex;
+                                                    const total = aircraftChartData.datasets[0].data[idx] + aircraftChartData.datasets[1].data[idx];
+                                                    return `Total: ${total.toFixed(1)} hours`;
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
-                        });
+                            });
+                        }
                     });
+                    
+                    // This function handles checkbox clicks and updates the table immediately
+                    window.handleFilterClick = function(checkbox) {
+                        const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
+                        
+                        // If 'All' is checked, uncheck other filters
+                        if (checkbox.id === 'filter-all' && checkbox.checked) {
+                            filterCheckboxes.forEach(cb => {
+                                if (cb.id !== 'filter-all') cb.checked = false;
+                            });
+                        }
+                        // If any other filter is checked, uncheck 'All'
+                        else if (checkbox.id !== 'filter-all' && checkbox.checked) {
+                            const allCheckbox = document.getElementById('filter-all');
+                            if (allCheckbox) allCheckbox.checked = false;
+                        }
+                        
+                        // If no filters are checked, check 'All'
+                        let anyChecked = false;
+                        filterCheckboxes.forEach(cb => {
+                            if (cb.checked) anyChecked = true;
+                        });
+                        if (!anyChecked) {
+                            const allCheckbox = document.getElementById('filter-all');
+                            if (allCheckbox) allCheckbox.checked = true;
+                        }
+                        
+                        // Apply filters immediately
+                        filterAndSearchFlights();
+                        
+                        // Add visual feedback
+                        checkbox.classList.add('pulse-animation');
+                        setTimeout(() => {
+                            checkbox.classList.remove('pulse-animation');
+                        }, 300);
+                    };
                 </script>
 
                 <div class="flight-table-container">
@@ -1402,8 +1459,8 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                 toggleButton.addEventListener('click', toggleTableExpansion);
             }
 
-            // Search and filter functionality
-            function filterAndSearchFlights() {
+            // Search and filter functionality - make it globally accessible
+            window.filterAndSearchFlights = function() {
                 const searchInput = document.getElementById('flight-search');
                 const searchText = searchInput ? searchInput.value.toLowerCase() : '';
                 
@@ -1459,42 +1516,62 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                         detailsRow.style.display = (showRow && detailsRow.classList.contains('show')) ? '' : 'none';
                     }
                 });
-            }
+                
+                // Add a visual indicator that filtering has occurred
+                const filterIndicator = document.getElementById('filter-indicator');
+                if (filterIndicator) {
+                    filterIndicator.classList.add('active');
+                    setTimeout(() => {
+                        filterIndicator.classList.remove('active');
+                    }, 500);
+                }
+            };
             
-            // Setup search and filtering
+            // Make handleFilterClick a global function so it can be called from HTML onclick attributes
+            window.handleFilterClick = function(checkbox) {
+                const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
+                
+                // If 'All' is checked, uncheck other filters
+                if (checkbox.id === 'filter-all' && checkbox.checked) {
+                    filterCheckboxes.forEach(cb => {
+                        if (cb.id !== 'filter-all') cb.checked = false;
+                    });
+                }
+                // If any other filter is checked, uncheck 'All'
+                else if (checkbox.id !== 'filter-all' && checkbox.checked) {
+                    const allCheckbox = document.getElementById('filter-all');
+                    if (allCheckbox) allCheckbox.checked = false;
+                }
+                
+                // If no filters are checked, check 'All'
+                let anyChecked = false;
+                filterCheckboxes.forEach(cb => {
+                    if (cb.checked) anyChecked = true;
+                });
+                if (!anyChecked) {
+                    const allCheckbox = document.getElementById('filter-all');
+                    if (allCheckbox) allCheckbox.checked = true;
+                }
+                
+                // Apply filters immediately
+                window.filterAndSearchFlights();
+                
+                // Add visual feedback
+                checkbox.classList.add('pulse-animation');
+                setTimeout(() => {
+                    checkbox.classList.remove('pulse-animation');
+                }, 300);
+                
+                // Log for debugging
+                console.log('Filter clicked:', checkbox.id, 'is checked:', checkbox.checked);
+                return true;
+            };
+            
+            // Setup search filtering
             const searchInput = document.getElementById('flight-search');
-            const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
-            
             if (searchInput) {
                 searchInput.addEventListener('input', filterAndSearchFlights);
             }
-            
-            filterCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    // If 'All' is checked, uncheck other filters
-                    if (this.id === 'filter-all' && this.checked) {
-                        filterCheckboxes.forEach(cb => {
-                            if (cb.id !== 'filter-all') cb.checked = false;
-                        });
-                    }
-                    // If any other filter is checked, uncheck 'All'
-                    else if (this.id !== 'filter-all' && this.checked) {
-                        const allCheckbox = document.getElementById('filter-all');
-                        if (allCheckbox) allCheckbox.checked = false;
-                    }
-                    // If no filters are checked, check 'All'
-                    let anyChecked = false;
-                    filterCheckboxes.forEach(cb => {
-                        if (cb.checked) anyChecked = true;
-                    });
-                    if (!anyChecked) {
-                        const allCheckbox = document.getElementById('filter-all');
-                        if (allCheckbox) allCheckbox.checked = true;
-                    }
-                    
-                    filterAndSearchFlights();
-                });
-            });
             
             // Initial filter
             filterAndSearchFlights();
