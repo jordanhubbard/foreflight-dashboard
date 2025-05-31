@@ -45,6 +45,8 @@ for name in logging.root.manager.loggerDict:
     for handler in root_logger.handlers:
         log.addHandler(handler)
 
+# Create Flask app with default template folder structure
+# Flask will look for templates in the 'templates' directory inside the application package
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # Required for flash messages
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -397,5 +399,12 @@ if __name__ == '__main__':
     app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
     
+    # Parse command line arguments
+    import argparse
+    parser = argparse.ArgumentParser(description='ForeFlight Dashboard Flask App')
+    parser.add_argument('--host', default='0.0.0.0', help='Host to bind to')
+    parser.add_argument('--port', type=int, default=5050, help='Port to bind to')
+    args = parser.parse_args()
+    
     # Run the app
-    app.run(host='0.0.0.0', port=5050, debug=True) 
+    app.run(host=args.host, port=args.port, debug=True)

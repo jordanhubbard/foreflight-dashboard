@@ -1538,7 +1538,9 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                         // Check if row matches any of the selected filters
                         // Student pilot flights should be considered dual instruction, not PIC
                         const pilotRole = row.querySelector('td:nth-child(5)').textContent.trim();
+                        // Only show PIC flights where role is NOT 'STUDENT'
                         if (picChecked && row.classList.contains('pic-flight') && pilotRole !== 'STUDENT') showRow = true;
+                        // Show dual flights, including those with STUDENT role
                         if (dualChecked && (row.classList.contains('dual-only') || pilotRole === 'STUDENT')) showRow = true;
                         if (soloChecked && row.querySelector('.solo-time') && parseFloat(row.querySelector('.solo-time').textContent) > 0) showRow = true;
                         if (nightChecked && row.classList.contains('night-only')) showRow = true;

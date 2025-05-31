@@ -61,7 +61,7 @@ test: build-test
 	docker run --rm \
 		-v $(PWD)/tests:/app/tests \
 		-v $(PWD)/logs:/app/logs \
-		$(IMAGE_NAME):test
+		$(IMAGE_NAME):test pytest tests/
 
 # Run tests with coverage
 test-cov: build-test
