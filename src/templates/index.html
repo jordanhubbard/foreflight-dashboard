@@ -947,7 +947,7 @@
                             {% for entry in entries %}
                             <tr id="entry-{{ loop.index }}" 
                                 class="{% if entry.error_explanation %}has-error{% endif %}
-                                       {% if entry.pic_time > 0 and entry.dual_received == 0 %}pic-flight{% endif %}
+                                       {% if entry.pic_time > 0 and entry.pilot_role != 'STUDENT' %}pic-flight{% endif %}
                                        {% if entry.pic_time == 0 and entry.dual_received > 0 %}dual-only{% endif %}
                                        {% if entry.conditions.night > 0 and entry.conditions.day == 0 %}night-only{% endif %}
                                        {% if entry.pilot_role == 'SPLIT' %}split-role{% endif %}
@@ -1536,11 +1536,15 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                         showRow = true;
                     } else {
                         // Check if row matches any of the selected filters
-                        // Student pilot flights should be considered dual instruction, not PIC
-                        const pilotRole = row.querySelector('td:nth-child(5)').textContent.trim();
-                        // Only show PIC flights where role is NOT 'STUDENT'
-                        if (picChecked && row.classList.contains('pic-flight') && pilotRole !== 'STUDENT') showRow = true;
-                        // Show dual flights, including those with STUDENT role
+                        // Get the pilot role from the 6th column (index 5)
+                        const pilotRole = row.querySelector('td:nth-child(6)').textContent.trim();
+                        // Get the PIC time from the 7th column (index 6)
+                        const picTime = parseFloat(row.querySelector('td:nth-child(7)').textContent.trim() || '0');
+                        
+                        // PIC filter: Show only if has PIC time AND role is NOT STUDENT
+                        if (picChecked && picTime > 0 && pilotRole !== 'STUDENT') showRow = true;
+                        
+                        // Dual filter: Show if has dual time OR role is STUDENT
                         if (dualChecked && (row.classList.contains('dual-only') || pilotRole === 'STUDENT')) showRow = true;
                         if (soloChecked && row.querySelector('.solo-time') && parseFloat(row.querySelector('.solo-time').textContent) > 0) showRow = true;
                         if (nightChecked && row.classList.contains('night-only')) showRow = true;
