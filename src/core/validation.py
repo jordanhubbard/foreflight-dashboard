@@ -4,7 +4,7 @@ from typing import Dict, Any
 from pathlib import Path
 import logging
 
-from .importer import ForeFlightImporter
+from src.services.importer import ForeFlightImporter
 
 def validate_csv(csv_path: str) -> Dict[str, Any]:
     """Validate a ForeFlight CSV file and return detailed validation results.

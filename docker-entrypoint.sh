@@ -11,7 +11,7 @@ FLASK_PID=$!
 
 # Start FastAPI application in background
 echo "Starting FastAPI application..."
-python -m uvicorn src.api.routes:app --host=0.0.0.0 --port=5051 &
+cd /app && python -m uvicorn src.api.routes:app --host=0.0.0.0 --port=5051 --reload &
 UVICORN_PID=$!
 
 # Handle shutdown signals

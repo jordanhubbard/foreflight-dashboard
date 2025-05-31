@@ -1,18 +1,24 @@
 """FastAPI application for the ForeFlight Logbook Manager."""
 
 from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any, Annotated
+from typing import List, Optional, Annotated
 from pathlib import Path
+import tempfile
+import shutil
+import traceback
+import logging
+
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.exceptions import RequestValidationError
-import tempfile
-import shutil
-import traceback
 from pydantic import ValidationError
-import logging
+
+from src.core.models import LogbookEntry
+from src.services.foreflight_client import ForeFlightClient
+from src.services.importer import ForeFlightImporter
+from src.core.validation import validate_csv
 
 # Configure logging
 logging.basicConfig(
@@ -20,11 +26,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-from .models import LogbookEntry
-from .foreflight_client import ForeFlightClient
-from .importer import ForeFlightImporter
-from .validation import validate_csv
 
 app = FastAPI(
     title="ForeFlight Logbook Manager",

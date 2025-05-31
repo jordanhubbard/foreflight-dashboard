@@ -4,8 +4,8 @@ import requests
 from typing import Dict, List, Optional
 from datetime import datetime
 
-from .config import FOREFLIGHT_API_KEY, FOREFLIGHT_API_SECRET, FOREFLIGHT_API_BASE_URL
-from .models import LogbookEntry
+from src.core.config import FOREFLIGHT_API_KEY, FOREFLIGHT_API_SECRET, FOREFLIGHT_API_BASE_URL
+from src.core.models import LogbookEntry
 
 class ForeFlightClient:
     """Client for interacting with the ForeFlight API."""
