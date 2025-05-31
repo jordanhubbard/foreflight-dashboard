@@ -1536,8 +1536,10 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                         showRow = true;
                     } else {
                         // Check if row matches any of the selected filters
-                        if (picChecked && row.classList.contains('pic-flight')) showRow = true;
-                        if (dualChecked && row.classList.contains('dual-only')) showRow = true;
+                        // Student pilot flights should be considered dual instruction, not PIC
+                        const pilotRole = row.querySelector('td:nth-child(5)').textContent.trim();
+                        if (picChecked && row.classList.contains('pic-flight') && pilotRole !== 'STUDENT') showRow = true;
+                        if (dualChecked && (row.classList.contains('dual-only') || pilotRole === 'STUDENT')) showRow = true;
                         if (soloChecked && row.querySelector('.solo-time') && parseFloat(row.querySelector('.solo-time').textContent) > 0) showRow = true;
                         if (nightChecked && row.classList.contains('night-only')) showRow = true;
                         if (xcChecked && row.querySelector('.xc-time') && parseFloat(row.querySelector('.xc-time').textContent) > 0) showRow = true;
