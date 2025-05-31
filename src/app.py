@@ -265,7 +265,7 @@ def upload_file():
         # Calculate statistics
         logger.info("Calculating statistics")
         stats = calculate_stats_for_entries([e for e in entries if e.date.year == datetime.now().year])
-        all_time_stats = calculate_stats_for_entries(entries)
+        all_time = calculate_stats_for_entries(entries)
         recent_experience = calculate_recent_experience(entries)
         aircraft_stats = prepare_aircraft_stats(entries)
         
@@ -296,7 +296,7 @@ def upload_file():
         return render_template('index.html',
                              entries=entries_dict,
                              stats=stats,
-                             all_time_stats=all_time_stats,
+                             all_time=all_time,
                              recent_experience=recent_experience,
                              aircraft_stats=aircraft_stats,
                              endorsements=endorsements_dict,

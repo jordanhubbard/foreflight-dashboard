@@ -342,6 +342,34 @@
             border-left: 1px solid #dee2e6;
             background-color: #e9ecef;
         }
+        
+        /* Sorting indicators */
+        .flight-table th {
+            cursor: pointer;
+            position: relative;
+            user-select: none;
+        }
+        
+        .flight-table th:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .sort-indicator {
+            display: inline-block;
+            margin-left: 5px;
+            font-size: 0.8em;
+        }
+        
+        /* Filter indicator animation */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse-animation {
+            animation: pulse 0.3s ease-in-out;
+        }
         /* Add new styles for disclosure triangles */
         .disclosure-triangle {
             cursor: pointer;
@@ -809,6 +837,9 @@
                     {% set pic_solo_flights = entries|selectattr('pic_time', '>', 0)|list %}
                     <span class="badge bg-info ms-2">
                         PIC/Solo Flights: {{ pic_solo_flights|length }}
+                    </span>
+                    <span id="visible-row-count" class="badge bg-secondary ms-2">
+                        Showing all entries
                     </span>
                     {% endif %}
                 </div>
@@ -1407,12 +1438,21 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                         tbody.appendChild(detailsRow);
                     }
                 });
+                
+                // Apply current filters after sorting
+                window.filterAndSearchFlights();
+                
+                console.log('Table sorted by column', columnIndex, 'in', currentDirection, 'order');
             }
 
             // Add click handlers to table headers for sorting
-            document.querySelectorAll('.flight-table th').forEach((th, index) => {
-                th.addEventListener('click', function() {
-                    sortTable(index);
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('.flight-table th').forEach((th, index) => {
+                    th.style.cursor = 'pointer';
+                    th.title = 'Click to sort';
+                    th.addEventListener('click', function() {
+                        sortTable(index);
+                    });
                 });
             });
 
@@ -1481,6 +1521,7 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                 const instrumentChecked = instrumentCheckbox && instrumentCheckbox.checked;
                 
                 const rows = document.querySelectorAll('.flight-table tbody tr:not(.details-row)');
+                let visibleRowCount = 0;
                 
                 rows.forEach(row => {
                     // Skip detail rows
@@ -1515,6 +1556,8 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                     if (detailsRow) {
                         detailsRow.style.display = (showRow && detailsRow.classList.contains('show')) ? '' : 'none';
                     }
+                    
+                    if (showRow) visibleRowCount++;
                 });
                 
                 // Add a visual indicator that filtering has occurred
@@ -1525,6 +1568,14 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                         filterIndicator.classList.remove('active');
                     }, 500);
                 }
+                
+                // Update visible row count
+                const countDisplay = document.getElementById('visible-row-count');
+                if (countDisplay) {
+                    countDisplay.textContent = `Showing ${visibleRowCount} of ${rows.length} entries`;
+                }
+                
+                console.log('Filters applied, showing', visibleRowCount, 'of', rows.length, 'entries');
             };
             
             // Make handleFilterClick a global function so it can be called from HTML onclick attributes
@@ -1592,47 +1643,7 @@ PIC: {{ entry.running_totals.pic_time }}</span>
             });
         });
 
-        // Flight type filter logic
-        document.addEventListener('DOMContentLoaded', function() {
-            const checkboxes = document.querySelectorAll('.flight-type-checkbox');
-            const tableRows = document.querySelectorAll('.flight-table tbody tr');
-
-            function filterRows() {
-                // Get all checked types
-                const checkedTypes = Array.from(checkboxes)
-                    .filter(cb => cb.checked)
-                    .map(cb => cb.value);
-                tableRows.forEach(row => {
-                    // Only filter main entry rows (not details rows)
-                    if (row.classList.contains('details-row')) return;
-                    // If no type is checked, show all
-                    if (checkedTypes.length === 0) {
-                        row.style.display = '';
-                        return;
-                    }
-                    // If row matches any of the selected filters
-                    if (picChecked && row.classList.contains('pic-flight')) showRow = true;
-                    if (dualChecked && row.classList.contains('dual-only')) showRow = true;
-                    if (soloChecked && row.querySelector('.solo-time') && parseFloat(row.querySelector('.solo-time').textContent) > 0) showRow = true;
-                    if (nightChecked && row.classList.contains('night-only')) showRow = true;
-                    if (xcChecked && row.querySelector('.xc-time') && parseFloat(row.querySelector('.xc-time').textContent) > 0) showRow = true;
-                    if (instrumentChecked && row.querySelector('.instrument-time') && parseFloat(row.querySelector('.instrument-time').textContent) > 0) showRow = true;
-                }
-                
-                // Apply search filter if there's search text
-                if (searchText) {
-                    const rowText = row.textContent.toLowerCase();
-                    const detailsText = detailsRow ? detailsRow.textContent.toLowerCase() : '';
-                    showRow = showRow && (rowText.includes(searchText) || detailsText.includes(searchText));
-                }
-                
-                // Show/hide the row and its details
-                row.style.display = showRow ? '' : 'none';
-                if (detailsRow) {
-                    detailsRow.style.display = (showRow && detailsRow.classList.contains('show')) ? '' : 'none';
-                }
-            });
-        }
+        // Remove duplicate filter logic - we'll use the global filterAndSearchFlights function instead
         
 
         
