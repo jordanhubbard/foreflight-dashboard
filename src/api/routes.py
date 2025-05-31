@@ -47,6 +47,10 @@ static_path = Path(__file__).parent.parent / "static"
 static_path.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
+# Mount templates directory
+templates_path = Path(__file__).parent.parent / "templates"
+templates_path.mkdir(exist_ok=True)
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Handle validation errors with detailed messages."""
@@ -90,8 +94,12 @@ async def get_foreflight_client() -> ForeFlightClient:
 @app.get("/", response_class=HTMLResponse)
 async def get_index():
     """Serve the main page."""
-    index_path = static_path / "index.html"
-    return index_path.read_text()
+    index_path = templates_path / "index.html"
+    if index_path.exists():
+        return index_path.read_text()
+    else:
+        logger.error(f"Template not found: {index_path}")
+        raise HTTPException(status_code=404, detail="Template not found")
 
 @app.post("/upload", status_code=status.HTTP_200_OK)
 async def upload_logbook(file: Annotated[UploadFile, File(...)]):
