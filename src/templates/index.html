@@ -6,33 +6,67 @@
     <title>ForeFlight Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .error-entry {
-            background-color: #fff3f3;
-            border-left: 4px solid #dc3545;
-            animation: highlight-error 2s ease-in-out;
-        }
-        @keyframes highlight-error {
-            0% { background-color: #ffebeb; }
-            50% { background-color: #ffe0e0; }
-            100% { background-color: #fff3f3; }
-        }
-        .validation-error {
-            color: #dc3545;
-            font-size: 0.9em;
-            margin-top: 0.5em;
-        }
-        .flight-entry {
-            background-color: #ffffff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .flight-entry.has-error {
+    .sort-arrows-horizontal {
+        display: inline-flex;
+        flex-direction: row;
+        align-items: center;
+        margin-left: 8px;
+        gap: 2px;
+        font-size: 0.9em;
+        line-height: 1;
+        vertical-align: middle;
+    }
+    .sort-arrow {
+        display: block;
+        color: #888;
+        text-decoration: none;
+        font-size: 0.85em;
+        line-height: 1;
+        padding: 0 2px;
+        margin: 0 1px;
+        cursor: pointer;
+        transition: color 0.15s;
+    }
+    .sort-arrow:hover {
+        color: #0d6efd;
+        text-decoration: none;
+    }
+    th.sorted-asc .sort-arrow[data-dir="asc"],
+    th.sorted-desc .sort-arrow[data-dir="desc"] {
+        color: #0d6efd;
+        font-weight: bold;
+    }
+    .sort-label {
+        display: inline-block;
+        vertical-align: middle;
+    }
+    .error-entry {
+        background-color: #fff3f3;
+        border-left: 4px solid #dc3545;
+        animation: highlight-error 2s ease-in-out;
+    }
+    @keyframes highlight-error {
+        0% { background-color: #ffebeb; }
+        50% { background-color: #ffe0e0; }
+        100% { background-color: #fff3f3; }
+    }
+    .validation-error {
+        color: #dc3545;
+        font-size: 0.9em;
+        margin-top: 0.5em;
+    }
+    .flight-entry {
+        background-color: #ffffff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .flight-entry.has-error {
             background-color: #fff3f3;  /* Light red for invalid entries */
         }
         .flight-entry.pic-flight {
@@ -888,31 +922,31 @@
                             <span id="filter-indicator" class="badge bg-success me-2 filter-indicator">Filtering...</span>
                             <label class="form-label fw-bold me-3 pt-1">Filter by Type:</label>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-all" checked onclick="handleFilterClick(this)">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-all" checked>
                                 <label class="form-check-label" for="filter-all">All</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-pic" onclick="handleFilterClick(this)">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-pic">
                                 <label class="form-check-label" for="filter-pic">PIC</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-dual" onclick="handleFilterClick(this)">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-dual">
                                 <label class="form-check-label" for="filter-dual">Dual</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-solo" onclick="handleFilterClick(this)">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-solo">
                                 <label class="form-check-label" for="filter-solo">Solo</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-night" onclick="handleFilterClick(this)">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-night">
                                 <label class="form-check-label" for="filter-night">Night</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-xc" onclick="handleFilterClick(this)">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-xc">
                                 <label class="form-check-label" for="filter-xc">Cross Country</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-instrument" onclick="handleFilterClick(this)">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-instrument">
                                 <label class="form-check-label" for="filter-instrument">Instrument</label>
                             </div>
                         </div>
@@ -922,37 +956,26 @@
                     <table class="flight-table">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Route</th>
-                                <th>Aircraft</th>
-                                <th>Total</th>
-                                <th>Day/Night</th>
-                                <th>Ldg</th>
-                                <th>Role</th>
-                                <th>PIC</th>
-                                <th>Dual Rcvd</th>
-                                <th>Status</th>
-                                <th class="text-end running-total">Ground</th>
-                                <th class="text-end running-total">ASEL</th>
-                                <th class="text-end running-total">XC</th>
-                                <th class="text-end running-total">Day</th>
-                                <th class="text-end running-total">Night</th>
-                                <th class="text-end running-total">Sim Inst</th>
-                                <th class="text-end running-total">Dual Rcvd</th>
-                                <th class="text-end running-total">PIC</th>
+                                {% set columns = [
+                                    'Date', 'Route', 'Aircraft', 'Total', 'Day/Night', 'Ldg', 'Role', 'PIC', 'Dual Rcvd', 'Status',
+                                    'Ground', 'ASEL', 'XC', 'Day', 'Night', 'Sim Inst', 'Dual Rcvd', 'PIC'
+                                ] %}
+                                {% for col in columns %}
+                                <th class="sortable" data-col="{{ loop.index0 }}">
+                                    {{ col }}
+                                    <span class="sort-arrows-horizontal">
+                                        <a href="javascript:void(0)" class="sort-arrow" data-dir="asc">▲</a>
+                                        <a href="javascript:void(0)" class="sort-arrow" data-dir="desc">▼</a>
+                                    </span>
+                                </th>
+                                {% endfor %}
                             </tr>
                         </thead>
+
                         <tbody>
                             {% if entries %}
                             {% for entry in entries %}
-                            <tr id="entry-{{ loop.index }}" 
-                                class="{% if entry.error_explanation %}has-error{% endif %}
-                                       {% if entry.pic_time > 0 and entry.pilot_role != 'STUDENT' %}pic-flight{% endif %}
-                                       {% if entry.pic_time == 0 and entry.dual_received > 0 %}dual-only{% endif %}
-                                       {% if entry.conditions.night > 0 and entry.conditions.day == 0 %}night-only{% endif %}
-                                       {% if entry.pilot_role == 'SPLIT' %}split-role{% endif %}
-                                       {% if entry.conditions.cross_country > 0 %}cross-country{% endif %}"
-                                data-has-error="{{ 'true' if entry.error_explanation else 'false' }}">
+                            <tr id="entry-{{ loop.index }}" class="{% if entry.error_explanation %}has-error{% endif %}">
                                 <td class="flight-date">
                                     <span class="disclosure-triangle" data-target="flight-details-{{ loop.index }}">▶</span>
                                     {{ entry.date.split('T')[0] }}
@@ -970,8 +993,6 @@
                                     <span class="badge bg-danger" data-bs-toggle="tooltip" title="{{ entry.error_explanation }}">
                                         Invalid
                                     </span>
-                                    {% else %}
-                                    <span class="badge bg-success">Valid</span>
                                     {% endif %}
                                     {% if entry.conditions.cross_country > 0 %}
                                     <span class="badge badge-xc" data-bs-toggle="tooltip" title="Cross-country flight">
@@ -1368,82 +1389,73 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                 });
             });
 
-            // Table sorting
-            function sortTable(columnIndex) {
+            // Table sorting (with direction)
+            function sortTable(columnIndex, direction) {
                 const table = document.querySelector('.flight-table');
                 if (!table) return;
-                
                 const tbody = table.querySelector('tbody');
                 if (!tbody) return;
-                
                 const rows = Array.from(tbody.querySelectorAll('tr:not(.details-row)'));
                 if (rows.length === 0) return;
-                
-                // Get current sort direction
-                const th = table.querySelectorAll('th')[columnIndex];
-                if (!th) return;
-                
-                const currentDirection = th.getAttribute('data-sort') === 'asc' ? 'desc' : 'asc';
-                
-                // Update all headers
+
+                // Remove sort indicators from all headers/footers
                 table.querySelectorAll('th').forEach(header => {
                     header.removeAttribute('data-sort');
-                    const indicator = header.querySelector('.sort-indicator');
-                    if (indicator) indicator.remove();
+                    header.classList.remove('sorted-asc', 'sorted-desc');
                 });
-                
-                // Set new sort direction and indicator
-                th.setAttribute('data-sort', currentDirection);
-                const indicator = document.createElement('span');
-                indicator.className = 'sort-indicator ms-1';
-                indicator.innerHTML = currentDirection === 'asc' ? '▲' : '▼';
-                th.appendChild(indicator);
-                
+
+                // Set sort indicator on both header and footer for this column
+                table.querySelectorAll('th[data-col="' + columnIndex + '"]').forEach(th => {
+                    th.setAttribute('data-sort', direction);
+                    th.classList.add(direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                });
+
                 // Sort rows
                 rows.sort((a, b) => {
                     const aCells = a.querySelectorAll('td');
                     const bCells = b.querySelectorAll('td');
-                    
                     if (columnIndex >= aCells.length || columnIndex >= bCells.length) return 0;
-                    
                     const aValue = aCells[columnIndex].textContent.trim();
                     const bValue = bCells[columnIndex].textContent.trim();
-                    
-                    // Handle numeric values
+
+                    // Numeric sort
                     if (!isNaN(parseFloat(aValue)) && !isNaN(parseFloat(bValue))) {
-                        return currentDirection === 'asc' ? 
-                            parseFloat(aValue) - parseFloat(bValue) : 
-                            parseFloat(bValue) - parseFloat(aValue);
+                        return direction === 'asc' ? parseFloat(aValue) - parseFloat(bValue)
+                                                  : parseFloat(bValue) - parseFloat(aValue);
                     }
-                    
-                    // Handle dates (in format YYYY-MM-DD)
+                    // Date sort (YYYY-MM-DD)
                     if (aValue.match(/^\d{4}-\d{2}-\d{2}$/) && bValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                        return currentDirection === 'asc' ? 
-                            new Date(aValue) - new Date(bValue) : 
-                            new Date(bValue) - new Date(aValue);
+                        return direction === 'asc' ? new Date(aValue) - new Date(bValue)
+                                                  : new Date(bValue) - new Date(aValue);
                     }
-                    
-                    // Handle strings
-                    return currentDirection === 'asc' ? 
-                        aValue.localeCompare(bValue) : 
-                        bValue.localeCompare(aValue);
+                    // String sort
+                    return direction === 'asc' ? aValue.localeCompare(bValue)
+                                              : bValue.localeCompare(aValue);
                 });
-                
+
                 // Reorder rows in the DOM
                 rows.forEach(row => {
                     const rowId = row.id.split('-')[1];
                     const detailsRow = document.getElementById(`flight-details-${rowId}`);
                     tbody.appendChild(row);
-                    if (detailsRow) {
-                        tbody.appendChild(detailsRow);
-                    }
+                    if (detailsRow) tbody.appendChild(detailsRow);
                 });
-                
-                // Apply current filters after sorting
-                window.filterAndSearchFlights();
-                
-                console.log('Table sorted by column', columnIndex, 'in', currentDirection, 'order');
+                // Re-apply filters after sorting
+                filterAndSearchFlights();
             }
+
+            // Add event listeners for all sort arrows (header and footer)
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('.flight-table th .sort-arrow').forEach(arrow => {
+                    arrow.addEventListener('click', function(e) {
+                        e.preventDefault(); // Prevent default navigation immediately
+                        const th = this.closest('th');
+                        const colIdx = parseInt(th.getAttribute('data-col'), 10);
+                        const dir = this.getAttribute('data-dir');
+                        sortTable(colIdx, dir);
+                    });
+                });
+            });
 
             // Add click handlers to table headers for sorting
             document.addEventListener('DOMContentLoaded', function() {
@@ -1499,67 +1511,52 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                 toggleButton.addEventListener('click', toggleTableExpansion);
             }
 
-            // Search and filter functionality - make it globally accessible
-            window.filterAndSearchFlights = function() {
+            // Search and filter functionality
+            function filterAndSearchFlights() {
                 const searchInput = document.getElementById('flight-search');
                 const searchText = searchInput ? searchInput.value.toLowerCase() : '';
                 
-                const allCheckbox = document.getElementById('filter-all');
-                const picCheckbox = document.getElementById('filter-pic');
-                const dualCheckbox = document.getElementById('filter-dual');
-                const soloCheckbox = document.getElementById('filter-solo');
-                const nightCheckbox = document.getElementById('filter-night');
-                const xcCheckbox = document.getElementById('filter-xc');
-                const instrumentCheckbox = document.getElementById('filter-instrument');
-                
-                const allChecked = allCheckbox && allCheckbox.checked;
-                const picChecked = picCheckbox && picCheckbox.checked;
-                const dualChecked = dualCheckbox && dualCheckbox.checked;
-                const soloChecked = soloCheckbox && soloCheckbox.checked;
-                const nightChecked = nightCheckbox && nightCheckbox.checked;
-                const xcChecked = xcCheckbox && xcCheckbox.checked;
-                const instrumentChecked = instrumentCheckbox && instrumentCheckbox.checked;
+                // Get filter states
+                const allChecked = document.getElementById('filter-all').checked;
+                const picChecked = document.getElementById('filter-pic').checked;
+                const dualChecked = document.getElementById('filter-dual').checked;
+                const soloChecked = document.getElementById('filter-solo').checked;
+                const nightChecked = document.getElementById('filter-night').checked;
+                const xcChecked = document.getElementById('filter-xc').checked;
+                const instrumentChecked = document.getElementById('filter-instrument').checked;
                 
                 const rows = document.querySelectorAll('.flight-table tbody tr:not(.details-row)');
                 let visibleRowCount = 0;
                 
                 rows.forEach(row => {
-                    // Skip detail rows
-                    if (row.classList.contains('details-row')) return;
-                    
                     const rowId = row.id.split('-')[1];
                     const detailsRow = document.getElementById(`flight-details-${rowId}`);
-                    let showRow = false;
+                    let showRow = true;
                     
-                    // If 'All' is checked, show all rows that match the search
-                    if (allChecked) {
-                        showRow = true;
-                    } else {
-                        // Check if row matches any of the selected filters
-                        // Get the pilot role from the 6th column (index 5)
-                        const pilotRole = row.querySelector('td:nth-child(6)').textContent.trim();
-                        // Get the PIC time from the 7th column (index 6)
-                        const picTime = parseFloat(row.querySelector('td:nth-child(7)').textContent.trim() || '0');
-                        
-                        // PIC filter: Show only if has PIC time AND role is NOT STUDENT
-                        if (picChecked && picTime > 0 && pilotRole !== 'STUDENT') showRow = true;
-                        
-                        // Dual filter: Show if has dual time OR role is STUDENT
-                        if (dualChecked && (row.classList.contains('dual-only') || pilotRole === 'STUDENT')) showRow = true;
-                        if (soloChecked && row.querySelector('.solo-time') && parseFloat(row.querySelector('.solo-time').textContent) > 0) showRow = true;
-                        if (nightChecked && row.classList.contains('night-only')) showRow = true;
-                        if (xcChecked && row.querySelector('.xc-time') && parseFloat(row.querySelector('.xc-time').textContent) > 0) showRow = true;
-                        if (instrumentChecked && row.querySelector('.instrument-time') && parseFloat(row.querySelector('.instrument-time').textContent) > 0) showRow = true;
-                    }
-                    
-                    // Apply search filter if there's search text
-                    if (searchText && showRow) {
+                    // Apply search filter
+                    if (searchText) {
                         const rowText = row.textContent.toLowerCase();
-                        const detailsText = detailsRow ? detailsRow.textContent.toLowerCase() : '';
+                        const detailsText = detailsRow ? detailsText.textContent.toLowerCase() : '';
                         showRow = (rowText.includes(searchText) || detailsText.includes(searchText));
                     }
                     
-                    // Show/hide the row and its details
+                    // Apply filter logic
+                    if (allChecked || 
+                        (picChecked && row.cells[0].textContent === 'PIC') || 
+                        (dualChecked && row.cells[1].textContent === 'Dual') || 
+                        (soloChecked && row.cells[1].textContent === 'Solo') || 
+                        (nightChecked && row.cells[2].textContent === 'Night') || 
+                        (xcChecked && row.cells[3].textContent === 'XC') || 
+                        (instrumentChecked && row.cells[4].textContent === 'Instrument')) {
+                        showRow = true;
+                    } else {
+                        showRow = false;
+                    }
+                    
+                    // Log row visibility
+                    console.log(`Row ${rowId}: showRow=${showRow}`);
+                    
+                    // Update row visibility
                     row.style.display = showRow ? '' : 'none';
                     if (detailsRow) {
                         detailsRow.style.display = (showRow && detailsRow.classList.contains('show')) ? '' : 'none';
@@ -1568,86 +1565,85 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                     if (showRow) visibleRowCount++;
                 });
                 
-                // Add a visual indicator that filtering has occurred
+                // Update UI
                 const filterIndicator = document.getElementById('filter-indicator');
                 if (filterIndicator) {
                     filterIndicator.classList.add('active');
-                    setTimeout(() => {
-                        filterIndicator.classList.remove('active');
-                    }, 500);
+                    setTimeout(() => filterIndicator.classList.remove('active'), 500);
                 }
                 
-                // Update visible row count
                 const countDisplay = document.getElementById('visible-row-count');
                 if (countDisplay) {
                     countDisplay.textContent = `Showing ${visibleRowCount} of ${rows.length} entries`;
                 }
-                
-                console.log('Filters applied, showing', visibleRowCount, 'of', rows.length, 'entries');
-            };
-            
-            // Make handleFilterClick a global function so it can be called from HTML onclick attributes
-            window.handleFilterClick = function(checkbox) {
-                const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
-                
-                // If 'All' is checked, uncheck other filters
-                if (checkbox.id === 'filter-all' && checkbox.checked) {
-                    filterCheckboxes.forEach(cb => {
-                        if (cb.id !== 'filter-all') cb.checked = false;
-                    });
-                }
-                // If any other filter is checked, uncheck 'All'
-                else if (checkbox.id !== 'filter-all' && checkbox.checked) {
-                    const allCheckbox = document.getElementById('filter-all');
-                    if (allCheckbox) allCheckbox.checked = false;
-                }
-                
-                // If no filters are checked, check 'All'
-                let anyChecked = false;
-                filterCheckboxes.forEach(cb => {
-                    if (cb.checked) anyChecked = true;
-                });
-                if (!anyChecked) {
-                    const allCheckbox = document.getElementById('filter-all');
-                    if (allCheckbox) allCheckbox.checked = true;
-                }
-                
-                // Apply filters immediately
-                window.filterAndSearchFlights();
-                
-                // Add visual feedback
-                checkbox.classList.add('pulse-animation');
-                setTimeout(() => {
-                    checkbox.classList.remove('pulse-animation');
-                }, 300);
-                
-                // Log for debugging
-                console.log('Filter clicked:', checkbox.id, 'is checked:', checkbox.checked);
-                return true;
-            };
-            
-            // Setup search filtering
-            const searchInput = document.getElementById('flight-search');
-            if (searchInput) {
-                searchInput.addEventListener('input', filterAndSearchFlights);
             }
             
-            // Initial filter
-            filterAndSearchFlights();
+
+            
+            // Initialize filters
+            document.addEventListener('DOMContentLoaded', function() {
+                // Add event listeners to filter checkboxes
+                document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', function() {
+                        // Handle 'All' checkbox
+                        if (this.id === 'filter-all') {
+                            if (this.checked) {
+                                document.querySelectorAll('.filter-checkbox').forEach(cb => {
+                                    if (cb.id !== 'filter-all') cb.checked = false;
+                                });
+                            }
+                        } else {
+                            // If any filter is checked, uncheck 'All'
+                            if (this.checked) {
+                                document.getElementById('filter-all').checked = false;
+                            }
+                            
+                            // If no filters are checked, check 'All'
+                            const anyChecked = Array.from(document.querySelectorAll('.filter-checkbox'))
+                                .some(cb => cb.id !== 'filter-all' && cb.checked);
+                            if (!anyChecked) {
+                                document.getElementById('filter-all').checked = true;
+                            }
+                        }
+                        
+                        // Apply filters and show visual feedback
+                        filterAndSearchFlights();
+                        this.classList.add('pulse-animation');
+                        setTimeout(() => this.classList.remove('pulse-animation'), 300);
+                    });
+                });
+
+                // Setup search
+                const searchInput = document.getElementById('flight-search');
+                if (searchInput) {
+                    searchInput.addEventListener('input', filterAndSearchFlights);
+                }
+
+                // Initial filter
+                filterAndSearchFlights();
+            });
         });
             
             // Function to update UI based on student pilot status
             function updateUIForStudentPilot(isStudentPilot) {
-                endorsementsSection.style.display = isStudentPilot ? 'block' : 'none';
-                verifyPICButton.style.display = isStudentPilot ? 'inline-block' : 'none';
-            }
+    var endorsementsSection = document.getElementById('endorsementsSection');
+    var verifyPICButton = document.getElementById('verifyPICButton');
+    if (endorsementsSection) {
+        endorsementsSection.style.display = isStudentPilot ? 'block' : 'none';
+    }
+    if (verifyPICButton) {
+        verifyPICButton.style.display = isStudentPilot ? 'inline-block' : 'none';
+    }
+}
             
-            // Set initial state
-            updateUIForStudentPilot(studentPilotCheck.checked);
-            
-            // Add change event listener
-            studentPilotCheck.addEventListener('change', function() {
-                updateUIForStudentPilot(this.checked);
+            document.addEventListener('DOMContentLoaded', function() {
+                const studentPilotCheck = document.getElementById('studentPilotCheck');
+                if (studentPilotCheck) {
+                    updateUIForStudentPilot(studentPilotCheck.checked);
+                    studentPilotCheck.addEventListener('change', function() {
+                        updateUIForStudentPilot(this.checked);
+                    });
+                }
             });
         });
 
