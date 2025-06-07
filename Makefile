@@ -158,7 +158,8 @@ stop:
 	-docker rm $(CONTAINER_NAME) 2>/dev/null || true
 	@echo "Stop completed successfully"
 
-start: -docker compose up -d
+start:
+	docker compose up -d
 
 # View logs from the container
 logs:
