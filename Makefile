@@ -1,4 +1,4 @@
-.PHONY: build build-dev build-prod build-test test test-cov format lint check clean docker-clean run init init-dev init-prod stop logs shell
+.PHONY: build build-dev build-prod build-test test test-cov format lint check clean docker-clean dev init init-dev init-prod stop logs shell
 
 # Default port for Flask UI
 PORT ?= 5050
@@ -133,10 +133,10 @@ docker-clean: stop
 	@-docker rmi $(IMAGE_NAME):dev $(IMAGE_NAME):test $(IMAGE_NAME):prod $(IMAGE_NAME):latest-dev $(IMAGE_NAME):latest 2>/dev/null || true
 	@echo "Docker clean completed successfully"
 
-restart: stop run
+restart: stop start
 
 # Run development mode with code reloading using docker-compose
-run: build-dev
+run-dev: build-dev
 	EXPORT_DOCKER_BUILDKIT=1 docker-compose up
 
 # Stop the running container
