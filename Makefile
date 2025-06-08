@@ -112,25 +112,25 @@ init: init-dev
 
 # Clean up project files
 clean: docker-clean
-	-find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	-find . -type f -name "*.pyc" -delete 2>/dev/null || true
-	-find . -type f -name "*.pyo" -delete 2>/dev/null || true
-	-find . -type f -name "*.pyd" -delete 2>/dev/null || true
-	-find . -type f -name ".coverage" -delete 2>/dev/null || true
-	-find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
-	-find . -type d -name "*.egg" -exec rm -rf {} + 2>/dev/null || true
-	-find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
-	-find . -type d -name ".coverage" -exec rm -rf {} + 2>/dev/null || true
-	-find . -type d -name "htmlcov" -exec rm -rf {} + 2>/dev/null || true
-	-find . -type d -name "build" -exec rm -rf {} + 2>/dev/null || true
-	-find . -type d -name "dist" -exec rm -rf {} + 2>/dev/null || true
-	-rm -f logs/* 2>/dev/null || true
-	-rm -f uploads/* 2>/dev/null || true
+	@-find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	@-find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	@-find . -type f -name "*.pyo" -delete 2>/dev/null || true
+	@-find . -type f -name "*.pyd" -delete 2>/dev/null || true
+	@-find . -type f -name ".coverage" -delete 2>/dev/null || true
+	@-find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
+	@-find . -type d -name "*.egg" -exec rm -rf {} + 2>/dev/null || true
+	@-find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
+	@-find . -type d -name ".coverage" -exec rm -rf {} + 2>/dev/null || true
+	@-find . -type d -name "htmlcov" -exec rm -rf {} + 2>/dev/null || true
+	@-find . -type d -name "build" -exec rm -rf {} + 2>/dev/null || true
+	@-find . -type d -name "dist" -exec rm -rf {} + 2>/dev/null || true
+	@-rm -f logs/* 2>/dev/null || true
+	@-rm -f uploads/* 2>/dev/null || true
 	@echo "Clean completed successfully"
 
 # Clean Docker resources
 docker-clean: stop
-	-docker rmi $(IMAGE_NAME):dev $(IMAGE_NAME):test $(IMAGE_NAME):prod $(IMAGE_NAME):latest-dev $(IMAGE_NAME):latest 2>/dev/null || true
+	@-docker rmi $(IMAGE_NAME):dev $(IMAGE_NAME):test $(IMAGE_NAME):prod $(IMAGE_NAME):latest-dev $(IMAGE_NAME):latest 2>/dev/null || true
 	@echo "Docker clean completed successfully"
 
 # Run development mode with code reloading using docker-compose

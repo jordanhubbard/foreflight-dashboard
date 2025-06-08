@@ -1067,7 +1067,7 @@
                                         <i class="fas fa-user"></i> Solo
                                     </span>
                                     {% endif %}
-                                    {% if entry.dual_received > 0 %}
+                                    {% if entry.dual_received|float > 0 %}
                                     <span class="badge badge-dual" data-bs-toggle="tooltip" title="Dual instruction received">
                                         <i class="fas fa-users"></i> Dual
                                     </span>
@@ -1085,8 +1085,8 @@
                                 <td class="d-none xc-time">{{ entry.conditions.cross_country }}</td>
                                 <td class="d-none instrument-time">{{ entry.conditions.simulated_instrument + entry.conditions.actual_instrument }}</td>
                             </tr>
-                            <tr>
-                                <td colspan="100%" class="details-row" id="flight-details-{{ loop.index }}">
+                            <tr class="details-row">
+                                <td colspan="100%" id="flight-details-{{ loop.index }}">
                                     <div class="details-grid">
                                         <div class="detail-item">
                                             <span class="detail-label">Aircraft Details</span>
@@ -1320,7 +1320,7 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                                                 <span class="detail-label">Flight History</span>
                                                 <span class="detail-value">
                                                     {% for entry in entries if entry.aircraft.registration == aircraft.registration %}
-                                                    {{ entry.date.split('T')[0] }}: {{ entry.total_time }} hours ({% if entry.dual_received > 0 %}Dual{% else %}Solo{% endif %})<br>
+                                                    {{ entry.date.split('T')[0] }}: {{ entry.total_time }} hours ({% if entry.dual_received|float > 0 %}Dual{% else %}Solo{% endif %})<br>
                                                     {% endfor %}
                                                 </span>
                                             </div>
@@ -1339,7 +1339,7 @@ PIC: {{ entry.running_totals.pic_time }}</span>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/src/templates/mvc-table.js"></script>
+    <script src="{{ url_for('static', filename='mvc-table.js') }}"></script>
     <script>
     // (Legacy JS for table filtering/sorting/searching removed; see mvc-table.js)
     // Dynamically show/hide Endorsement Validation Summary and Endorsements tab for student pilot
