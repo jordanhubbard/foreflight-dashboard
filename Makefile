@@ -136,7 +136,7 @@ docker-clean: stop
 restart: stop start
 
 # Run development mode with code reloading using docker-compose
-run-dev: build-dev
+run: build-dev
 	EXPORT_DOCKER_BUILDKIT=1 docker-compose up
 
 # Stop the running container
