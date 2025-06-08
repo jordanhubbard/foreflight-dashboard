@@ -133,6 +133,8 @@ docker-clean: stop
 	@-docker rmi $(IMAGE_NAME):dev $(IMAGE_NAME):test $(IMAGE_NAME):prod $(IMAGE_NAME):latest-dev $(IMAGE_NAME):latest 2>/dev/null || true
 	@echo "Docker clean completed successfully"
 
+restart: stop run
+
 # Run development mode with code reloading using docker-compose
 run: build-dev
 	EXPORT_DOCKER_BUILDKIT=1 docker-compose up
