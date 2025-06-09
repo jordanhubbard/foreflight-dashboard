@@ -90,6 +90,7 @@ class ForeFlightImporter:
                     pic_time = self._clean_float(row['PIC'])
                     sic_time = self._clean_float(row['SIC'])
                     dual_received = self._clean_float(row.get('DualReceived', 0.0))
+                    solo_time = self._clean_float(row.get('Solo', 0.0))
                     
                     # Determine pilot role
                     if dual_given > 0:
@@ -128,7 +129,8 @@ class ForeFlightImporter:
                         remarks=f"Distance: {self._clean_float(row.get('Distance', 0.0))}nm\n{str(row['PilotComments']) if pd.notna(row['PilotComments']) else None or str(row['InstructorComments']) if pd.notna(row['InstructorComments']) else None or 'No remarks'}",
                         instructor_comments=str(row['InstructorComments']) if pd.notna(row['InstructorComments']) else None,
                         dual_received=dual_received,
-                        pic_time=pic_time
+                        pic_time=pic_time,
+                        solo_time=solo_time
                     )
                     
                     entries.append(entry)

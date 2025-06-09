@@ -25,12 +25,28 @@ window.flightDashboardMVC = (() => {
                 status: cells[9]?.textContent.trim(),
                 ground: parseFloat(cells[10]?.textContent) || 0,
                 asel: parseFloat(cells[11]?.textContent) || 0,
-                xc: parseFloat(cells[12]?.textContent) || 0,
+                xc: (() => {
+    // Try to get from hidden .xc-time cell if present
+    const xcCell = row.querySelector('.xc-time');
+    if (xcCell) {
+        const val = parseFloat(xcCell.textContent);
+        return isNaN(val) ? 0 : val;
+    }
+    return parseFloat(cells[12]?.textContent) || 0;
+})(),
                 day_time: parseFloat(cells[13]?.textContent) || 0,
                 night_time: parseFloat(cells[14]?.textContent) || 0,
                 sim_inst: parseFloat(cells[15]?.textContent) || 0,
                 dual_rcvd: parseFloat(cells[16]?.textContent) || 0,
                 pic_time: parseFloat(cells[17]?.textContent) || 0,
+                solo_time: (() => {
+    const soloCell = row.querySelector('.solo-time');
+    if (soloCell) {
+        const val = parseFloat(soloCell.textContent);
+        return isNaN(val) ? 0 : val;
+    }
+    return 0;
+})(),
                 rowHTML: row.outerHTML // for initial rendering, will be replaced
             });
         });
@@ -78,7 +94,7 @@ window.flightDashboardMVC = (() => {
                     let match = false;
                     if (state.filters.pic && flight.pic > 0) match = true;
                     if (state.filters.dual && flight.dual_rcvd > 0) match = true;
-                    if (state.filters.solo && flight.pic > 0 && flight.dual_rcvd === 0) match = true;
+                    if (state.filters.solo && flight.solo_time > 0) match = true;
                     if (!match) return false;
                     // Modifiers: must match all checked
                     if (state.filters.night && !hasNight) return false;
@@ -127,7 +143,7 @@ window.flightDashboardMVC = (() => {
                     ${flight.night > 0 ? '<span class="badge badge-night">Night</span>' : ''}
                     ${flight.xc > 0 ? '<span class="badge badge-xc">XC</span>' : ''}
                     ${(flight.pic > 0 && flight.dual_rcvd === 0) ? '<span class="badge badge-solo">Solo</span>' : ''}
-                    ${flight.dual_rcvd > 0 ? '<span class="badge badge-dual">Dual</span>' : ''}
+                    ${flight.dual > 0 ? '<span class="badge badge-dual">Dual</span>' : ''}
                 </td>
                 <td class="text-end running-total">${flight.ground.toFixed(1)}</td>
                 <td class="text-end running-total">${flight.asel.toFixed(1)}</td>
