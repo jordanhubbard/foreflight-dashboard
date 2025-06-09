@@ -142,8 +142,9 @@ window.flightDashboardMVC = (() => {
                 <td>
                     ${flight.night > 0 ? '<span class="badge badge-night">Night</span>' : ''}
                     ${flight.xc > 0 ? '<span class="badge badge-xc">XC</span>' : ''}
-                    ${(flight.pic > 0 && flight.dual_rcvd === 0) ? '<span class="badge badge-solo">Solo</span>' : ''}
+                    ${(flight.pic > 0 && flight.solo_time > 0) ? '<span class="badge badge-solo">Solo</span>' : ''}
                     ${flight.dual > 0 ? '<span class="badge badge-dual">Dual</span>' : ''}
+                    ${(flight.pic > 0 && flight.solo_time === 0 && flight.dual_rcvd === 0) ? '<span class="badge badge-pic">PIC</span>' : ''}
                 </td>
                 <td class="text-end running-total">${flight.ground.toFixed(1)}</td>
                 <td class="text-end running-total">${flight.asel.toFixed(1)}</td>
