@@ -44,6 +44,8 @@ class ForeFlightImporter:
         """Return list of Aircraft model objects from aircraft_df."""
         aircraft_list = []
         for _, row in self.aircraft_df.iterrows():
+            if pd.isna(row['AircraftID']) or not str(row['AircraftID']).strip():
+                continue
             aircraft_list.append(Aircraft(
                 registration=str(row['AircraftID']).strip(),
                 type=str(row['Model']) if pd.notna(row['Model']) else 'UNKNOWN',
@@ -86,6 +88,20 @@ class ForeFlightImporter:
                 return default
         return default
 
+    def _parse_time(self, value):
+        """Parse a string time (HH:MM or HH:MM:SS) into a time object."""
+        if not value or str(value).lower() in ('nan', 'none', ''):
+            return None
+        try:
+            parts = [int(p) for p in str(value).strip().split(':')]
+            if len(parts) == 2:
+                return time(parts[0], parts[1])
+            elif len(parts) == 3:
+                return time(parts[0], parts[1], parts[2])
+        except Exception:
+            return None
+        return None
+
     def _create_aircraft_dict(self) -> Dict[str, Aircraft]:
         """Create a dictionary of aircraft from the aircraft_df."""
         aircraft_dict = {}
@@ -117,9 +133,9 @@ class ForeFlightImporter:
                     departure = Airport(identifier=row['From'].strip() if isinstance(row['From'], str) else None) if pd.notna(row['From']) else None
                     destination = Airport(identifier=row['To'].strip() if isinstance(row['To'], str) else None) if pd.notna(row['To']) else None
                     
-                    # Parse times
-                    departure_time = self._parse_time(str(row['TimeOut']) if pd.notna(row['TimeOut']) else None)
-                    arrival_time = self._parse_time(str(row['TimeIn']) if pd.notna(row['TimeIn']) else None)
+                    # No TimeOut/TimeIn in ForeFlight CSV: set times to None
+                    departure_time = None
+                    arrival_time = None
                     
                     # Clean numeric values with better error handling
                     total_time = self._clean_float(row['TotalTime'])
@@ -154,13 +170,19 @@ class ForeFlightImporter:
                         cross_country=cross_country
                     )
                     
-                    # Create logbook entry
+                    # Aircraft mapping (robust):
+                    aircraft_id = str(row['AircraftID']).strip() if pd.notna(row['AircraftID']) else ''
+                    if aircraft_id in aircraft_dict:
+                        aircraft_obj = aircraft_dict[aircraft_id]
+                    else:
+                        aircraft_obj = Aircraft(registration=aircraft_id or 'UNKNOWN', type='UNKNOWN', category_class='UNKNOWN', gear_type='UNKNOWN')
+
                     entry = LogbookEntry(
                         date=datetime.strptime(str(row['Date']).strip(), "%Y-%m-%d"),
-                        departure_time=departure_time or time(0, 0),
-                        arrival_time=arrival_time or time(0, 0),
+                        departure_time=departure_time,
+                        arrival_time=arrival_time,
                         total_time=total_time,
-                        aircraft=aircraft_dict[str(row['AircraftID']).strip() if pd.notna(row['AircraftID']) else ''],
+                        aircraft=aircraft_obj,
                         departure=departure,
                         destination=destination,
                         conditions=conditions,
