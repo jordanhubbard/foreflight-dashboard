@@ -1,7 +1,7 @@
 """ForeFlight Logbook Manager web application."""
 
 import csv
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime, timedelta, timezone
@@ -192,32 +192,62 @@ def prepare_aircraft_stats(entries):
 @app.route('/')
 def index():
     """Render the main page."""
-    # Check if the database exists and initialize it if needed
     init_db_if_needed()
     
-    # Get student pilot status from session
-    is_student_pilot = request.args.get('student_pilot', 'false').lower() == 'true'
+    # Check if a logbook was uploaded in this session
+    logbook_filename = session.get('logbook_filename')
+    is_student_pilot = session.get('is_student_pilot', False)
     
-    # Only get endorsements if student pilot
-    endorsements = []
-    if is_student_pilot:
+    entries = []
+    stats = {}
+    all_time_stats = {}
+    aircraft_stats = []
+    aircraft_list = []
+    endorsements_dict = []
+    recent_experience = {}
+    all_time = {}
+    error_count = 0
+    
+    if logbook_filename:
         try:
-            endorsements = get_all_endorsements()
-            endorsements_dict = [e.to_dict() for e in endorsements]
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], logbook_filename)
+            from src.services.importer import ForeFlightImporter
+            importer = ForeFlightImporter(filepath)
+            entries = importer.get_flight_entries()
+            aircraft_list = importer.get_aircraft_list()
+            entries = calculate_running_totals(entries)
+            stats = calculate_stats_for_entries([e for e in entries if e.date.year == datetime.now().year])
+            all_time = calculate_stats_for_entries(entries)
+            recent_experience = calculate_recent_experience(entries)
+            aircraft_stats = aircraft_list
+            # Get endorsements if student pilot
+            if is_student_pilot:
+                try:
+                    endorsements = get_all_endorsements()
+                    endorsements_dict = [e.to_dict() for e in endorsements]
+                except Exception as e:
+                    logger.warning(f"Could not load endorsements: {str(e)}")
+                    endorsements_dict = []
+            # Do not delete the uploaded file or clear session here; keep for future reloads
+            # File is kept in uploads/ for future reloads
+            pass
         except Exception as e:
-            logger.warning(f"Could not load endorsements: {str(e)}")
-            endorsements_dict = []
-    else:
-        endorsements_dict = []
+            logger.error(f"Failed to reload uploaded logbook: {str(e)}", exc_info=True)
+            flash(f'Failed to reload uploaded logbook: {str(e)}')
     
     return render_template('index.html', 
-                         entries=None, 
-                         stats=None, 
-                         all_time_stats=None, 
-                         aircraft_stats=None, 
+                         entries=[entry.to_dict() for entry in entries],
+                         stats=stats,
+                         all_time_stats=all_time,
+                         aircraft_stats=aircraft_stats,
+                         aircraft_list=aircraft_list,
                          endorsements=endorsements_dict,
                          now=datetime.now().isoformat(),
-                         is_student_pilot=is_student_pilot)
+                         is_student_pilot=is_student_pilot,
+                         error_count=error_count,
+                         recent_experience=recent_experience,
+                         all_time=all_time
+    )
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -242,12 +272,17 @@ def upload_file():
     
     try:
         # Save uploaded file
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         logger.info(f"Saved uploaded file to {filepath}")
         
+        # Store filename and student pilot state in session for persistence
+        session['logbook_filename'] = filename
+        session['is_student_pilot'] = request.form.get('student_pilot') == 'on'
+        
         # Create debug copy
-        debug_filepath = os.path.join(app.config['UPLOAD_FOLDER'], 'debug_' + secure_filename(file.filename))
+        debug_filepath = os.path.join(app.config['UPLOAD_FOLDER'], 'debug_' + filename)
         shutil.copy2(filepath, debug_filepath)
         logger.info(f"Created debug copy at {debug_filepath}")
         
@@ -292,23 +327,10 @@ def upload_file():
         else:
             endorsements_dict = []
         
-        # Clean up uploaded file
-        os.remove(filepath)
-        logger.info("Cleaned up uploaded file")
-        
-        # Convert entries to dictionaries for JSON serialization
-        entries_dict = [entry.to_dict() for entry in entries]
-        
-        logger.info("Rendering template with processed data")
-        return render_template('index.html',
-                             entries=entries_dict,
-                             stats=stats,
-                             all_time=all_time,
-                             recent_experience=recent_experience,
-                             aircraft_stats=aircraft_stats,
-                             endorsements=endorsements_dict,
-                             now=datetime.now().isoformat(),
-                             is_student_pilot=is_student_pilot)
+        # Do not delete the uploaded file; keep it in uploads/ for future reloads
+
+        # Redirect to index so session-based persistence is used
+        return redirect(url_for('index'))
     except ValueError as e:
         logger.error(f"Validation error: {str(e)}")
         flash(f'Error validating logbook: {str(e)}')
