@@ -1291,18 +1291,22 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for aircraft in aircraft_stats %}
+                                {% for aircraft in aircraft_list %}
                                 <tr>
                                     <td>
                                         <span class="disclosure-triangle" data-target="aircraft-details-{{ loop.index }}">▶</span>
                                         {{ aircraft.registration }}
                                     </td>
                                     <td class="text-start" style="width:7ch;">{{ aircraft.type }}</td>
-                                    <td class="text-end" style="width:6ch;">{{ aircraft.count }}</td>
-                                    <td>{{ "%.1f"|format(aircraft.total_time) }}</td>
-                                    <td>{{ "%.1f"|format(aircraft.solo_time) }}</td>
-                                    <td>{{ "%.1f"|format(aircraft.dual_time) }}</td>
-                                    <td>{{ "%.1f"|format(aircraft.total_time / aircraft.count) }}</td>
+                                    <td class="text-end" style="width:6ch;">{{ entries | selectattr('aircraft.registration', 'equalto', aircraft.registration) | list | length }}</td>
+                                    <td>{{ entries | selectattr('aircraft.registration', 'equalto', aircraft.registration) | map(attribute='total_time') | sum | float | round(1) }}</td>
+                                    <td>{{ entries | selectattr('aircraft.registration', 'equalto', aircraft.registration) | map(attribute='solo_time') | sum | float | round(1) }}</td>
+                                    <td>{{ entries | selectattr('aircraft.registration', 'equalto', aircraft.registration) | map(attribute='dual_received') | sum | float | round(1) }}</td>
+                                    <td>
+                                        {% set count = entries | selectattr('aircraft.registration', 'equalto', aircraft.registration) | list | length %}
+                                        {% set total = entries | selectattr('aircraft.registration', 'equalto', aircraft.registration) | map(attribute='total_time') | sum %}
+                                        {{ (total / count) | float | round(1) if count > 0 else '0.0' }}
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td colspan="100%" class="details-row" id="aircraft-details-{{ loop.index }}">

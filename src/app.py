@@ -250,10 +250,13 @@ def upload_file():
         shutil.copy2(filepath, debug_filepath)
         logger.info(f"Created debug copy at {debug_filepath}")
         
-        # Validate entries
-        logger.info("Starting logbook validation")
-        entries = validate_logbook(filepath)
-        logger.info(f"Successfully validated {len(entries)} entries")
+        # Use ForeFlightImporter for MVC-compliant model access
+        logger.info("Parsing uploaded logbook using ForeFlightImporter")
+        from src.services.importer import ForeFlightImporter
+        importer = ForeFlightImporter(filepath)
+        entries = importer.get_flight_entries()
+        aircraft_list = importer.get_aircraft_list()
+        logger.info(f"Parsed {len(entries)} flights and {len(aircraft_list)} aircraft")
         
         if not entries:
             logger.warning("No entries found in logbook")
@@ -269,7 +272,8 @@ def upload_file():
         stats = calculate_stats_for_entries([e for e in entries if e.date.year == datetime.now().year])
         all_time = calculate_stats_for_entries(entries)
         recent_experience = calculate_recent_experience(entries)
-        aircraft_stats = prepare_aircraft_stats(entries)
+        # aircraft_stats can now be a direct pass-through of aircraft_list, or can be calculated from aircraft_list
+        aircraft_stats = aircraft_list
         
         # Get student pilot status from form
         is_student_pilot = request.form.get('student_pilot') == 'on'

@@ -9,10 +9,53 @@ class ForeFlightImporter:
     """Importer for ForeFlight logbook CSV exports."""
     
     def __init__(self, csv_path: str):
-        """Initialize importer with CSV file path."""
+        """Initialize importer with CSV file path and parse both Aircraft and Flights tables."""
         self.csv_path = csv_path
-        self.flights_df = pd.read_csv(csv_path)
-        
+        self.aircraft_df, self.flights_df = self._parse_foreflight_csv(csv_path)
+
+    def _parse_foreflight_csv(self, csv_path: str):
+        """Parse ForeFlight CSV and return (aircraft_df, flights_df)."""
+        import csv
+        import io
+        aircraft_lines = []
+        flights_lines = []
+        section = None
+        with open(csv_path, 'r', encoding='utf-8-sig') as f:
+            for line in f:
+                if 'Aircraft Table' in line:
+                    section = 'aircraft'
+                    continue
+                if 'Flights Table' in line:
+                    section = 'flights'
+                    continue
+                if section == 'aircraft':
+                    aircraft_lines.append(line)
+                elif section == 'flights':
+                    flights_lines.append(line)
+        # Remove empty lines
+        aircraft_lines = [l for l in aircraft_lines if l.strip()]
+        flights_lines = [l for l in flights_lines if l.strip()]
+        # Parse as CSV
+        aircraft_df = pd.read_csv(io.StringIO(''.join(aircraft_lines))) if aircraft_lines else pd.DataFrame()
+        flights_df = pd.read_csv(io.StringIO(''.join(flights_lines))) if flights_lines else pd.DataFrame()
+        return aircraft_df, flights_df
+
+    def get_aircraft_list(self):
+        """Return list of Aircraft model objects from aircraft_df."""
+        aircraft_list = []
+        for _, row in self.aircraft_df.iterrows():
+            aircraft_list.append(Aircraft(
+                registration=str(row['AircraftID']).strip(),
+                type=str(row['Model']) if pd.notna(row['Model']) else 'UNKNOWN',
+                category_class=str(row['aircraftClass (FAA)']) if 'aircraftClass (FAA)' in row and pd.notna(row['aircraftClass (FAA)']) else 'airplane_single_engine_land',
+                gear_type=str(row['GearType']) if 'GearType' in row and pd.notna(row['GearType']) else 'tricycle'
+            ))
+        return aircraft_list
+
+    def get_flight_entries(self):
+        """Return list of LogbookEntry model objects from flights_df."""
+        return self.import_entries()
+
     def _clean_numeric(self, value) -> int:
         """Clean and convert a value to integer, handling invalid values."""
         if pd.isna(value) or value == '':
@@ -44,20 +87,18 @@ class ForeFlightImporter:
         return default
 
     def _create_aircraft_dict(self) -> Dict[str, Aircraft]:
-        """Create a dictionary of aircraft from the CSV data."""
+        """Create a dictionary of aircraft from the aircraft_df."""
         aircraft_dict = {}
-        
-        for _, row in self.flights_df.iterrows():
+        for _, row in self.aircraft_df.iterrows():
             if pd.notna(row['AircraftID']):
                 aircraft_id = str(row['AircraftID']).strip()
                 if aircraft_id not in aircraft_dict:
                     aircraft_dict[aircraft_id] = Aircraft(
                         registration=aircraft_id,
                         type=str(row['Model']) if pd.notna(row['Model']) else 'UNKNOWN',
-                        category_class='airplane_single_engine_land',  # Default to ASEL
-                        gear_type='tricycle'  # Default to tricycle gear
+                        category_class=str(row['aircraftClass (FAA)']) if 'aircraftClass (FAA)' in row and pd.notna(row['aircraftClass (FAA)']) else 'airplane_single_engine_land',
+                        gear_type=str(row['GearType']) if 'GearType' in row and pd.notna(row['GearType']) else 'tricycle'
                     )
-        
         return aircraft_dict
 
     def import_entries(self) -> List[LogbookEntry]:
