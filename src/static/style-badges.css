@@ -1,0 +1,6 @@
+.badge-pic {
+  background-color: #198754 !important; /* Bootstrap green */
+  color: #fff !important;
+  margin-left: 2px;
+  font-weight: bold;
+}
