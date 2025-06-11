@@ -22,6 +22,21 @@ window.flightDashboardMVC = (() => {
         sort: { column: 'date', direction: 'desc' }
     };
 
+    // Render statistics summary at top
+    function renderFlightStats() {
+        const flights = state.flights;
+        const total = flights.length;
+        const picSolo = flights.filter(f => (f.pic_time > 0 || f.solo_time > 0)).length;
+        document.getElementById('flight-stats').innerHTML = `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <span class="badge bg-primary">Total Entries: ${total}</span>
+                    <span class="badge bg-info">PIC/Solo Flights: ${picSolo}</span>
+                </div>
+            </div>
+        `;
+    }
+
     // View stub
     function renderTable() {
         const tbody = document.querySelector('.flight-table tbody');
@@ -78,6 +93,7 @@ window.flightDashboardMVC = (() => {
         });
         console.log('[Sort] After:', filtered.map(f => f.date), 'Direction:', state.sort.direction);
         // Render rows
+        renderFlightStats();
         filtered.forEach(flight => {
             // Render main row
             let row = document.createElement('tr');
@@ -116,6 +132,7 @@ window.flightDashboardMVC = (() => {
     // On DOMContentLoaded, extract model and wire up UI
     document.addEventListener('DOMContentLoaded', function() {
         state.flights = extractFlights();
+        renderFlightStats();
         // Wire up filter checkboxes
         document.querySelectorAll('.filter-checkbox').forEach(cb => {
             cb.addEventListener('change', function() {
