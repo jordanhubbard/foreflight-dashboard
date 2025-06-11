@@ -47,7 +47,8 @@ for name in logging.root.manager.loggerDict:
 
 # Create Flask app with default template folder structure
 # Flask will look for templates in the 'templates' directory inside the application package
-app = Flask(__name__)
+import os
+app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 app.secret_key = 'your-secret-key-here'  # Required for flash messages
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size

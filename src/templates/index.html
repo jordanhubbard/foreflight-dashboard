@@ -8,6 +8,10 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='style-badges.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='summary-table.css') }}" rel="stylesheet">
+    <script>
+      window.flightData = {{ entries|tojson|safe }};
+      window.aircraftData = {{ aircraft_list|tojson|safe }};
+    </script>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -817,73 +821,6 @@
         </div>
 
         {% if stats %}
-        <!-- Combined Flight Statistics -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <h5 class="card-title">Flight Statistics</h5>
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover">
-                        <thead>
-                            <tr>
-                                <th class="text-start">Time Period</th>
-                                <th>Ground Training</th>
-                                <th>ASEL Time</th>
-                                <th>Cross Country</th>
-                                <th>Day</th>
-                                <th>Night</th>
-                                <th>Sim Instrument</th>
-                                <th>Dual Received</th>
-                                <th>PIC Time</th>
-                                <th>Takeoffs/Landings</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr class="table-info">
-                                <td class="fw-bold text-start">Recent (2 Months)</td>
-                                <td>{{ "%.1f"|format(recent_experience.total_ground_training) }}</td>
-                                <td>{{ "%.1f"|format(recent_experience.total_time_asel) }}</td>
-                                <td>{{ "%.1f"|format(recent_experience.total_cross_country) }}</td>
-                                <td>{{ "%.1f"|format(recent_experience.total_day) }}</td>
-                                <td>{{ "%.1f"|format(recent_experience.total_night) }}</td>
-                                <td>{{ "%.1f"|format(recent_experience.total_sim_instrument) }}</td>
-                                <td>{{ "%.1f"|format(recent_experience.total_dual_received) }}</td>
-                                <td>{{ "%.1f"|format(recent_experience.total_pic) }}</td>
-                                <td>{{ recent_experience.total_takeoffs }}/{{ recent_experience.total_landings }}</td>
-                            </tr>
-                            <tr class="table-warning">
-                                <td class="fw-bold text-start">Last Year</td>
-                                <td>{{ "%.1f"|format(stats.total_ground_training) }}</td>
-                                <td>{{ "%.1f"|format(stats.total_time_asel) }}</td>
-                                <td>{{ "%.1f"|format(stats.total_cross_country) }}</td>
-                                <td>{{ "%.1f"|format(stats.total_day) }}</td>
-                                <td>{{ "%.1f"|format(stats.total_night) }}</td>
-                                <td>{{ "%.1f"|format(stats.total_sim_instrument) }}</td>
-                                <td>{{ "%.1f"|format(stats.total_dual_received) }}</td>
-                                <td>{{ "%.1f"|format(stats.total_pic) }}</td>
-                                <td>{{ stats.total_takeoffs }}/{{ stats.total_landings }}</td>
-                            </tr>
-                            <tr class="table-success">
-                                <td class="fw-bold text-start">All Time</td>
-                                <td>{{ "%.1f"|format(all_time.total_ground_training) }}</td>
-                                <td>{{ "%.1f"|format(all_time.total_time_asel) }}</td>
-                                <td>{{ "%.1f"|format(all_time.total_cross_country) }}</td>
-                                <td>{{ "%.1f"|format(all_time.total_day) }}</td>
-                                <td>{{ "%.1f"|format(all_time.total_night) }}</td>
-                                <td>{{ "%.1f"|format(all_time.total_sim_instrument) }}</td>
-                                <td>{{ "%.1f"|format(all_time.total_dual_received) }}</td>
-                                <td>{{ "%.1f"|format(all_time.total_pic) }}</td>
-                                <td>{{ all_time.total_takeoffs }}/{{ all_time.total_landings }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Additional statistics toggle button -->
-                <button class="btn btn-sm btn-outline-secondary mt-2" type="button" data-bs-toggle="collapse" data-bs-target="#additionalStats" aria-expanded="false" aria-controls="additionalStats">
-                    <i class="fas fa-chart-bar"></i> Show Additional Statistics
-                </button>
-                
-                <!-- Collapsible additional statistics -->
                 <div class="collapse mt-3" id="additionalStats">
                     <div class="card card-body bg-light">
                         <h6 class="card-subtitle mb-2 text-muted">Aircraft Type Breakdown</h6>

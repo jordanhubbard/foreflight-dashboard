@@ -1,56 +1,9 @@
 // MVC Model/State Initialization for Flight Table
 window.flightDashboardMVC = (() => {
     // Extract flights from DOM table on page load
+    // Model-driven: use window.flightData directly
     function extractFlights() {
-        const flights = [];
-        document.querySelectorAll('.flight-table tbody tr:not(.details-row)').forEach(row => {
-            const cells = row.querySelectorAll('td');
-            flights.push({
-                id: row.id,
-                // Extract only the date (YYYY-MM-DD) from the cell, ignoring icons or extra content
-                date: (() => {
-                    const cellText = cells[0]?.textContent || '';
-                    const match = cellText.match(/(\d{4}-\d{2}-\d{2})/);
-                    return match ? match[1] : cellText.trim();
-                })(),
-                route: cells[1]?.textContent.trim(),
-                aircraft: cells[2]?.textContent.trim(),
-                total: parseFloat(cells[3]?.textContent) || 0,
-                day: parseFloat((cells[4]?.textContent.split('/')[0]) || 0),
-                night: parseFloat((cells[4]?.textContent.split('/')[1]) || 0),
-                ldg: parseInt(cells[5]?.textContent) || 0,
-                role: cells[6]?.textContent.trim(),
-                pic: parseFloat(cells[7]?.textContent) || 0,
-                dual: parseFloat(cells[8]?.textContent) || 0,
-                status: cells[9]?.textContent.trim(),
-                ground: parseFloat(cells[10]?.textContent) || 0,
-                asel: parseFloat(cells[11]?.textContent) || 0,
-                xc: (() => {
-    // Try to get from hidden .xc-time cell if present
-    const xcCell = row.querySelector('.xc-time');
-    if (xcCell) {
-        const val = parseFloat(xcCell.textContent);
-        return isNaN(val) ? 0 : val;
-    }
-    return parseFloat(cells[12]?.textContent) || 0;
-})(),
-                day_time: parseFloat(cells[13]?.textContent) || 0,
-                night_time: parseFloat(cells[14]?.textContent) || 0,
-                sim_inst: parseFloat(cells[15]?.textContent) || 0,
-                dual_rcvd: parseFloat(cells[16]?.textContent) || 0,
-                pic_time: parseFloat(cells[17]?.textContent) || 0,
-                solo_time: (() => {
-    const soloCell = row.querySelector('.solo-time');
-    if (soloCell) {
-        const val = parseFloat(soloCell.textContent);
-        return isNaN(val) ? 0 : val;
-    }
-    return 0;
-})(),
-                rowHTML: row.outerHTML // for initial rendering, will be replaced
-            });
-        });
-        return flights;
+        return Array.isArray(window.flightData) ? window.flightData : [];
     }
 
     // State
