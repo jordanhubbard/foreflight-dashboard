@@ -214,7 +214,7 @@ def index():
             from src.services.importer import ForeFlightImporter
             importer = ForeFlightImporter(filepath)
             entries = importer.get_flight_entries()
-            aircraft_list = importer.get_aircraft_list()
+            aircraft_list = [a.to_dict() for a in importer.get_aircraft_list()]
             entries = calculate_running_totals(entries)
             stats = calculate_stats_for_entries([e for e in entries if e.date.year == datetime.now().year])
             all_time = calculate_stats_for_entries(entries)
