@@ -56,6 +56,23 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+def _ensure_running_totals(entry):
+    # If entry is a custom object, convert to dict first
+    if hasattr(entry, 'to_dict'):
+        entry = entry.to_dict()
+    # Provide running_totals if missing or None
+    if not entry.get('running_totals') or entry['running_totals'] is None:
+        entry['running_totals'] = {}
+    # Comprehensive audit of all keys used in the template
+    required_keys = [
+        'asel_time', 'pic_time', 'dual_time', 'solo_time', 'night_time', 'xc_time',
+        'day_time', 'ground_training', 'sim_instrument', 'dual_received',
+        'cross_country'
+    ]
+    for key in required_keys:
+        entry['running_totals'][key] = entry['running_totals'].get(key, 0)
+    return entry
+
 # Initialize the database only if it doesn't exist
 def init_db_if_needed():
     """Initialize the database only if it doesn't exist."""
@@ -219,7 +236,7 @@ def index():
             stats = calculate_stats_for_entries([e for e in entries if e.date.year == datetime.now().year])
             all_time = calculate_stats_for_entries(entries)
             recent_experience = calculate_recent_experience(entries)
-            aircraft_stats = aircraft_list
+            aircraft_stats = prepare_aircraft_stats(entries)
             # Get endorsements if student pilot
             if is_student_pilot:
                 try:
@@ -236,7 +253,7 @@ def index():
             flash(f'Failed to reload uploaded logbook: {str(e)}')
     
     return render_template('index.html', 
-                         entries=[entry.to_dict() for entry in entries],
+                         entries=[_ensure_running_totals(entry) for entry in entries],
                          stats=stats,
                          all_time_stats=all_time,
                          aircraft_stats=aircraft_stats,
