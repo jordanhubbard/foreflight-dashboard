@@ -688,11 +688,8 @@
         .expand-tables-btn {
             margin-bottom: 1rem;
         }
-        /* Add styles for expanded tables */
+        /* Running totals columns should always be visible */
         .flight-table .running-total {
-            display: none;
-        }
-        .flight-table.expanded .running-total {
             display: table-cell;
         }
         .expand-tables-btn {
@@ -1129,10 +1126,15 @@
                                     'Ground', 'ASEL', 'XC', 'Day', 'Night', 'Sim Inst', 'Dual Rcvd', 'PIC'
                                 ] %}
                                 {% for col in columns %}
+                                {% if loop.index0 >= 10 %}
+                                <th class="sortable running-total" data-col="{{ loop.index0 }}">
+                                    {{ col }}
+                                </th>
+                                {% else %}
                                 <th class="sortable" data-col="{{ loop.index0 }}">
                                     {{ col }}
-                                    
                                 </th>
+                                {% endif %}
                                 {% endfor %}
                             </tr>
                         </thead>

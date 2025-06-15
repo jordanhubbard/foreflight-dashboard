@@ -54,24 +54,31 @@ window.foreflightDashboard = (() => {
     // Initialize disclosure triangles for expandable content
     function initDisclosureTriangles() {
         try {
-            document.querySelectorAll('.disclosure-triangle').forEach(triangle => {
-                triangle.addEventListener('click', function() {
-                    const detailsId = this.getAttribute('data-target');
+            const triangles = document.querySelectorAll('.disclosure-triangle');
+            
+            triangles.forEach((triangle, index) => {
+                const detailsId = triangle.getAttribute('data-target');
+                
+                triangle.addEventListener('click', function(e) {
+                    e.stopPropagation(); // Prevent row click from also firing
                     toggleDetails(this, detailsId);
                 });
             });
 
             // Also allow clicking on flight rows to expand details
-            document.querySelectorAll('.flight-table tbody tr:not(.details-row)').forEach(row => {
+            const flightRows = document.querySelectorAll('.flight-table tbody tr:not(.details-row)');
+            
+            flightRows.forEach((row, index) => {
                 row.addEventListener('click', function(e) {
-                    // Don't toggle if clicking on a link or input
-                    if (e.target.tagName === 'A' || e.target.tagName === 'INPUT') {
+                    // Don't toggle if clicking on a link, input, or triangle
+                    if (e.target.tagName === 'A' || e.target.tagName === 'INPUT' || e.target.classList.contains('disclosure-triangle')) {
                         return;
                     }
                     
                     const rowId = this.id.split('-')[1];
                     const detailsRow = document.getElementById(`flight-details-${rowId}`);
                     const triangle = this.querySelector('.disclosure-triangle');
+                    
                     if (triangle && detailsRow) {
                         toggleDetails(triangle, detailsRow.id);
                     }
@@ -87,15 +94,27 @@ window.foreflightDashboard = (() => {
     function toggleDetails(triangle, detailsId) {
         try {
             const detailsElement = document.getElementById(detailsId);
-            if (!detailsElement) return;
             
-            if (detailsElement.style.display === 'block') {
-                detailsElement.style.display = 'none';
-                detailsElement.classList.remove('show');
+            if (!detailsElement) {
+                console.warn('[Dashboard] Details element not found for ID:', detailsId);
+                return;
+            }
+            
+            // The detailsElement is a <td>, we need to show/hide its parent <tr>
+            const detailsRow = detailsElement.closest('tr.details-row');
+            
+            if (!detailsRow) {
+                console.warn('[Dashboard] Details row not found for element:', detailsId);
+                return;
+            }
+            
+            const isCurrentlyVisible = detailsRow.classList.contains('show');
+            
+            if (isCurrentlyVisible) {
+                detailsRow.classList.remove('show');
                 triangle.textContent = '▶';
             } else {
-                detailsElement.style.display = 'block';
-                detailsElement.classList.add('show');
+                detailsRow.classList.add('show');
                 triangle.textContent = '▼';
             }
         } catch (error) {
@@ -113,19 +132,34 @@ window.foreflightDashboard = (() => {
             }
 
             toggleButton.addEventListener('click', function() {
-                const table = document.querySelector('.flight-table');
-                if (!table) return;
-                
-                const isExpanded = table.classList.contains('expanded');
+                const detailsRows = document.querySelectorAll('.details-row');
+                const triangles = document.querySelectorAll('.disclosure-triangle');
                 const buttonSpan = toggleButton.querySelector('span');
                 
-                if (isExpanded) {
-                    table.classList.remove('expanded');
+                // Check if any details are currently shown
+                const anyDetailsShown = Array.from(detailsRows).some(row => 
+                    row.classList.contains('show')
+                );
+                
+                if (anyDetailsShown) {
+                    // Collapse all details
+                    detailsRows.forEach(row => {
+                        row.classList.remove('show');
+                    });
+                    triangles.forEach(triangle => {
+                        triangle.textContent = '▶';
+                    });
                     if (buttonSpan) buttonSpan.textContent = 'Expand Tables';
                     toggleButton.classList.remove('btn-secondary');
                     toggleButton.classList.add('btn-outline-success');
                 } else {
-                    table.classList.add('expanded');
+                    // Expand all details
+                    detailsRows.forEach(row => {
+                        row.classList.add('show');
+                    });
+                    triangles.forEach(triangle => {
+                        triangle.textContent = '▼';
+                    });
                     if (buttonSpan) buttonSpan.textContent = 'Collapse Tables';
                     toggleButton.classList.remove('btn-outline-success');
                     toggleButton.classList.add('btn-secondary');
@@ -263,26 +297,45 @@ window.foreflightDashboard = (() => {
                 body: JSON.stringify(filters)
             })
             .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Replace table content with filtered results
-                    if (tbody) {
-                        tbody.innerHTML = data.table_html;
-                    }
-                    
-                    // Update count display
-                    if (countDisplay) {
-                        countDisplay.textContent = `Showing ${data.total_entries} of ${data.original_total} entries`;
-                    }
-                    
-                    // Re-initialize disclosure triangles for new content
-                    initDisclosureTriangles();
-                    
-                    // Re-initialize tooltips for new content
-                    initTooltips();
-                    
-                    console.log('[Dashboard] Successfully applied filters:', data.total_entries, 'entries shown');
-                } else {
+                         .then(data => {
+                 if (data.success) {
+                     // Check if details were expanded before replacing content
+                     const detailsRows = document.querySelectorAll('.details-row');
+                     const wereDetailsExpanded = Array.from(detailsRows).some(row => 
+                         row.classList.contains('show')
+                     );
+                     
+                     // Replace table content with filtered results
+                     if (tbody) {
+                         tbody.innerHTML = data.table_html;
+                     }
+                     
+                     // Restore details expansion state if they were expanded before
+                     if (wereDetailsExpanded) {
+                         const newDetailsRows = document.querySelectorAll('.details-row');
+                         const newTriangles = document.querySelectorAll('.disclosure-triangle');
+                         newDetailsRows.forEach(row => {
+                             row.classList.add('show');
+                         });
+                         newTriangles.forEach(triangle => {
+                             triangle.textContent = '▼';
+                         });
+                         console.log('[Dashboard] Restored expanded details state');
+                     }
+                     
+                     // Update count display
+                     if (countDisplay) {
+                         countDisplay.textContent = `Showing ${data.total_entries} of ${data.original_total} entries`;
+                     }
+                     
+                     // Re-initialize disclosure triangles for new content
+                     initDisclosureTriangles();
+                     
+                     // Re-initialize tooltips for new content
+                     initTooltips();
+                     
+                     console.log('[Dashboard] Successfully applied filters:', data.total_entries, 'entries shown');
+                 } else {
                     console.error('[Dashboard] Filter request failed:', data.error);
                     if (tbody) {
                         tbody.innerHTML = `<tr><td colspan="100%" class="text-center text-danger">Error: ${data.error}</td></tr>`;

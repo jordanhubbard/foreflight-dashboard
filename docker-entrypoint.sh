@@ -13,7 +13,7 @@ else
     echo "Starting Flask application..."
     cd /app
     export PYTHONPATH=/app
-    python -m src.app --host=0.0.0.0 --port=5050 &
+    python -m src.app --host=0.0.0.0 --port=8081 &
     FLASK_PID=$!
 
     # Start FastAPI application in background

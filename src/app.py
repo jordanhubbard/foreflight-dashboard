@@ -751,7 +751,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='ForeFlight Dashboard Flask App')
     parser.add_argument('--host', default='0.0.0.0', help='Host to bind to')
-    parser.add_argument('--port', type=int, default=5050, help='Port to bind to')
+    parser.add_argument('--port', type=int, default=8081, help='Port to bind to')
     args = parser.parse_args()
     
     # Run the app

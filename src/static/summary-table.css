@@ -31,3 +31,26 @@
   width: 100%;
   table-layout: fixed;
 }
+
+/* Hide details rows by default */
+.details-row {
+  display: none;
+}
+
+/* Show details rows when they have the 'show' class */
+.details-row.show {
+  display: table-row;
+}
+
+/* Style for disclosure triangles */
+.disclosure-triangle {
+  cursor: pointer;
+  user-select: none;
+  margin-right: 0.5rem;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.disclosure-triangle:hover {
+  color: #0066cc;
+}
