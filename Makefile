@@ -1,4 +1,4 @@
-.PHONY: build build-dev build-prod build-test test test-cov format lint check clean docker-clean dev init init-dev init-prod stop logs shell
+.PHONY: build build-dev build-prod build-test test test-cov format lint check clean docker-clean dev run init init-dev init-prod stop logs shell
 
 # Default port for Flask UI
 PORT ?= 5050
@@ -110,6 +110,36 @@ init-prod: build-prod
 # Default init target (development)
 init: init-dev
 
+# Development mode - containerized but runs in foreground (not daemonized)
+dev: build-dev
+	@echo "Starting development server in foreground..."
+	@echo "Press Ctrl+C to stop the server"
+	EXPORT_DOCKER_BUILDKIT=1 docker-compose up
+
+# Production mode - containerized and runs in background (daemonized)
+run: build-prod
+	@echo "Starting production server in background..."
+	EXPORT_DOCKER_BUILDKIT=1 docker-compose up -d
+	@echo "Server started in background. Use 'make logs' to view logs or 'make stop' to stop."
+
+# Stop the running container
+stop:
+	-docker-compose down 2>/dev/null || true
+	-docker stop $(CONTAINER_NAME) 2>/dev/null || true
+	-docker rm $(CONTAINER_NAME) 2>/dev/null || true
+	@echo "Stop completed successfully"
+
+# View logs from the container
+logs:
+	docker-compose logs -f 2>/dev/null || docker logs -f $(CONTAINER_NAME) 2>/dev/null || echo "No running containers found"
+
+# Get a shell inside the container
+shell: build-dev
+	docker run --rm -it \
+		-v $(PWD):/app \
+		$(IMAGE_NAME):dev \
+		/bin/bash
+
 # Clean up project files
 clean: docker-clean
 	@-find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
@@ -133,29 +163,8 @@ docker-clean: stop
 	@-docker rmi $(IMAGE_NAME):dev $(IMAGE_NAME):test $(IMAGE_NAME):prod $(IMAGE_NAME):latest-dev $(IMAGE_NAME):latest 2>/dev/null || true
 	@echo "Docker clean completed successfully"
 
-restart: stop start
+# Restart containers
+restart: stop dev
 
-# Run development mode with code reloading using docker-compose
-run: build-dev
-	EXPORT_DOCKER_BUILDKIT=1 docker-compose up
-
-# Stop the running container
-stop:
-	-docker-compose down 2>/dev/null || true
-	-docker stop $(CONTAINER_NAME) 2>/dev/null || true
-	-docker rm $(CONTAINER_NAME) 2>/dev/null || true
-	@echo "Stop completed successfully"
-
-start: build-all
-	docker compose up -d
-
-# View logs from the container
-logs:
-	docker logs -f $(CONTAINER_NAME) 2>/dev/null || echo "Container $(CONTAINER_NAME) is not running"
-
-# Get a shell inside the container
-shell: build-dev
-	docker run --rm -it \
-		-v $(PWD):/app \
-		$(IMAGE_NAME):dev \
-		/bin/bash
+# Legacy aliases for backward compatibility
+start: run

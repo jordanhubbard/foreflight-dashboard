@@ -1,177 +1,491 @@
-// MVC Model/State Initialization for Flight Table
-window.flightDashboardMVC = (() => {
-    // Extract flights from DOM table on page load
-    // Model-driven: use window.flightData directly
-    function extractFlights() {
-        return Array.isArray(window.flightData) ? window.flightData : [];
+// Clean JavaScript for ForeFlight Dashboard
+// Server-side rendering with minimal client-side interactivity
+window.foreflightDashboard = (() => {
+    'use strict';
+
+    // Initialize all interactive features
+    function init() {
+        console.log('[Dashboard] Initializing client-side interactivity...');
+        
+        try {
+            // Initialize tooltips (Bootstrap requirement)
+            initTooltips();
+            
+            // Initialize disclosure triangles for expandable rows
+            initDisclosureTriangles();
+            
+            // Initialize table expansion toggle
+            initTableExpansion();
+            
+            // Initialize search and filters
+            initSearchAndFilters();
+            
+            // Initialize student pilot features
+            initStudentPilotFeatures();
+            
+            // Initialize error navigation
+            initErrorNavigation();
+            
+            console.log('[Dashboard] Client-side interactivity initialized successfully');
+        } catch (error) {
+            console.error('[Dashboard] Error during initialization:', error);
+        }
     }
 
-    // State
-    const state = {
-        flights: [],
-        filters: {
-            all: true,
-            pic: false,
-            dual: false,
-            solo: false,
-            night: false,
-            xc: false,
-            instrument: false
-        },
-        search: '',
-        sort: { column: 'date', direction: 'desc' }
-    };
+    // Initialize Bootstrap tooltips with error handling
+    function initTooltips() {
+        try {
+            // Check if Bootstrap is available
+            if (typeof bootstrap === 'undefined') {
+                console.warn('[Dashboard] Bootstrap not available, skipping tooltip initialization');
+                return;
+            }
 
-    // Render statistics summary at top
-    function renderFlightStats() {
-        const flights = state.flights;
-        const total = flights.length;
-        const picSolo = flights.filter(f => (f.pic_time > 0 || f.solo_time > 0)).length;
-        document.getElementById('flight-stats').innerHTML = `
-            <div class="card mb-3">
-                <div class="card-body">
-                    <span class="badge bg-primary">Total Entries: ${total}</span>
-                    <span class="badge bg-info">PIC/Solo Flights: ${picSolo}</span>
-                </div>
-            </div>
-        `;
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+            console.log('[Dashboard] Initialized', tooltipTriggerList.length, 'tooltips');
+        } catch (error) {
+            console.error('[Dashboard] Error initializing tooltips:', error);
+        }
     }
 
-    // View stub
-    function renderTable() {
-        const tbody = document.querySelector('.flight-table tbody');
-        if (!tbody) return;
-        // Clear table
-        tbody.innerHTML = '';
-        // Apply search
-        let filtered = state.flights.filter(flight => {
-            if (!state.search) return true;
-            const text = Object.values(flight).join(' ').toLowerCase();
-            return text.includes(state.search.toLowerCase());
-        });
-        // Apply filters
-        if (!state.filters.all) {
-            const primaryChecked = state.filters.pic || state.filters.dual || state.filters.solo;
-            filtered = filtered.filter(flight => {
-                // Helper badge checks
-                const hasNight = flight.night_time > 0;
-                const hasXC = flight.xc > 0;
-                const hasInstrument = flight.sim_inst > 0;
-                // Primary logic
-                if (primaryChecked) {
-                    let match = false;
-                    if (state.filters.pic && flight.pic > 0) match = true;
-                    if (state.filters.dual && flight.dual_rcvd > 0) match = true;
-                    if (state.filters.solo && flight.solo_time > 0) match = true;
-                    if (!match) return false;
-                    // Modifiers: must match all checked
-                    if (state.filters.night && !hasNight) return false;
-                    if (state.filters.xc && !hasXC) return false;
-                    if (state.filters.instrument && !hasInstrument) return false;
-                    return true;
+    // Initialize disclosure triangles for expandable content
+    function initDisclosureTriangles() {
+        try {
+            document.querySelectorAll('.disclosure-triangle').forEach(triangle => {
+                triangle.addEventListener('click', function() {
+                    const detailsId = this.getAttribute('data-target');
+                    toggleDetails(this, detailsId);
+                });
+            });
+
+            // Also allow clicking on flight rows to expand details
+            document.querySelectorAll('.flight-table tbody tr:not(.details-row)').forEach(row => {
+                row.addEventListener('click', function(e) {
+                    // Don't toggle if clicking on a link or input
+                    if (e.target.tagName === 'A' || e.target.tagName === 'INPUT') {
+                        return;
+                    }
+                    
+                    const rowId = this.id.split('-')[1];
+                    const detailsRow = document.getElementById(`flight-details-${rowId}`);
+                    const triangle = this.querySelector('.disclosure-triangle');
+                    if (triangle && detailsRow) {
+                        toggleDetails(triangle, detailsRow.id);
+                    }
+                });
+            });
+            console.log('[Dashboard] Initialized disclosure triangles');
+        } catch (error) {
+            console.error('[Dashboard] Error initializing disclosure triangles:', error);
+        }
+    }
+
+    // Toggle details visibility
+    function toggleDetails(triangle, detailsId) {
+        try {
+            const detailsElement = document.getElementById(detailsId);
+            if (!detailsElement) return;
+            
+            if (detailsElement.style.display === 'block') {
+                detailsElement.style.display = 'none';
+                detailsElement.classList.remove('show');
+                triangle.textContent = '▶';
+            } else {
+                detailsElement.style.display = 'block';
+                detailsElement.classList.add('show');
+                triangle.textContent = '▼';
+            }
+        } catch (error) {
+            console.error('[Dashboard] Error toggling details:', error);
+        }
+    }
+
+    // Initialize table expansion (show/hide running totals)
+    function initTableExpansion() {
+        try {
+            const toggleButton = document.getElementById('toggleTables');
+            if (!toggleButton) {
+                console.log('[Dashboard] Toggle button not found, skipping table expansion init');
+                return;
+            }
+
+            toggleButton.addEventListener('click', function() {
+                const table = document.querySelector('.flight-table');
+                if (!table) return;
+                
+                const isExpanded = table.classList.contains('expanded');
+                const buttonSpan = toggleButton.querySelector('span');
+                
+                if (isExpanded) {
+                    table.classList.remove('expanded');
+                    if (buttonSpan) buttonSpan.textContent = 'Expand Tables';
+                    toggleButton.classList.remove('btn-secondary');
+                    toggleButton.classList.add('btn-outline-success');
                 } else {
-                    // No primary checked: modifiers act as primary
-                    let match = false;
-                    if (state.filters.night && hasNight) match = true;
-                    if (state.filters.xc && hasXC) match = true;
-                    if (state.filters.instrument && hasInstrument) match = true;
-                    return match;
+                    table.classList.add('expanded');
+                    if (buttonSpan) buttonSpan.textContent = 'Collapse Tables';
+                    toggleButton.classList.remove('btn-outline-success');
+                    toggleButton.classList.add('btn-secondary');
                 }
             });
+            console.log('[Dashboard] Initialized table expansion toggle');
+        } catch (error) {
+            console.error('[Dashboard] Error initializing table expansion:', error);
         }
-        // Sort
-        console.log('[Sort] Before:', filtered.map(f => f.date));
-        filtered.sort((a, b) => {
-            if (state.sort.column === 'date') {
-                const result = state.sort.direction === 'asc'
-                    ? new Date(a.date) - new Date(b.date)
-                    : new Date(b.date) - new Date(a.date);
-                return result;
-            }
-            // Add more sort options if needed
-            return 0;
-        });
-        console.log('[Sort] After:', filtered.map(f => f.date), 'Direction:', state.sort.direction);
-        // Render rows
-        renderFlightStats();
-        filtered.forEach(flight => {
-            // Render main row
-            let row = document.createElement('tr');
-            row.id = flight.id;
-            row.innerHTML = `
-                <td>${flight.date}</td>
-                <td>${flight.route}</td>
-                <td>${flight.aircraft}</td>
-                <td>${flight.total.toFixed(1)}</td>
-                <td>${flight.day.toFixed(1)}/${flight.night.toFixed(1)}</td>
-                <td>${flight.ldg}</td>
-                <td>${flight.role}</td>
-                <td>${flight.pic.toFixed(1)}</td>
-                <td>${flight.dual.toFixed(1)}</td>
-                <td>
-                    ${flight.night > 0 ? '<span class="badge badge-night">Night</span>' : ''}
-                    ${flight.xc > 0 ? '<span class="badge badge-xc">XC</span>' : ''}
-                    ${(flight.pic > 0 && flight.solo_time > 0 && flight.dual_rcvd === 0) ? '<span class="badge badge-solo">Solo</span>' : ''}
-                    ${(flight.dual > 0 && flight.solo_time === 0) ? '<span class="badge badge-dual">Dual</span>' : ''}
-                    ${flight.pic > 0 ? '<span class="badge bg-success badge-pic">PIC</span>' : ''}
-                </td>
-                <td class="text-end running-total">${flight.ground.toFixed(1)}</td>
-                <td class="text-end running-total">${flight.asel.toFixed(1)}</td>
-                <td class="text-end running-total">${flight.xc.toFixed(1)}</td>
-                <td class="text-end running-total">${flight.day_time.toFixed(1)}</td>
-                <td class="text-end running-total">${flight.night_time.toFixed(1)}</td>
-                <td class="text-end running-total">${flight.sim_inst.toFixed(1)}</td>
-                <td class="text-end running-total">${flight.dual_rcvd.toFixed(1)}</td>
-                <td class="text-end running-total">${flight.pic_time.toFixed(1)}</td>
-            `;
-            tbody.appendChild(row);
-            // Details row could be added here if needed
-        });
     }
 
-    // On DOMContentLoaded, extract model and wire up UI
-    document.addEventListener('DOMContentLoaded', function() {
-        state.flights = extractFlights();
-        renderFlightStats();
-        // Wire up filter checkboxes
-        document.querySelectorAll('.filter-checkbox').forEach(cb => {
-            cb.addEventListener('change', function() {
-                const id = this.id.replace('filter-', '');
-                if (id === 'all') {
-                    Object.keys(state.filters).forEach(k => state.filters[k] = false);
-                    state.filters.all = this.checked;
+    // Initialize search and filter functionality
+    function initSearchAndFilters() {
+        try {
+            // Search functionality
+            const searchInput = document.getElementById('flight-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', applyFiltersAndSearch);
+                console.log('[Dashboard] Initialized search input');
+            }
+
+            // Filter checkboxes
+            const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
+            console.log('[Dashboard] Found', filterCheckboxes.length, 'filter checkboxes');
+            
+            filterCheckboxes.forEach((checkbox, index) => {
+                console.log('[Dashboard] Setting up checkbox', index, ':', checkbox.id);
+                checkbox.addEventListener('change', function() {
+                    console.log('[Dashboard] Filter changed:', this.id, 'checked:', this.checked);
+                    handleFilterChange(this);
+                    applyFiltersAndSearch();
+                });
+            });
+
+            // Sort dropdown
+            const sortSelect = document.getElementById('date-sort-select');
+            if (sortSelect) {
+                sortSelect.addEventListener('change', function() {
+                    applySorting(this.value);
+                });
+                console.log('[Dashboard] Initialized sort dropdown');
+            }
+
+            // Initial filter application - only if we have a table
+            const flightTable = document.querySelector('.flight-table tbody');
+            if (flightTable && flightTable.children.length > 0) {
+                console.log('[Dashboard] Found flight table with data, applying initial filters');
+                applyFiltersAndSearch();
+            } else {
+                console.log('[Dashboard] No flight table data found, skipping initial filter application');
+            }
+            console.log('[Dashboard] Initialized search and filters');
+        } catch (error) {
+            console.error('[Dashboard] Error initializing search and filters:', error);
+        }
+    }
+
+    // Handle filter checkbox logic with mutual exclusivity rules
+    function handleFilterChange(checkbox) {
+        try {
+            console.log('[Dashboard] handleFilterChange called for:', checkbox.id, 'checked:', checkbox.checked);
+            const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
+            
+            if (checkbox.id === 'filter-all' && checkbox.checked) {
+                // If 'All' is checked, uncheck other filters
+                filterCheckboxes.forEach(cb => {
+                    if (cb.id !== 'filter-all') cb.checked = false;
+                });
+            } else if (checkbox.id !== 'filter-all' && checkbox.checked) {
+                // If any other filter is checked, uncheck 'All'
+                const allCheckbox = document.getElementById('filter-all');
+                if (allCheckbox) allCheckbox.checked = false;
+                
+                // Apply mutual exclusivity rules
+                const picCheckbox = document.getElementById('filter-pic');
+                const dualCheckbox = document.getElementById('filter-dual');
+                const soloCheckbox = document.getElementById('filter-solo');
+                
+                if (checkbox.id === 'filter-pic' && checkbox.checked) {
+                    // PIC is mutually exclusive with dual
+                    if (dualCheckbox) dualCheckbox.checked = false;
+                } else if (checkbox.id === 'filter-dual' && checkbox.checked) {
+                    // Dual is mutually exclusive with PIC and solo
+                    if (picCheckbox) picCheckbox.checked = false;
+                    if (soloCheckbox) soloCheckbox.checked = false;
+                } else if (checkbox.id === 'filter-solo' && checkbox.checked) {
+                    // Solo is mutually exclusive with dual
+                    if (dualCheckbox) dualCheckbox.checked = false;
+                }
+            }
+            
+            // If no filters are checked, check 'All' by default
+            const anyOtherChecked = Array.from(filterCheckboxes).some(cb => 
+                cb.id !== 'filter-all' && cb.checked
+            );
+            if (!anyOtherChecked) {
+                const allCheckbox = document.getElementById('filter-all');
+                if (allCheckbox) allCheckbox.checked = true;
+            }
+        } catch (error) {
+            console.error('[Dashboard] Error handling filter change:', error);
+        }
+    }
+
+    // Apply search and filters via server-side request
+    function applyFiltersAndSearch() {
+        try {
+            // Get filter states
+            const filters = {
+                all: document.getElementById('filter-all')?.checked || false,
+                pic: document.getElementById('filter-pic')?.checked || false,
+                dual: document.getElementById('filter-dual')?.checked || false,
+                solo: document.getElementById('filter-solo')?.checked || false,
+                night: document.getElementById('filter-night')?.checked || false,
+                xc: document.getElementById('filter-xc')?.checked || false,
+                instrument: document.getElementById('filter-instrument')?.checked || false
+            };
+            
+            console.log('[Dashboard] Applying filters:', filters);
+            
+            // Show loading state
+            const tbody = document.querySelector('.flight-table tbody');
+            const countDisplay = document.getElementById('visible-row-count');
+            
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="100%" class="text-center">Loading filtered results...</td></tr>';
+            }
+            
+            // Send filter request to server
+            fetch('/filter-flights', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(filters)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Replace table content with filtered results
+                    if (tbody) {
+                        tbody.innerHTML = data.table_html;
+                    }
+                    
+                    // Update count display
+                    if (countDisplay) {
+                        countDisplay.textContent = `Showing ${data.total_entries} of ${data.original_total} entries`;
+                    }
+                    
+                    // Re-initialize disclosure triangles for new content
+                    initDisclosureTriangles();
+                    
+                    // Re-initialize tooltips for new content
+                    initTooltips();
+                    
+                    console.log('[Dashboard] Successfully applied filters:', data.total_entries, 'entries shown');
                 } else {
-                    state.filters[id] = this.checked;
-                    state.filters.all = false;
-                    // If none checked, revert to all
-                    if (!Object.keys(state.filters).some(k => k !== 'all' && state.filters[k])) {
-                        state.filters.all = true;
+                    console.error('[Dashboard] Filter request failed:', data.error);
+                    if (tbody) {
+                        tbody.innerHTML = `<tr><td colspan="100%" class="text-center text-danger">Error: ${data.error}</td></tr>`;
                     }
                 }
-                renderTable();
+            })
+            .catch(error => {
+                console.error('[Dashboard] Error sending filter request:', error);
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="100%" class="text-center text-danger">Error loading filtered results</td></tr>`;
+                }
             });
-        });
-        // Wire up search
-        const searchBox = document.getElementById('flight-search');
-        if (searchBox) {
-            searchBox.addEventListener('input', function() {
-                state.search = this.value;
-                renderTable();
-            });
+            
+        } catch (error) {
+            console.error('[Dashboard] Error applying filters and search:', error);
         }
-        // Wire up sort dropdown
-        const sortSelect = document.getElementById('date-sort-select');
-        if (sortSelect) {
-            sortSelect.addEventListener('change', function() {
-                console.log('[Sort Dropdown] Changed to:', this.value);
-                state.sort.direction = this.value;
-                renderTable();
-            });
-        }
-        // Initial render
-        renderTable();
-    });
+    }
 
-    // Expose for debugging
-    return { state, renderTable };
+    // Apply sorting to table
+    function applySorting(direction) {
+        try {
+            const tbody = document.querySelector('.flight-table tbody');
+            if (!tbody) return;
+            
+            const rows = Array.from(tbody.querySelectorAll('tr:not(.details-row)'));
+            const detailsRows = Array.from(tbody.querySelectorAll('tr.details-row'));
+            
+            // Sort rows by date
+            rows.sort((a, b) => {
+                const dateA = new Date(a.cells[0].textContent.trim());
+                const dateB = new Date(b.cells[0].textContent.trim());
+                
+                return direction === 'asc' ? dateA - dateB : dateB - dateA;
+            });
+            
+            // Clear and re-append in sorted order
+            tbody.innerHTML = '';
+            rows.forEach(row => {
+                tbody.appendChild(row);
+                // Find and append corresponding details row
+                const detailsRow = detailsRows.find(dr => 
+                    dr.querySelector('td[id]')?.id === `flight-details-${row.id.split('-')[1]}`
+                );
+                if (detailsRow) {
+                    tbody.appendChild(detailsRow);
+                }
+            });
+            
+            // Reapply filters after sorting
+            applyFiltersAndSearch();
+        } catch (error) {
+            console.error('[Dashboard] Error applying sorting:', error);
+        }
+    }
+
+    // Initialize student pilot specific features
+    function initStudentPilotFeatures() {
+        try {
+            const studentCheckbox = document.getElementById('studentPilotCheck');
+            const endorsementCard = document.getElementById('endorsement-summary-card');
+            const verifyPICButton = document.getElementById('verifyPICButton');
+            
+            if (studentCheckbox) {
+                studentCheckbox.addEventListener('change', function() {
+                    const isStudentPilot = this.checked;
+                    
+                    if (endorsementCard) {
+                        endorsementCard.style.display = isStudentPilot ? 'block' : 'none';
+                    }
+                    
+                    if (verifyPICButton) {
+                        verifyPICButton.style.display = isStudentPilot ? 'inline-block' : 'none';
+                    }
+                    
+                    toggleEndorsementsTab(isStudentPilot);
+                });
+            }
+            console.log('[Dashboard] Initialized student pilot features');
+        } catch (error) {
+            console.error('[Dashboard] Error initializing student pilot features:', error);
+        }
+    }
+
+    // Toggle endorsements tab visibility
+    function toggleEndorsementsTab(show) {
+        try {
+            // Check if Bootstrap is available for tab functionality
+            if (typeof bootstrap === 'undefined') {
+                console.warn('[Dashboard] Bootstrap not available, skipping endorsements tab toggle');
+                return;
+            }
+
+            const mainTabs = document.getElementById('mainTabs');
+            const mainTabsContent = document.getElementById('mainTabsContent');
+            const tabId = 'endorsements-tab';
+            const paneId = 'endorsements';
+            
+            let tab = document.getElementById(tabId);
+            let pane = document.getElementById(paneId);
+            
+            if (show && !tab) {
+                // Create endorsements tab
+                const li = document.createElement('li');
+                li.className = 'nav-item';
+                li.role = 'presentation';
+                li.innerHTML = `<button class="nav-link" id="${tabId}" data-bs-toggle="tab" data-bs-target="#${paneId}" type="button" role="tab">Endorsements</button>`;
+                mainTabs.appendChild(li);
+                
+                // Create endorsements pane
+                const endorsementsPane = document.createElement('div');
+                endorsementsPane.className = 'tab-pane fade';
+                endorsementsPane.id = paneId;
+                endorsementsPane.role = 'tabpanel';
+                endorsementsPane.innerHTML = document.getElementById('endorsements-tab-content-template').innerHTML;
+                mainTabsContent.appendChild(endorsementsPane);
+                
+                // Auto-switch to the tab
+                const endorsementsTabBtn = document.getElementById(tabId);
+                if (endorsementsTabBtn) {
+                    new bootstrap.Tab(endorsementsTabBtn).show();
+                }
+            } else if (!show) {
+                // Remove endorsements tab and pane
+                if (tab) tab.parentElement.remove();
+                if (pane) pane.remove();
+            }
+        } catch (error) {
+            console.error('[Dashboard] Error toggling endorsements tab:', error);
+        }
+    }
+
+    // Initialize error navigation
+    function initErrorNavigation() {
+        try {
+            const errorEntries = document.querySelectorAll('.has-error');
+            let currentErrorIndex = 0;
+
+            if (errorEntries.length === 0) {
+                console.log('[Dashboard] No error entries found, skipping error navigation init');
+                return;
+            }
+
+            function updateErrorCounter() {
+                const counter = document.getElementById('error-counter');
+                if (counter) {
+                    counter.textContent = `${currentErrorIndex + 1}/${errorEntries.length}`;
+                }
+            }
+
+            function navigateError(direction) {
+                // Remove highlight from current error
+                errorEntries[currentErrorIndex].classList.remove('current-error');
+                
+                // Update index
+                currentErrorIndex = (currentErrorIndex + direction + errorEntries.length) % errorEntries.length;
+                
+                // Highlight new current error and scroll to it
+                errorEntries[currentErrorIndex].classList.add('current-error');
+                errorEntries[currentErrorIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                updateErrorCounter();
+            }
+
+            // Initialize error counter
+            updateErrorCounter();
+
+            // Keyboard navigation
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowLeft') {
+                    navigateError(-1);
+                } else if (e.key === 'ArrowRight') {
+                    navigateError(1);
+                }
+            });
+
+            // Expose navigation function globally for button clicks
+            window.navigateError = navigateError;
+            console.log('[Dashboard] Initialized error navigation for', errorEntries.length, 'errors');
+        } catch (error) {
+            console.error('[Dashboard] Error initializing error navigation:', error);
+        }
+    }
+
+    // Track if already initialized to prevent double initialization
+    let isInitialized = false;
+    
+    // Wrapper function to prevent double initialization
+    function safeInit() {
+        if (isInitialized) {
+            console.log('[Dashboard] Already initialized, skipping');
+            return;
+        }
+        isInitialized = true;
+        init();
+    }
+
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', safeInit);
+
+    // Expose public API
+    return {
+        init: safeInit,
+        applyFiltersAndSearch,
+        applySorting
+    };
 })();

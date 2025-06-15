@@ -24,41 +24,39 @@ The application will be available at the forwarded port URL that GitHub Codespac
 
 ## Local Setup
 
-### Using Make (Recommended)
+### Prerequisites
+- Docker
+- Docker Compose
+- make (for using the Makefile commands)
 
-1. Create a virtual environment and install dependencies:
-```bash
-make setup
-```
+### Containerized Setup (Recommended)
 
-2. Run the application:
+All operations are performed in Docker containers - no local Python installation needed.
+
+1. Build and run the application:
 ```bash
 make run
 ```
+
+2. Access the application at http://localhost:5050
 
 3. Clean up (optional):
 ```bash
 make clean
 ```
 
-### Manual Setup
+### Manual Docker Commands
 
-1. Create a virtual environment:
+If you prefer not to use Make:
+
+1. Build the development image:
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # On Unix/macOS
-# or
-.\venv\Scripts\activate  # On Windows
+docker buildx bake development
 ```
 
-2. Install dependencies:
+2. Run with docker-compose:
 ```bash
-pip install -r requirements.txt
-```
-
-3. Run the application:
-```bash
-flask run --port 5050
+docker-compose up
 ```
 
 ## Project Structure
@@ -79,12 +77,15 @@ foreflight_logbook/
 
 ### Available Make Commands
 
-- `make setup` - Create virtual environment and install dependencies
-- `make run` - Start the application
-- `make clean` - Remove virtual environment and cached files
-- `make test` - Run tests
-- `make lint` - Run linting checks
-- `make format` - Format code using black and isort
+- `make build-dev` - Build development Docker image
+- `make build-prod` - Build production Docker image
+- `make run` - Start the application with docker-compose
+- `make test` - Run tests in Docker container
+- `make lint` - Run linting checks in Docker container
+- `make format` - Format code using black and isort in Docker container
+- `make shell` - Get a shell inside the development container
+- `make clean` - Remove Docker images and cached files
+- `make stop` - Stop running containers
 
 ### Code Quality
 

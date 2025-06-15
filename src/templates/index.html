@@ -198,6 +198,31 @@
             gap: 0.5rem;
             margin-top: 1rem;
         }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+        .stat-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            font-weight: 500;
+        }
+        .stat-value {
+            font-weight: 600;
+            color: #0d6efd;
+            font-size: 1em;
+        }
         .aircraft-stat-card {
             background: #f8f9fa;
             border-radius: 4px;
@@ -663,6 +688,22 @@
         .expand-tables-btn {
             margin-bottom: 1rem;
         }
+        /* Add styles for expanded tables */
+        .flight-table .running-total {
+            display: none;
+        }
+        .flight-table.expanded .running-total {
+            display: table-cell;
+        }
+        .expand-tables-btn {
+            transition: all 0.3s ease;
+        }
+        .flight-table {
+            transition: all 0.3s ease;
+        }
+        .flight-table.expanded {
+            font-size: 0.85em;
+        }
     </style>
 </head>
 <body>
@@ -807,18 +848,157 @@
             <div class="card-body">
                 <h5 class="card-title">Quick Navigation</h5>
                 <div class="d-flex gap-2 flex-wrap">
-                    <button class="btn btn-outline-primary" onclick="document.getElementById('aircraft-stats').scrollIntoView({behavior: 'smooth'})">
+                    <button class="btn btn-outline-primary" id="scrollToAircraftStats">
                         <i class="fas fa-plane"></i> Aircraft Statistics
                     </button>
                     <button class="btn btn-outline-success" id="toggleTables">
                         <i class="fas fa-expand"></i> <span>Expand Tables</span>
                     </button>
-                    <button class="btn btn-outline-warning" id="verifyPICButton" style="display: none;" onclick="verifyPICEndorsements()">
+                    <button class="btn btn-outline-warning" id="verifyPICButton" style="display: none;">
                         <i class="fas fa-check-circle"></i> Verify PIC Endorsements
                     </button>
                 </div>
             </div>
         </div>
+
+        {% if stats %}
+        <!-- Flight Statistics/Currency Table -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Flight Statistics & Currency Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6 class="text-muted mb-3">Recent Experience (Last 30 Days)</h6>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-label">Total Time</div>
+                                <div class="stat-value">{{ "%.1f"|format(recent_experience.total_time) }} hrs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">PIC Time</div>
+                                <div class="stat-value">{{ "%.1f"|format(recent_experience.total_pic) }} hrs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Night Time</div>
+                                <div class="stat-value">{{ "%.1f"|format(recent_experience.total_night) }} hrs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Cross Country</div>
+                                <div class="stat-value">{{ "%.1f"|format(recent_experience.total_cross_country) }} hrs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Instrument</div>
+                                <div class="stat-value">{{ "%.1f"|format(recent_experience.total_sim_instrument) }} hrs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Landings</div>
+                                <div class="stat-value">{{ recent_experience.total_landings }} total</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-muted mb-3">Current Year ({{ current_year }})</h6>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-label">Total Time</div>
+                                <div class="stat-value">{{ "%.1f"|format(stats.total_time) }} hrs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">PIC Time</div>
+                                <div class="stat-value">{{ "%.1f"|format(stats.total_pic) }} hrs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Night Time</div>
+                                <div class="stat-value">{{ "%.1f"|format(stats.total_night) }} hrs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Cross Country</div>
+                                <div class="stat-value">{{ "%.1f"|format(stats.total_cross_country) }} hrs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Instrument</div>
+                                <div class="stat-value">{{ "%.1f"|format(stats.total_sim_instrument) }} hrs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Landings</div>
+                                <div class="stat-value">{{ stats.total_landings }} total</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-muted mb-3">All Time Totals</h6>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-label">Total Time</div>
+                                <div class="stat-value">{{ "%.1f"|format(all_time.total_time) }} hrs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">PIC Time</div>
+                                <div class="stat-value">{{ "%.1f"|format(all_time.total_pic) }} hrs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Night Time</div>
+                                <div class="stat-value">{{ "%.1f"|format(all_time.total_night) }} hrs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Cross Country</div>
+                                <div class="stat-value">{{ "%.1f"|format(all_time.total_cross_country) }} hrs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Instrument</div>
+                                <div class="stat-value">{{ "%.1f"|format(all_time.total_sim_instrument) }} hrs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Landings</div>
+                                <div class="stat-value">{{ all_time.total_landings }} total</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Aircraft Category Breakdown -->
+                <div class="mt-4">
+                    <h6 class="text-muted mb-3">Aircraft Category Breakdown</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="stat-item">
+                                        <div class="stat-label">ASEL</div>
+                                        <div class="stat-value">{{ "%.1f"|format(all_time.total_time_asel) }} hrs</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="stat-item">
+                                        <div class="stat-label">Tailwheel</div>
+                                        <div class="stat-value">{{ "%.1f"|format(all_time.total_time_tailwheel) }} hrs</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="stat-item">
+                                        <div class="stat-label">Complex</div>
+                                        <div class="stat-value">{{ "%.1f"|format(all_time.total_time_complex) }} hrs</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="stat-item">
+                                        <div class="stat-label">High Performance</div>
+                                        <div class="stat-value">{{ "%.1f"|format(all_time.total_time_high_performance) }} hrs</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         {% if stats %}
                 <div class="collapse mt-3" id="additionalStats">
@@ -858,7 +1038,7 @@
                 </div>
                 {% if error_count > 0 %}
                 <span id="errorCounter" class="text-muted"></span>
-                <button class="btn btn-outline-primary" onclick="navigateError(1)">Next Error →</button>
+                                    <button class="btn btn-outline-primary" id="nextErrorButton">Next Error →</button>
                 {% endif %}
             </div>
         </div>
@@ -875,7 +1055,7 @@
                         <span id="validEndorsementCount" class="badge bg-success me-2">Valid Endorsements: --</span>
                         <span id="invalidEndorsementCount" class="badge bg-danger">Missing Endorsements: --</span>
                     </div>
-                    <button class="btn-sm btn-outline-primary" onclick="verifyPICEndorsements()">
+                    <button class="btn-sm btn-outline-primary" id="refreshValidationButton">
                         <i class="fas fa-sync-alt"></i> Refresh Validation
                     </button>
                 </div>
@@ -910,31 +1090,31 @@
                             <span id="filter-indicator" class="badge bg-success me-2 filter-indicator">Filtering...</span>
                             <label class="form-label fw-bold me-3 pt-1">Filter by Type:</label>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-all" checked onchange="handleFilterClick(this)">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-all" checked>
                                 <label class="form-check-label" for="filter-all">All</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-pic" onchange="handleFilterClick(this)">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-pic">
                                 <label class="form-check-label" for="filter-pic">PIC</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-dual" onchange="handleFilterClick(this)">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-dual">
                                 <label class="form-check-label" for="filter-dual">Dual</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-solo" onchange="handleFilterClick(this)">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-solo">
                                 <label class="form-check-label" for="filter-solo">Solo</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-night" onchange="handleFilterClick(this)">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-night">
                                 <label class="form-check-label" for="filter-night">Night</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-xc" onchange="handleFilterClick(this)">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-xc">
                                 <label class="form-check-label" for="filter-xc">Cross Country</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-instrument" onchange="handleFilterClick(this)">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="filter-instrument">
                                 <label class="form-check-label" for="filter-instrument">Instrument</label>
                             </div>
                         </div>
@@ -960,100 +1140,100 @@
                         <tbody>
                             {% if entries %}
                             {% for entry in entries %}
-                            <tr id="entry-{{ loop.index }}" class="{% if entry.error_explanation %}has-error{% endif %}">
+                            <tr id="entry-{{ loop.index }}" class="{% if entry['error_explanation'] %}has-error{% endif %}">
                                 <td class="flight-date">
                                     <span class="disclosure-triangle" data-target="flight-details-{{ loop.index }}">▶</span>
-                                    {{ entry.date.split('T')[0] }}
+                                    {{ entry['date'].split('T')[0] }}
                                 </td>
-                                <td class="route">{{ entry.departure.identifier if entry.departure else '---' }} → {{ entry.destination.identifier if entry.destination else '---' }}</td>
-                                <td>{{ entry.aircraft.registration }}</td>
-                                <td>{{ "%.1f"|format(entry.total_time) }}</td>
-                                <td>{{ "%.1f"|format(entry.conditions.day) }}/{{ "%.1f"|format(entry.conditions.night) }}</td>
-                                <td>{{ entry.landings_day + entry.landings_night }}</td>
-                                <td class="{% if entry.pilot_role == 'SPLIT' %}split-role-text{% endif %}">{{ entry.pilot_role }}</td>
-                                <td>{{ "%.1f"|format(entry.pic_time) }}</td>
-                                <td>{{ "%.1f"|format(entry.dual_received) }}</td>
+                                <td class="route">{{ entry['departure']['identifier'] if entry['departure'] else '---' }} → {{ entry['destination']['identifier'] if entry['destination'] else '---' }}</td>
+                                <td>{{ entry['aircraft']['registration'] }}</td>
+                                <td>{{ "%.1f"|format(entry['total_time']) }}</td>
+                                <td>{{ "%.1f"|format(entry['conditions']['day']) }}/{{ "%.1f"|format(entry['conditions']['night']) }}</td>
+                                <td>{{ entry['landings_day'] + entry['landings_night'] }}</td>
+                                <td class="{% if entry['pilot_role'] == 'SPLIT' %}split-role-text{% endif %}">{{ entry['pilot_role'] }}</td>
+                                <td>{{ "%.1f"|format(entry['pic_time']) }}</td>
+                                <td>{{ "%.1f"|format(entry['dual_received']) }}</td>
                                 <td>
-                                    {% if entry.error_explanation %}
-                                    <span class="badge bg-danger" data-bs-toggle="tooltip" title="{{ entry.error_explanation }}">
+                                    {% if entry['error_explanation'] %}
+                                    <span class="badge bg-danger" data-bs-toggle="tooltip" title="{{ entry['error_explanation'] }}">
                                         Invalid
                                     </span>
                                     {% endif %}
-                                    {% if entry.conditions.cross_country > 0 %}
+                                    {% if entry['conditions']['cross_country'] > 0 %}
                                     <span class="badge badge-xc" data-bs-toggle="tooltip" title="Cross-country flight">
                                         <i class="fas fa-plane"></i> XC
                                     </span>
                                     {% endif %}
-                                    {% if entry.conditions.night > 0 %}
+                                    {% if entry['conditions']['night'] > 0 %}
                                     <span class="badge badge-night" data-bs-toggle="tooltip" title="Night flight">
                                         <i class="fas fa-moon"></i> Night
                                     </span>
                                     {% endif %}
-                                    {% if entry.pic_time > 0 and entry.dual_received == 0 %}
+                                    {% if entry['pic_time'] > 0 and entry['dual_received'] == 0 %}
                                     <span class="badge badge-solo" data-bs-toggle="tooltip" title="Solo flight">
                                         <i class="fas fa-user"></i> Solo
                                     </span>
                                     {% endif %}
-                                    {% if entry.dual_received|float > 0 %}
+                                    {% if entry['dual_received']|float > 0 %}
                                     <span class="badge badge-dual" data-bs-toggle="tooltip" title="Dual instruction received">
                                         <i class="fas fa-users"></i> Dual
                                     </span>
                                     {% endif %}
                                 </td>
-                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.ground_training) if entry.running_totals.ground_training else "0.0" }}</td>
-                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.asel_time) }}</td>
-                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.cross_country) if entry.running_totals.cross_country else "0.0" }}</td>
-                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.day_time) }}</td>
-                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.night_time) }}</td>
-                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.sim_instrument) }}</td>
-                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.dual_received) }}</td>
-                                <td class="text-end running-total">{{ "%.1f"|format(entry.running_totals.pic_time) }}</td>
-                                <td class="d-none solo-time">{{ entry.solo_time }}</td>
-                                <td class="d-none xc-time">{{ entry.conditions.cross_country }}</td>
-                                <td class="d-none instrument-time">{{ entry.conditions.simulated_instrument + entry.conditions.actual_instrument }}</td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['ground_training']) if entry['running_totals']['ground_training'] else "0.0" }}</td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['asel_time']) }}</td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['cross_country']) if entry['running_totals']['cross_country'] else "0.0" }}</td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['day_time']) }}</td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['night_time']) }}</td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['sim_instrument']) }}</td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['dual_received']) }}</td>
+                                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['pic_time']) }}</td>
+                                <td class="d-none solo-time">{{ entry['solo_time'] }}</td>
+                                <td class="d-none xc-time">{{ entry['conditions']['cross_country'] }}</td>
+                                <td class="d-none instrument-time">{{ entry['conditions']['simulated_instrument'] + entry['conditions']['actual_instrument'] }}</td>
                             </tr>
                             <tr class="details-row">
                                 <td colspan="100%" id="flight-details-{{ loop.index }}">
                                     <div class="details-grid">
                                         <div class="detail-item">
                                             <span class="detail-label">Aircraft Details</span>
-                                            <span class="detail-value">Registration: {{ entry.aircraft.registration }}
-Type: {{ entry.aircraft.type }}
-Category/Class: {{ entry.aircraft.category_class }}</span>
+                                            <span class="detail-value">Registration: {{ entry['aircraft']['registration'] }}
+Type: {{ entry['aircraft']['type'] }}
+Category/Class: {{ entry['aircraft']['category_class'] }}</span>
                                         </div>
                                         <div class="detail-item">
                                             <span class="detail-label">Route Information</span>
-                                            <span class="detail-value">Departure: {{ entry.departure.identifier }}
-Destination: {{ entry.destination.identifier }}</span>
+                                            <span class="detail-value">Departure: {{ entry['departure']['identifier'] if entry['departure'] else 'N/A' }}
+Destination: {{ entry['destination']['identifier'] if entry['destination'] else 'N/A' }}</span>
                                         </div>
                                         <div class="detail-item">
                                             <span class="detail-label">Flight Times</span>
-                                            <span class="detail-value">Total: {{ entry.total_time }}
-Day: {{ entry.conditions.day }}
-Night: {{ entry.conditions.night }}
-PIC: {{ entry.pic_time }}
-Dual Received: {{ entry.dual_received }}</span>
+                                            <span class="detail-value">Total: {{ entry['total_time'] }}
+Day: {{ entry['conditions']['day'] }}
+Night: {{ entry['conditions']['night'] }}
+PIC: {{ entry['pic_time'] }}
+Dual Received: {{ entry['dual_received'] }}</span>
                                         </div>
                                         <div class="detail-item">
                                             <span class="detail-label">Landings</span>
-                                            <span class="detail-value">Day: {{ entry.landings_day }}
-Night: {{ entry.landings_night }}</span>
+                                            <span class="detail-value">Day: {{ entry['landings_day'] }}
+Night: {{ entry['landings_night'] }}</span>
                                         </div>
                                         <div class="detail-item">
                                             <span class="detail-label">Running Totals</span>
-                                            <span class="detail-value">Ground: {{ entry.running_totals.ground_training if entry.running_totals.ground_training else "0.0" }}
-ASEL: {{ entry.running_totals.asel_time }}
-Cross Country: {{ entry.running_totals.cross_country if entry.running_totals.cross_country else "0.0" }}
-Day: {{ entry.running_totals.day_time }}
-Night: {{ entry.running_totals.night_time }}
-Sim Instrument: {{ entry.running_totals.sim_instrument }}
-Dual Received: {{ entry.running_totals.dual_received }}
-PIC: {{ entry.running_totals.pic_time }}</span>
+                                            <span class="detail-value">Ground: {{ entry['running_totals']['ground_training'] if entry['running_totals']['ground_training'] else "0.0" }}
+ASEL: {{ entry['running_totals']['asel_time'] }}
+Cross Country: {{ entry['running_totals']['cross_country'] if entry['running_totals']['cross_country'] else "0.0" }}
+Day: {{ entry['running_totals']['day_time'] }}
+Night: {{ entry['running_totals']['night_time'] }}
+Sim Instrument: {{ entry['running_totals']['sim_instrument'] }}
+Dual Received: {{ entry['running_totals']['dual_received'] }}
+PIC: {{ entry['running_totals']['pic_time'] }}</span>
                                         </div>
-                                        {% if entry.remarks %}
+                                        {% if entry['remarks'] %}
                                         <div class="detail-item">
                                             <span class="detail-label">Remarks</span>
-                                            <span class="detail-value">{{ entry.remarks }}</span>
+                                            <span class="detail-value">{{ entry['remarks'] }}</span>
                                         </div>
                                         {% endif %}
                                     </div>
@@ -1116,7 +1296,7 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                     document.addEventListener('DOMContentLoaded', function() {
                         // Initialize aircraft chart if it exists
                         const chartCanvas = document.getElementById('aircraftChart');
-                        if (chartCanvas && typeof aircraftChartData !== 'undefined') {
+                        if (chartCanvas && typeof aircraftChartData !== 'undefined' && typeof Chart !== 'undefined') {
                             const ctx = chartCanvas.getContext('2d');
                             new Chart(ctx, {
                                 type: 'bar',
@@ -1156,35 +1336,8 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                             });
                         }
                     });
-                    
-                    // This function handles checkbox clicks and updates the table immediately
-                    window.handleFilterClick = function(checkbox) {
-                        const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
-                        
-                        // If 'All' is checked, uncheck other filters
-                        if (checkbox.id === 'filter-all' && checkbox.checked) {
-                            filterCheckboxes.forEach(cb => {
-                                if (cb.id !== 'filter-all') cb.checked = false;
-                            });
-                        }
-                        // If any other filter is checked, uncheck 'All'
-                        else if (checkbox.id !== 'filter-all' && checkbox.checked) {
-                            const allCheckbox = document.getElementById('filter-all');
-                            if (allCheckbox) allCheckbox.checked = false;
-                        }
-                        // If all filters are unchecked, check 'All' by default
-                        let anyOtherChecked = false;
-                        filterCheckboxes.forEach(cb => {
-                            if (cb.id !== 'filter-all' && cb.checked) anyOtherChecked = true;
-                        });
-                        if (!anyOtherChecked) {
-                            const allCheckbox = document.getElementById('filter-all');
-                            if (allCheckbox) allCheckbox.checked = true;
-                        }
-                        // Apply filters immediately
-                        filterAndSearchFlights();
-                    };
                 </script>
+
 
                 <div class="flight-table-container">
                     <div class="flight-table-header">
@@ -1241,17 +1394,17 @@ PIC: {{ entry.running_totals.pic_time }}</span>
                                                 <span class="detail-value">
                                                     Registration: {{ aircraft.registration }}<br>
                                                     Type: {{ aircraft.type }}<br>
-                                                    Total Flights: {{ aircraft.count }}<br>
-                                                    Total Time: {{ "%.1f"|format(aircraft.total_time) }}<br>
-                                                    Solo Time: {{ "%.1f"|format(aircraft.solo_time) }}<br>
-                                                    Dual Time: {{ "%.1f"|format(aircraft.dual_time) }}
+                                                    Total Flights: {{ entries | selectattr('aircraft.registration', 'equalto', aircraft.registration) | list | length }}<br>
+                                                    Total Time: {{ "%.1f"|format(entries | selectattr('aircraft.registration', 'equalto', aircraft.registration) | map(attribute='total_time') | sum) }}<br>
+                                                    Solo Time: {{ "%.1f"|format(entries | selectattr('aircraft.registration', 'equalto', aircraft.registration) | map(attribute='solo_time') | sum) }}<br>
+                                                    Dual Time: {{ "%.1f"|format(entries | selectattr('aircraft.registration', 'equalto', aircraft.registration) | map(attribute='dual_received') | sum) }}
                                                 </span>
                                             </div>
                                             <div class="detail-item">
                                                 <span class="detail-label">Flight History</span>
                                                 <span class="detail-value">
-                                                    {% for entry in entries if entry.aircraft.registration == aircraft.registration %}
-                                                    {{ entry.date.split('T')[0] }}: {{ entry.total_time }} hours ({% if entry.dual_received|float > 0 %}Dual{% else %}Solo{% endif %})<br>
+                                                                                    {% for entry in entries if entry['aircraft']['registration'] == aircraft.registration %}
+                                {{ entry['date'].split('T')[0] }}: {{ entry['total_time'] }} hours ({% if entry['dual_received']|float > 0 %}Dual{% else %}Solo{% endif %})<br>
                                                     {% endfor %}
                                                 </span>
                                             </div>
@@ -1270,505 +1423,67 @@ PIC: {{ entry.running_totals.pic_time }}</span>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='mvc-table.js') }}"></script>
     <script>
-    // (Legacy JS for table filtering/sorting/searching removed; see mvc-table.js)
-    // Dynamically show/hide Endorsement Validation Summary and Endorsements tab for student pilot
-    document.addEventListener('DOMContentLoaded', function() {
-        var studentCheckbox = document.getElementById('studentPilotCheck');
-        var endorsementCard = document.getElementById('endorsement-summary-card');
-        var mainTabs = document.getElementById('mainTabs');
-        var mainTabsContent = document.getElementById('mainTabsContent');
-        function toggleEndorsementsTab(show) {
-            var tabId = 'endorsements-tab';
-            var paneId = 'endorsements';
-            var tab = document.getElementById(tabId);
-            var pane = document.getElementById(paneId);
-            if (show) {
-                if (!tab) {
-                    var li = document.createElement('li');
-                    li.className = 'nav-item';
-                    li.role = 'presentation';
-                    li.innerHTML = '<button class="nav-link" id="endorsements-tab" data-bs-toggle="tab" data-bs-target="#endorsements" type="button" role="tab">Endorsements</button>';
-                    mainTabs.appendChild(li);
-                }
-                if (!pane) {
-                    var dashboardPane = document.getElementById('dashboard');
-                    var endorsementsPane = document.createElement('div');
-                    endorsementsPane.className = 'tab-pane fade';
-                    endorsementsPane.id = 'endorsements';
-                    endorsementsPane.role = 'tabpanel';
-                    endorsementsPane.innerHTML = document.getElementById('endorsements-tab-content-template').innerHTML;
-                    mainTabsContent.appendChild(endorsementsPane);
-                }
-                // Auto-switch to the tab
-                var endorsementsTabBtn = document.getElementById('endorsements-tab');
-                if (endorsementsTabBtn) {
-                    new bootstrap.Tab(endorsementsTabBtn).show();
-                }
+        // Wait for Bootstrap to load before initializing our dashboard
+        function waitForBootstrap() {
+            if (typeof bootstrap !== 'undefined') {
+                // Bootstrap is loaded, now load our script
+                const script = document.createElement('script');
+                script.src = "{{ url_for('static', filename='mvc-table.js') }}";
+                script.onload = function() {
+                    console.log('[Bootstrap] Dashboard script loaded successfully');
+                    // Initialize the dashboard since DOMContentLoaded may have already fired
+                    if (typeof window.foreflightDashboard !== 'undefined') {
+                        window.foreflightDashboard.init();
+                        console.log('[Bootstrap] Dashboard initialized manually');
+                    }
+                };
+                script.onerror = function() {
+                    console.error('[Bootstrap] Failed to load dashboard script');
+                };
+                document.head.appendChild(script);
             } else {
-                if (tab) tab.parentElement.remove();
-                if (pane) pane.remove();
+                // Bootstrap not ready yet, try again in 100ms
+                setTimeout(waitForBootstrap, 100);
             }
         }
-        if (studentCheckbox) {
-            studentCheckbox.addEventListener('change', function() {
-                if (endorsementCard) endorsementCard.style.display = this.checked ? 'block' : 'none';
-                toggleEndorsementsTab(this.checked);
-            });
-        }
-    });
-    
-    
-        // Initialize tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
-        })
-
-        // Disclosure triangle handling
+        
+        // Start waiting for Bootstrap
+        waitForBootstrap();
+    </script>
+    <script>
+        // Additional button handlers for elements that need specific functionality
         document.addEventListener('DOMContentLoaded', function() {
-            // Get all disclosure triangles
-            const triangles = document.querySelectorAll('.disclosure-triangle');
-            
-            // Add click handler to each triangle
-            triangles.forEach(triangle => {
-                triangle.addEventListener('click', function() {
-                    // Get the target element
-            });
-
-            // Error navigation
-            const errorEntries = document.querySelectorAll('.has-error');
-            let currentErrorIndex = 0;
-
-            function updateErrorCounter() {
-                const counter = document.getElementById('error-counter');
-                if (counter) {
-                    counter.textContent = `${currentErrorIndex + 1}/${errorEntries.length}`;
-                }
+            // Scroll to aircraft stats button
+            const scrollButton = document.getElementById('scrollToAircraftStats');
+            if (scrollButton) {
+                scrollButton.addEventListener('click', function() {
+                    document.getElementById('aircraft-stats')?.scrollIntoView({behavior: 'smooth'});
+                });
             }
 
-            function navigateError(direction) {
-                if (errorEntries.length === 0) return;
-                
-                // Remove highlight from current error
-                errorEntries[currentErrorIndex].classList.remove('current-error');
-                
-                // Update index
-                currentErrorIndex = (currentErrorIndex + direction + errorEntries.length) % errorEntries.length;
-                
-                // Highlight new current error and scroll to it
-                errorEntries[currentErrorIndex].classList.add('current-error');
-                errorEntries[currentErrorIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
-                
-                updateErrorCounter();
-            }
-
-            // Initialize error counter
-            if (errorEntries.length > 0) {
-                updateErrorCounter();
-            }
-
-            // Keyboard navigation
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'ArrowLeft') {
-                    navigateError(-1);
-                } else if (e.key === 'ArrowRight') {
-                    navigateError(1);
-                }
-            });
-
-            // Function to toggle details
-            function toggleDetails(triangle, detailsId) {
-                const detailsElement = document.getElementById(detailsId);
-                if (!detailsElement) return;
-                
-                if (detailsElement.style.display === 'block') {
-                    detailsElement.style.display = 'none';
-                    detailsElement.classList.remove('show');
-                    triangle.textContent = '▶';
-                } else {
-                    detailsElement.style.display = 'block';
-                    detailsElement.classList.add('show');
-                    triangle.textContent = '▼';
-                }
-            }
-
-            // Add click handlers to all disclosure triangles
-            document.querySelectorAll('.disclosure-triangle').forEach(triangle => {
-                triangle.addEventListener('click', function() {
-                    const detailsId = this.getAttribute('data-target');
-                    toggleDetails(this, detailsId);
-                });
-            });
-
-            // Add click handlers to all flight rows
-            document.querySelectorAll('.flight-table tbody tr:not(.details-row)').forEach(row => {
-                row.addEventListener('click', function(e) {
-                    // Don't toggle if clicking on a link or checkbox
-                    if (e.target.tagName === 'A' || e.target.tagName === 'INPUT') {
-                        return;
-                    }
-                    
-                    const rowId = this.id.split('-')[1];
-                    const detailsRow = document.getElementById(`flight-details-${rowId}`);
-                    const triangle = this.querySelector('.disclosure-triangle');
-                    if (triangle && detailsRow) {
-                        toggleDetails(triangle, detailsRow.id);
-                    }
-                });
-            });
-
-            // Table sorting (with direction)
-            function sortTable(columnIndex, direction) {
-                const table = document.querySelector('.flight-table');
-                if (!table) return;
-                const tbody = table.querySelector('tbody');
-                if (!tbody) return;
-                const rows = Array.from(tbody.querySelectorAll('tr:not(.details-row)'));
-                if (rows.length === 0) return;
-
-                // Remove sort indicators from all headers/footers
-                table.querySelectorAll('th').forEach(header => {
-                    header.removeAttribute('data-sort');
-                    header.classList.remove('sorted-asc', 'sorted-desc');
-                });
-
-                // Set sort indicator on both header and footer for this column
-                table.querySelectorAll('th[data-col="' + columnIndex + '"]').forEach(th => {
-                    th.setAttribute('data-sort', direction);
-                    th.classList.add(direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
-                });
-
-                // Sort rows
-                rows.sort((a, b) => {
-                    const aCells = a.querySelectorAll('td');
-                    const bCells = b.querySelectorAll('td');
-                    if (columnIndex >= aCells.length || columnIndex >= bCells.length) return 0;
-                    const aValue = aCells[columnIndex].textContent.trim();
-                    const bValue = bCells[columnIndex].textContent.trim();
-
-                    // Numeric sort
-                    if (!isNaN(parseFloat(aValue)) && !isNaN(parseFloat(bValue))) {
-                        return direction === 'asc' ? parseFloat(aValue) - parseFloat(bValue)
-                                                  : parseFloat(bValue) - parseFloat(aValue);
-                    }
-                    // Date sort (YYYY-MM-DD)
-                    if (aValue.match(/^\d{4}-\d{2}-\d{2}$/) && bValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                        return direction === 'asc' ? new Date(aValue) - new Date(bValue)
-                                                  : new Date(bValue) - new Date(aValue);
-                    }
-                    // String sort
-                    return direction === 'asc' ? aValue.localeCompare(bValue)
-                                              : bValue.localeCompare(aValue);
-                });
-
-                // Reorder rows in the DOM
-                rows.forEach(row => {
-                    const rowId = row.id.split('-')[1];
-                    const detailsRow = document.getElementById(`flight-details-${rowId}`);
-                    tbody.appendChild(row);
-                    if (detailsRow) tbody.appendChild(detailsRow);
-                });
-                // Re-apply filters after sorting
-                filterAndSearchFlights();
-            }
-
-            // Helper to attach event listeners to all sort arrows
-            function attachSortArrowListeners() {
-                const arrows = document.querySelectorAll('.flight-table th .sort-arrow');
-                console.log('[DEBUG] Found', arrows.length, 'sort arrows');
-                arrows.forEach(arrow => {
-                    // Remove any existing listener to avoid stacking
-                    arrow.replaceWith(arrow.cloneNode(true));
-                });
-                // Query again after replacement
-                document.querySelectorAll('.flight-table th .sort-arrow').forEach(arrow => {
-                    arrow.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        console.log('[DEBUG] Sort arrow clicked');
-                        const th = this.closest('th');
-                        const colIdx = parseInt(th.getAttribute('data-col'), 10);
-                        const dir = this.getAttribute('data-dir');
-                        console.log('[DEBUG] Sorting col', colIdx, 'dir', dir);
-                        sortTable(colIdx, dir);
-                    });
-                });
-                console.log('[DEBUG] Sort arrow listeners attached');
-            }
-
-            // Confirm script is running
-            console.log('[DEBUG] JS is running');
-            document.addEventListener('DOMContentLoaded', function() {
-                // Initialize filter logic
-                document.querySelectorAll('.filter-checkbox').forEach(cb => {
-                    cb.addEventListener('change', function() {
-                        handleFilterClick(this);
-                    });
-                });
-                // Date sort dropdown
-                const dateSortSelect = document.getElementById('date-sort-select');
-                if (dateSortSelect) {
-                    const dateSortIcon = document.getElementById('date-sort-icon');
-                    dateSortSelect.addEventListener('change', function() {
-                        sortTableByDate(this.value);
-                    });
-                    // Set icon on load
-                    if (dateSortSelect) sortTableByDate(dateSortSelect.value);
-                }
-                // Initial sort and filter on load
-                if (dateSortSelect) sortTableByDate(dateSortSelect.value);
-                filterAndSearchFlights();
-            });
-
-            // Sort table by date
-            function sortTableByDate(direction) {
-                const table = document.querySelector('.flight-table');
-                if (!table) return;
-                const tbody = table.querySelector('tbody');
-                if (!tbody) return;
-                const rows = Array.from(tbody.querySelectorAll('tr:not(.details-row)'));
-                if (rows.length === 0) return;
-                // Date is in column 0 (YYYY-MM-DD)
-                rows.sort((a, b) => {
-                    const aDate = a.cells[0]?.textContent.trim();
-                    const bDate = b.cells[0]?.textContent.trim();
-                    if (!aDate || !bDate) return 0;
-                    return direction === 'asc' ? new Date(aDate) - new Date(bDate) : new Date(bDate) - new Date(aDate);
-                });
-                // Reorder rows in the DOM
-                rows.forEach(row => {
-                    const rowId = row.id.split('-')[1];
-                    const detailsRow = document.getElementById(`flight-details-${rowId}`);
-                    tbody.appendChild(row);
-                    if (detailsRow) tbody.appendChild(detailsRow);
-                });
-                // Update sort icon
-                const dateSortIcon = document.getElementById('date-sort-icon');
-                if (dateSortIcon) {
-                    if (direction === 'desc') {
-                        dateSortIcon.innerHTML = '<i class="fas fa-arrow-down"></i>';
-                    } else {
-                        dateSortIcon.innerHTML = '<i class="fas fa-arrow-up"></i>';
-                    }
-                }
-                // Re-apply filters after sorting
-                filterAndSearchFlights();
-            }
-
-            // Re-attach sort arrow listeners after filtering/searching or table update
-            if (typeof filterAndSearchFlights === 'function') {
-                const origFilterAndSearch = filterAndSearchFlights;
-                window.filterAndSearchFlights = function() {
-                    origFilterAndSearch.apply(this, arguments);
-                    attachSortArrowListeners();
-                }
-            }
-
-            // Remove ambiguous header click handler for sorting without direction
-            // (If you want header click to sort, use arrows only or implement toggling direction)
-            // document.addEventListener('DOMContentLoaded', function() {
-            //     document.querySelectorAll('.flight-table th').forEach((th, index) => {
-            //         th.style.cursor = 'pointer';
-            //         th.title = 'Click to sort';
-            //         th.addEventListener('click', function() {
-            //             sortTable(index);
-            //         });
-            //     });
-            // });
-
-            // Function to synchronize column widths
-            function syncColumnWidths() {
-                const headerCells = document.querySelectorAll('.flight-table thead th');
-                const firstRowCells = document.querySelectorAll('.flight-table tbody tr:first-child td');
-                
-                if (headerCells.length === 0 || firstRowCells.length === 0) return;
-                
-                headerCells.forEach((cell, index) => {
-                    if (index < firstRowCells.length) {
-                        cell.style.width = firstRowCells[index].offsetWidth + 'px';
+            // Next error button
+            const nextErrorButton = document.getElementById('nextErrorButton');
+            if (nextErrorButton) {
+                nextErrorButton.addEventListener('click', function() {
+                    if (typeof window.navigateError === 'function') {
+                        window.navigateError(1);
                     }
                 });
             }
-                
-            // Sync widths initially and on window resize
-            syncColumnWidths();
-            window.addEventListener('resize', syncColumnWidths);
 
-            // Toggle table expansion
-            const toggleButton = document.getElementById('toggle-table-expansion');
-            if (toggleButton) {
-                function toggleTableExpansion() {
-                    const table = document.querySelector('.flight-table');
-                    if (!table) return;
-                    
-                    const isExpanded = table.classList.contains('expanded');
-                    
-                    if (isExpanded) {
-                        table.classList.remove('expanded');
-                        toggleButton.textContent = 'Show All Columns';
-                        toggleButton.classList.remove('btn-secondary');
-                        toggleButton.classList.add('btn-primary');
-                    } else {
-                        table.classList.add('expanded');
-                        toggleButton.textContent = 'Show Fewer Columns';
-                        toggleButton.classList.remove('btn-primary');
-                        toggleButton.classList.add('btn-secondary');
-                    }
-                }
-
-                toggleButton.addEventListener('click', toggleTableExpansion);
-            }
-
-            // Search and filter functionality
-            function filterAndSearchFlights() {
-                const searchInput = document.getElementById('flight-search');
-                const searchText = searchInput ? searchInput.value.toLowerCase() : '';
-                
-                // Get filter states
-                const allChecked = document.getElementById('filter-all').checked;
-                const picChecked = document.getElementById('filter-pic').checked;
-                const dualChecked = document.getElementById('filter-dual').checked;
-                const soloChecked = document.getElementById('filter-solo').checked;
-                const nightChecked = document.getElementById('filter-night').checked;
-                const xcChecked = document.getElementById('filter-xc').checked;
-                const instrumentChecked = document.getElementById('filter-instrument').checked;
-                
-                const rows = document.querySelectorAll('.flight-table tbody tr:not(.details-row)');
-                let visibleRowCount = 0;
-                
-                rows.forEach(row => {
-                    const rowId = row.id.split('-')[1];
-                    const detailsRow = document.getElementById(`flight-details-${rowId}`);
-                    let showRow = true;
-
-                    // Apply search filter
-                    if (searchText) {
-                        const rowText = row.textContent.toLowerCase();
-                        const detailsText = detailsRow ? detailsRow.textContent.toLowerCase() : '';
-                        showRow = (rowText.includes(searchText) || detailsText.includes(searchText));
-                    }
-
-                    // Get relevant cell values
-                    const role = row.cells[6]?.textContent.trim();
-                    const picTime = parseFloat(row.cells[7]?.textContent) || 0;
-                    const dualRcvd = parseFloat(row.cells[8]?.textContent) || 0;
-                    const nightTime = row.cells[14]?.textContent ? parseFloat(row.cells[14].textContent) : 0;
-                    const xcTime = row.cells[12]?.textContent ? parseFloat(row.cells[12].textContent) : 0;
-                    const instrumentTime = row.cells[15]?.textContent ? parseFloat(row.cells[15].textContent) : 0;
-
-                    // Apply filter logic
-                    // Only show all flights if 'All' is checked and no other filter is checked
-                    const anyOtherChecked = picChecked || dualChecked || soloChecked || nightChecked || xcChecked || instrumentChecked;
-                    if (allChecked && !anyOtherChecked) {
-                        showRow = true;
-                    } else {
-                        showRow = false;
-                        if (picChecked && ((role === 'PIC') || (picTime > 0))) showRow = true;
-                        // Dual: dualRcvd > 0
-                        if (dualChecked && (dualRcvd > 0)) showRow = true;
-                        // Solo: picTime > 0 and dualRcvd == 0
-                        if (soloChecked && (picTime > 0 && dualRcvd === 0)) showRow = true;
-                        if (nightChecked && nightTime > 0) showRow = true;
-                        if (xcChecked && xcTime > 0) showRow = true;
-                        if (instrumentChecked && instrumentTime > 0) showRow = true;
-                    }
-
-                    // Update row visibility
-                    row.style.display = showRow ? '' : 'none';
-                    if (detailsRow) {
-                        detailsRow.style.display = (showRow && detailsRow.classList.contains('show')) ? '' : 'none';
-                    }
-                    if (showRow) visibleRowCount++;
-                });
-                
-                // Update UI
-                const filterIndicator = document.getElementById('filter-indicator');
-                if (filterIndicator) {
-                    filterIndicator.classList.add('active');
-                    setTimeout(() => filterIndicator.classList.remove('active'), 500);
-                }
-                
-                const countDisplay = document.getElementById('visible-row-count');
-                if (countDisplay) {
-                    countDisplay.textContent = `Showing ${visibleRowCount} of ${rows.length} entries`;
-                }
-            }
-            
-
-            
-            // Initialize filters
-            document.addEventListener('DOMContentLoaded', function() {
-                // Add event listeners to filter checkboxes
-                document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
-                    checkbox.addEventListener('change', function() {
-                        // Handle 'All' checkbox
-                        if (this.id === 'filter-all') {
-                            if (this.checked) {
-                                document.querySelectorAll('.filter-checkbox').forEach(cb => {
-                                    if (cb.id !== 'filter-all') cb.checked = false;
-                                });
-                            }
-                        } else {
-                            // If any filter is checked, uncheck 'All'
-                            if (this.checked) {
-                                document.getElementById('filter-all').checked = false;
-                            }
-                            
-                            // If no filters are checked, check 'All'
-                            const anyChecked = Array.from(document.querySelectorAll('.filter-checkbox'))
-                                .some(cb => cb.id !== 'filter-all' && cb.checked);
-                            if (!anyChecked) {
-                                document.getElementById('filter-all').checked = true;
-                            }
-                        }
-                        
-                        // Apply filters and show visual feedback
-                        filterAndSearchFlights();
-                        this.classList.add('pulse-animation');
-                        setTimeout(() => this.classList.remove('pulse-animation'), 300);
-                    });
-                });
-
-                // Setup search
-                const searchInput = document.getElementById('flight-search');
-                if (searchInput) {
-                    searchInput.addEventListener('input', filterAndSearchFlights);
-                }
-
-                // Initial filter
-                filterAndSearchFlights();
-            });
-        });
-            
-            // Function to update UI based on student pilot status
-            function updateUIForStudentPilot(isStudentPilot) {
-    var endorsementsSection = document.getElementById('endorsementsSection');
-    var verifyPICButton = document.getElementById('verifyPICButton');
-    if (endorsementsSection) {
-        endorsementsSection.style.display = isStudentPilot ? 'block' : 'none';
-    }
-    if (verifyPICButton) {
-        verifyPICButton.style.display = isStudentPilot ? 'inline-block' : 'none';
-    }
-}
-            
-            document.addEventListener('DOMContentLoaded', function() {
-                const studentPilotCheck = document.getElementById('studentPilotCheck');
-                if (studentPilotCheck) {
-                    updateUIForStudentPilot(studentPilotCheck.checked);
-                    studentPilotCheck.addEventListener('change', function() {
-                        updateUIForStudentPilot(this.checked);
+            // Verify PIC buttons (placeholder - implement actual functionality as needed)
+            const verifyButtons = ['verifyPICButton', 'refreshValidationButton'];
+            verifyButtons.forEach(buttonId => {
+                const button = document.getElementById(buttonId);
+                if (button) {
+                    button.addEventListener('click', function() {
+                        console.log('PIC verification functionality not yet implemented');
+                        // TODO: Implement PIC verification logic
                     });
                 }
             });
         });
-
-        // Remove duplicate filter logic - we'll use the global filterAndSearchFlights function instead
-        
-
-        
-
     </script>
 </body>
 </html>

@@ -17,6 +17,13 @@ class Airport(BaseModel):
     def __bool__(self):
         """Return True if the airport has an identifier."""
         return bool(self.identifier)
+    
+    def to_dict(self) -> dict:
+        """Convert the airport to a dictionary for JSON serialization."""
+        return {
+            'identifier': self.identifier,
+            'name': self.name
+        }
 
 class Aircraft(BaseModel):
     """Aircraft information."""
@@ -24,10 +31,23 @@ class Aircraft(BaseModel):
     type: str
     category_class: str
     gear_type: str = "tricycle"  # Default to tricycle gear since it's more common
+    complex_aircraft: bool = False
+    high_performance: bool = False
     
     class Config:
         title = "Aircraft"
         description = "Aircraft information"
+    
+    def to_dict(self) -> dict:
+        """Convert the aircraft to a dictionary for JSON serialization."""
+        return {
+            'registration': self.registration,
+            'type': self.type,
+            'category_class': self.category_class,
+            'gear_type': self.gear_type,
+            'complex_aircraft': self.complex_aircraft,
+            'high_performance': self.high_performance
+        }
     
 class FlightConditions(BaseModel):
     """Flight conditions information."""
@@ -40,6 +60,16 @@ class FlightConditions(BaseModel):
     class Config:
         title = "FlightConditions"
         description = "Flight conditions information"
+    
+    def to_dict(self) -> dict:
+        """Convert the flight conditions to a dictionary for JSON serialization."""
+        return {
+            'day': self.day,
+            'night': self.night,
+            'actual_instrument': self.actual_instrument,
+            'simulated_instrument': self.simulated_instrument,
+            'cross_country': self.cross_country
+        }
     
 @dataclass
 class RunningTotals:

@@ -46,11 +46,23 @@ class ForeFlightImporter:
         for _, row in self.aircraft_df.iterrows():
             if pd.isna(row['AircraftID']) or not str(row['AircraftID']).strip():
                 continue
+            # Check complex and high performance flags
+            complex_aircraft = False
+            high_performance = False
+            
+            if 'complexAircraft (FAA)' in row and pd.notna(row['complexAircraft (FAA)']):
+                complex_aircraft = str(row['complexAircraft (FAA)']).strip().upper() == 'TRUE'
+            
+            if 'highPerformance (FAA)' in row and pd.notna(row['highPerformance (FAA)']):
+                high_performance = str(row['highPerformance (FAA)']).strip().upper() == 'TRUE'
+            
             aircraft_list.append(Aircraft(
                 registration=str(row['AircraftID']).strip(),
                 type=str(row['Model']) if pd.notna(row['Model']) else 'UNKNOWN',
                 category_class=str(row['aircraftClass (FAA)']) if 'aircraftClass (FAA)' in row and pd.notna(row['aircraftClass (FAA)']) else 'airplane_single_engine_land',
-                gear_type=str(row['GearType']) if 'GearType' in row and pd.notna(row['GearType']) else 'tricycle'
+                gear_type=str(row['GearType']) if 'GearType' in row and pd.notna(row['GearType']) else 'tricycle',
+                complex_aircraft=complex_aircraft,
+                high_performance=high_performance
             ))
         return aircraft_list
 
@@ -109,11 +121,23 @@ class ForeFlightImporter:
             if pd.notna(row['AircraftID']):
                 aircraft_id = str(row['AircraftID']).strip()
                 if aircraft_id not in aircraft_dict:
+                    # Check complex and high performance flags
+                    complex_aircraft = False
+                    high_performance = False
+                    
+                    if 'complexAircraft (FAA)' in row and pd.notna(row['complexAircraft (FAA)']):
+                        complex_aircraft = str(row['complexAircraft (FAA)']).strip().upper() == 'TRUE'
+                    
+                    if 'highPerformance (FAA)' in row and pd.notna(row['highPerformance (FAA)']):
+                        high_performance = str(row['highPerformance (FAA)']).strip().upper() == 'TRUE'
+                    
                     aircraft_dict[aircraft_id] = Aircraft(
                         registration=aircraft_id,
                         type=str(row['Model']) if pd.notna(row['Model']) else 'UNKNOWN',
                         category_class=str(row['aircraftClass (FAA)']) if 'aircraftClass (FAA)' in row and pd.notna(row['aircraftClass (FAA)']) else 'airplane_single_engine_land',
-                        gear_type=str(row['GearType']) if 'GearType' in row and pd.notna(row['GearType']) else 'tricycle'
+                        gear_type=str(row['GearType']) if 'GearType' in row and pd.notna(row['GearType']) else 'tricycle',
+                        complex_aircraft=complex_aircraft,
+                        high_performance=high_performance
                     )
         return aircraft_dict
 

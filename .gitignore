@@ -12,7 +12,7 @@ uploads/
 *.sqlite
 *.sqlite3
 
-# Virtual environment
+# Virtual environment (legacy - not used with containerized setup)
 venv/
 env/
 .env

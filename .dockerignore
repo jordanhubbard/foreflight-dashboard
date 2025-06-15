@@ -24,7 +24,7 @@ var/
 .installed.cfg
 *.egg
 
-# Virtual Environment
+# Virtual Environment (legacy - not used in containers)
 venv/
 ENV/
 

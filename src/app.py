@@ -7,7 +7,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 from src.validate_csv import validate_logbook
-from src.core.models import RunningTotals
+from src.core.models import RunningTotals, LogbookEntry, Aircraft, Airport, FlightConditions
 from src.db import init_db, add_endorsement, get_all_endorsements, delete_endorsement, verify_pic_endorsements
 import logging.handlers
 import shutil
@@ -56,22 +56,92 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-def _ensure_running_totals(entry):
-    # If entry is a custom object, convert to dict first
-    if hasattr(entry, 'to_dict'):
-        entry = entry.to_dict()
-    # Provide running_totals if missing or None
-    if not entry.get('running_totals') or entry['running_totals'] is None:
-        entry['running_totals'] = {}
-    # Comprehensive audit of all keys used in the template
-    required_keys = [
-        'asel_time', 'pic_time', 'dual_time', 'solo_time', 'night_time', 'xc_time',
-        'day_time', 'ground_training', 'sim_instrument', 'dual_received',
-        'cross_country'
-    ]
-    for key in required_keys:
-        entry['running_totals'][key] = entry['running_totals'].get(key, 0)
-    return entry
+def convert_entries_to_template_data(entries):
+    """Convert LogbookEntry objects to template-friendly dictionaries."""
+    logger.info(f"Converting {len(entries)} entries to template data")
+    
+    # Entries come in chronological order (oldest first) with running totals calculated
+    # We need to reverse them for display (newest first) while preserving running totals
+    template_entries = []
+    for i, entry in enumerate(entries):
+        try:
+            # Get the full nested dictionary for HTML template access
+            entry_dict = entry.to_dict()
+            
+            # Debug: Log the first few entries' running totals before conversion
+            if i < 3:
+                logger.info(f"Entry {i}: Original entry.running_totals object = {entry.running_totals}")
+                logger.info(f"Entry {i}: entry_dict running_totals = {entry_dict.get('running_totals')}")
+            
+            # Add flattened properties for JavaScript compatibility
+            entry_dict.update({
+                # Flattened versions for JavaScript
+                'id': f"entry-{i+1}",
+                'date': entry_dict['date'].split('T')[0],  # Date only
+                'route': f"{entry_dict['departure']['identifier'] if entry_dict['departure'] else '---'} → {entry_dict['destination']['identifier'] if entry_dict['destination'] else '---'}",
+                'aircraft': entry_dict['aircraft']['registration'],
+                'total': entry_dict['total_time'],
+                'day': entry_dict['conditions']['day'],
+                'night': entry_dict['conditions']['night'],
+                'ldg': entry_dict['landings_day'] + entry_dict['landings_night'],
+                'role': entry_dict['pilot_role'],
+                'pic': entry_dict['pic_time'],
+                'dual': entry_dict['dual_received'],
+                'xc': entry_dict['conditions']['cross_country'],  # Individual flight XC for filtering
+                'night_time': entry_dict['conditions']['night'],  # Individual flight night for filtering
+                'solo_time': entry_dict.get('solo_time', 0),
+                'dual_rcvd': entry_dict['dual_received'],
+                'sim_inst': entry_dict['conditions']['simulated_instrument'],
+                'pic_time': entry_dict['pic_time'],
+                # Running totals for the accumulated columns
+                'ground': entry_dict['running_totals']['ground_training'] if entry_dict.get('running_totals') else 0,
+                'asel': entry_dict['running_totals']['asel_time'] if entry_dict.get('running_totals') else 0,
+                'xc_total': entry_dict['running_totals']['cross_country'] if entry_dict.get('running_totals') else 0,
+                'day_time': entry_dict['running_totals']['day_time'] if entry_dict.get('running_totals') else 0,
+                'night_total': entry_dict['running_totals']['night_time'] if entry_dict.get('running_totals') else 0,
+                'sim_inst_total': entry_dict['running_totals']['sim_instrument'] if entry_dict.get('running_totals') else 0,
+                'dual_rcvd_total': entry_dict['running_totals']['dual_received'] if entry_dict.get('running_totals') else 0,
+                'pic_time_total': entry_dict['running_totals']['pic_time'] if entry_dict.get('running_totals') else 0
+            })
+            
+            # Debug: Log running totals for first few entries after conversion
+            if i < 3:
+                logger.info(f"Entry {i}: Final flattened running totals:")
+                logger.info(f"  ground: {entry_dict['ground']}")
+                logger.info(f"  asel: {entry_dict['asel']}")
+                logger.info(f"  xc_total: {entry_dict['xc_total']}")
+                logger.info(f"  day_time: {entry_dict['day_time']}")
+                logger.info(f"  night_total: {entry_dict['night_total']}")
+                logger.info(f"  sim_inst_total: {entry_dict['sim_inst_total']}")
+                logger.info(f"  dual_rcvd_total: {entry_dict['dual_rcvd_total']}")
+                logger.info(f"  pic_time_total: {entry_dict['pic_time_total']}")
+            
+            # Ensure running_totals is properly structured for template
+            if not entry_dict.get('running_totals'):
+                entry_dict['running_totals'] = {
+                    'ground_training': 0.0,
+                    'asel_time': 0.0, 
+                    'day_time': 0.0,
+                    'night_time': 0.0,
+                    'sim_instrument': 0.0,
+                    'dual_received': 0.0,
+                    'pic_time': 0.0,
+                    'cross_country': 0.0
+                }
+            template_entries.append(entry_dict)
+        except Exception as e:
+            logger.error(f"Error converting entry {i} to dict: {str(e)}")
+            continue
+    
+    # Reverse the order so most recent flights appear first
+    # Running totals are already calculated correctly in chronological order
+    template_entries.reverse()
+    logger.info(f"Successfully converted {len(template_entries)} entries to template data (reversed for display)")
+    return template_entries
+
+def convert_aircraft_to_template_data(aircraft_list):
+    """Convert Aircraft objects to template-friendly dictionaries."""
+    return [aircraft.to_dict() for aircraft in aircraft_list]
 
 # Initialize the database only if it doesn't exist
 def init_db_if_needed():
@@ -81,6 +151,7 @@ def init_db_if_needed():
 
 def calculate_running_totals(entries):
     """Calculate running totals for each entry."""
+    logger.info(f"Calculating running totals for {len(entries)} entries")
     totals = {
         'ground_training': 0.0,
         'asel_time': 0.0,
@@ -96,7 +167,7 @@ def calculate_running_totals(entries):
     sorted_entries = sorted(entries, key=lambda x: x.date)
     
     # Calculate running totals for each entry
-    for entry in sorted_entries:
+    for i, entry in enumerate(sorted_entries):
         # Update running totals
         totals['ground_training'] += float(entry.ground_training)
         totals['asel_time'] += float(entry.total_time) if entry.aircraft.category_class == "airplane_single_engine_land" else 0.0
@@ -109,7 +180,12 @@ def calculate_running_totals(entries):
         
         # Create RunningTotals instance with rounded values
         entry.running_totals = RunningTotals(**{k: round(v, 1) for k, v in totals.items()})
+        
+        # Debug: Log first few entries
+        if i < 3:
+            logger.info(f"Entry {i} ({entry.date.strftime('%Y-%m-%d')}): set running_totals = {entry.running_totals}")
     
+    logger.info(f"Finished calculating running totals")
     return sorted_entries
 
 def calculate_30_day_stats(entries):
@@ -119,18 +195,11 @@ def calculate_30_day_stats(entries):
     return calculate_stats_for_entries(recent_entries)
 
 def calculate_recent_experience(entries):
-    """Calculate statistics for the last 2 calendar months."""
-    today = datetime.now()
-    # Get the first day of the current month
-    first_day_current = today.replace(day=1)
-    # Get the first day of the previous month
-    if first_day_current.month == 1:
-        first_day_previous = first_day_current.replace(year=first_day_current.year - 1, month=12)
-    else:
-        first_day_previous = first_day_current.replace(month=first_day_current.month - 1)
+    """Calculate statistics for the last 30 days."""
+    thirty_days_ago = datetime.now() - timedelta(days=30)
     
-    # Filter entries for the last 2 calendar months
-    recent_entries = [e for e in entries if e.date >= first_day_previous]
+    # Filter entries for the last 30 days
+    recent_entries = [e for e in entries if e.date >= thirty_days_ago]
     return calculate_stats_for_entries(recent_entries)
 
 def calculate_year_stats(entries):
@@ -147,9 +216,11 @@ def calculate_stats_for_entries(entries):
     """Calculate statistics for the given entries."""
     stats = {
         'total_time': sum(float(e.total_time) for e in entries),
-        'total_time_tailwheel': sum(float(e.total_time) for e in entries if e.aircraft.gear_type == "tailwheel"),
-        'total_time_tricycle': sum(float(e.total_time) for e in entries if e.aircraft.gear_type == "tricycle"),
+        'total_time_tailwheel': sum(float(e.total_time) for e in entries if e.aircraft.gear_type == "fixed_tailwheel"),
+        'total_time_tricycle': sum(float(e.total_time) for e in entries if e.aircraft.gear_type == "fixed_tricycle"),
         'total_time_asel': sum(float(e.total_time) for e in entries if e.aircraft.category_class == "airplane_single_engine_land"),
+        'total_time_complex': sum(float(e.total_time) for e in entries if getattr(e.aircraft, 'complex_aircraft', False)),
+        'total_time_high_performance': sum(float(e.total_time) for e in entries if getattr(e.aircraft, 'high_performance', False)),
         'total_time_amel': sum(float(e.total_time) for e in entries if e.aircraft.category_class == "airplane_multi_engine_land"),
         'total_time_ases': sum(float(e.total_time) for e in entries if e.aircraft.category_class == "airplane_single_engine_sea"),
         'total_time_ames': sum(float(e.total_time) for e in entries if e.aircraft.category_class == "airplane_multi_engine_sea"),
@@ -215,6 +286,7 @@ def index():
     logbook_filename = session.get('logbook_filename')
     is_student_pilot = session.get('is_student_pilot', False)
     
+    # Initialize default values
     entries = []
     stats = {}
     all_time_stats = {}
@@ -230,13 +302,24 @@ def index():
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], logbook_filename)
             from src.services.importer import ForeFlightImporter
             importer = ForeFlightImporter(filepath)
-            entries = importer.get_flight_entries()
-            aircraft_list = [a.to_dict() for a in importer.get_aircraft_list()]
-            entries = calculate_running_totals(entries)
-            stats = calculate_stats_for_entries([e for e in entries if e.date.year == datetime.now().year])
-            all_time = calculate_stats_for_entries(entries)
-            recent_experience = calculate_recent_experience(entries)
-            aircraft_stats = prepare_aircraft_stats(entries)
+            
+            # Work with objects for business logic
+            entries_objects = importer.get_flight_entries()
+            aircraft_objects = importer.get_aircraft_list()
+            
+            # Calculate running totals on objects
+            entries_objects = calculate_running_totals(entries_objects)
+            
+            # Calculate statistics from objects
+            stats = calculate_stats_for_entries([e for e in entries_objects if e.date.year == datetime.now().year])
+            all_time = calculate_stats_for_entries(entries_objects)
+            recent_experience = calculate_recent_experience(entries_objects)
+            aircraft_stats = prepare_aircraft_stats(entries_objects)
+            
+            # Convert to template-friendly data
+            entries = convert_entries_to_template_data(entries_objects)
+            aircraft_list = convert_aircraft_to_template_data(aircraft_objects)
+            
             # Get endorsements if student pilot
             if is_student_pilot:
                 try:
@@ -245,21 +328,22 @@ def index():
                 except Exception as e:
                     logger.warning(f"Could not load endorsements: {str(e)}")
                     endorsements_dict = []
-            # Do not delete the uploaded file or clear session here; keep for future reloads
-            # File is kept in uploads/ for future reloads
-            pass
+            
+            logger.info(f"Successfully prepared {len(entries)} entries for template rendering")
+            
         except Exception as e:
             logger.error(f"Failed to reload uploaded logbook: {str(e)}", exc_info=True)
             flash(f'Failed to reload uploaded logbook: {str(e)}')
     
     return render_template('index.html', 
-                         entries=[_ensure_running_totals(entry) for entry in entries],
+                         entries=entries,  # Now always dictionaries
                          stats=stats,
                          all_time_stats=all_time,
                          aircraft_stats=aircraft_stats,
-                         aircraft_list=aircraft_list,
+                         aircraft_list=aircraft_list,  # Now always dictionaries
                          endorsements=endorsements_dict,
                          now=datetime.now().isoformat(),
+                         current_year=datetime.now().year,
                          is_student_pilot=is_student_pilot,
                          error_count=error_count,
                          recent_experience=recent_experience,
@@ -307,26 +391,28 @@ def upload_file():
         logger.info("Parsing uploaded logbook using ForeFlightImporter")
         from src.services.importer import ForeFlightImporter
         importer = ForeFlightImporter(filepath)
-        entries = importer.get_flight_entries()
-        aircraft_list = importer.get_aircraft_list()
-        logger.info(f"Parsed {len(entries)} flights and {len(aircraft_list)} aircraft")
         
-        if not entries:
+        # Work with objects for business logic
+        entries_objects = importer.get_flight_entries()
+        aircraft_objects = importer.get_aircraft_list()
+        logger.info(f"Parsed {len(entries_objects)} flights and {len(aircraft_objects)} aircraft")
+        
+        if not entries_objects:
             logger.warning("No entries found in logbook")
             flash('No valid entries found in the logbook file')
             return redirect(url_for('index'))
         
-        # Calculate running totals
+        # Calculate running totals on objects
         logger.info("Calculating running totals")
-        entries = calculate_running_totals(entries)
+        entries_objects = calculate_running_totals(entries_objects)
         
-        # Calculate statistics
+        # Calculate statistics from objects
         logger.info("Calculating statistics")
-        stats = calculate_stats_for_entries([e for e in entries if e.date.year == datetime.now().year])
-        all_time = calculate_stats_for_entries(entries)
-        recent_experience = calculate_recent_experience(entries)
-        # aircraft_stats can now be a direct pass-through of aircraft_list, or can be calculated from aircraft_list
-        aircraft_stats = aircraft_list
+        stats = calculate_stats_for_entries([e for e in entries_objects if e.date.year == datetime.now().year])
+        all_time = calculate_stats_for_entries(entries_objects)
+        recent_experience = calculate_recent_experience(entries_objects)
+        # Calculate aircraft statistics from entries
+        aircraft_stats = prepare_aircraft_stats(entries_objects)
         
         # Get student pilot status from form
         is_student_pilot = request.form.get('student_pilot') == 'on'
@@ -344,8 +430,6 @@ def upload_file():
         else:
             endorsements_dict = []
         
-        # Do not delete the uploaded file; keep it in uploads/ for future reloads
-
         # Redirect to index so session-based persistence is used
         return redirect(url_for('index'))
     except ValueError as e:
@@ -435,6 +519,226 @@ def verify_pic():
     except Exception as e:
         logger.error(f"Error verifying PIC endorsements: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/filter-flights', methods=['POST'])
+def filter_flights():
+    """Filter flights based on criteria and return rendered table HTML."""
+    try:
+        # Get filter criteria from request
+        filters = request.get_json()
+        logger.info(f"Received filter request: {filters}")
+        
+        # Get the logbook filename from session
+        filename = session.get('logbook_filename')
+        if not filename:
+            return jsonify({'error': 'No logbook data found. Please upload a CSV file first.'}), 400
+        
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'Logbook file not found. Please upload a CSV file again.'}), 400
+        
+        # Use ForeFlightImporter for MVC-compliant model access
+        from src.services.importer import ForeFlightImporter
+        importer = ForeFlightImporter(filepath)
+        entries_objects = importer.get_flight_entries()
+        
+        if not entries_objects:
+            return jsonify({'error': 'No valid entries found in logbook.'}), 400
+        
+        # Apply filters
+        filtered_entries = apply_flight_filters(entries_objects, filters)
+        logger.info(f"Filtered {len(entries_objects)} entries down to {len(filtered_entries)}")
+        
+        # Calculate running totals for filtered entries
+        filtered_entries = calculate_running_totals(filtered_entries)
+        
+        # Convert to template data
+        template_entries = convert_entries_to_template_data(filtered_entries)
+        
+        # Render just the table body HTML
+        from flask import render_template_string
+        table_html = render_template_string('''
+            {% for entry in entries %}
+            <tr id="entry-{{ loop.index }}" class="{% if entry['error_explanation'] %}has-error{% endif %}">
+                <td class="flight-date">
+                    <span class="disclosure-triangle" data-target="flight-details-{{ loop.index }}">▶</span>
+                    {{ entry['date'].split('T')[0] if 'T' in entry['date'] else entry['date'] }}
+                </td>
+                <td class="route">{{ entry['departure']['identifier'] if entry['departure'] else '---' }} → {{ entry['destination']['identifier'] if entry['destination'] else '---' }}</td>
+                <td>{{ entry['aircraft']['registration'] }}</td>
+                <td>{{ "%.1f"|format(entry['total_time']) }}</td>
+                <td>{{ "%.1f"|format(entry['conditions']['day']) }}/{{ "%.1f"|format(entry['conditions']['night']) }}</td>
+                <td>{{ entry['landings_day'] + entry['landings_night'] }}</td>
+                <td class="{% if entry['pilot_role'] == 'SPLIT' %}split-role-text{% endif %}">{{ entry['pilot_role'] }}</td>
+                <td>{{ "%.1f"|format(entry['pic_time']) }}</td>
+                <td>{{ "%.1f"|format(entry['dual_received']) }}</td>
+                <td>
+                    {% if entry['error_explanation'] %}
+                    <span class="badge bg-danger" data-bs-toggle="tooltip" title="{{ entry['error_explanation'] }}">
+                        Invalid
+                    </span>
+                    {% endif %}
+                    {% if entry['conditions']['cross_country'] > 0 %}
+                    <span class="badge badge-xc" data-bs-toggle="tooltip" title="Cross-country flight">
+                        <i class="fas fa-plane"></i> XC
+                    </span>
+                    {% endif %}
+                    {% if entry['conditions']['night'] > 0 %}
+                    <span class="badge badge-night" data-bs-toggle="tooltip" title="Night flight">
+                        <i class="fas fa-moon"></i> Night
+                    </span>
+                    {% endif %}
+                    {% if entry['pic_time'] > 0 and entry['dual_received'] == 0 %}
+                    <span class="badge badge-solo" data-bs-toggle="tooltip" title="Solo flight">
+                        <i class="fas fa-user"></i> Solo
+                    </span>
+                    {% endif %}
+                    {% if entry['dual_received']|float > 0 %}
+                    <span class="badge badge-dual" data-bs-toggle="tooltip" title="Dual instruction received">
+                        <i class="fas fa-users"></i> Dual
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['ground_training']) if entry['running_totals']['ground_training'] else "0.0" }}</td>
+                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['asel_time']) }}</td>
+                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['cross_country']) if entry['running_totals']['cross_country'] else "0.0" }}</td>
+                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['day_time']) }}</td>
+                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['night_time']) }}</td>
+                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['sim_instrument']) }}</td>
+                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['dual_received']) }}</td>
+                <td class="text-end running-total">{{ "%.1f"|format(entry['running_totals']['pic_time']) }}</td>
+                <td class="d-none solo-time">{{ entry['solo_time'] }}</td>
+                <td class="d-none xc-time">{{ entry['conditions']['cross_country'] }}</td>
+                <td class="d-none instrument-time">{{ entry['conditions']['simulated_instrument'] + entry['conditions']['actual_instrument'] }}</td>
+            </tr>
+            <tr class="details-row">
+                <td colspan="100%" id="flight-details-{{ loop.index }}">
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Aircraft Details</span>
+                            <span class="detail-value">Registration: {{ entry['aircraft']['registration'] }}
+Type: {{ entry['aircraft']['type'] }}
+Category/Class: {{ entry['aircraft']['category_class'] }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Route Information</span>
+                            <span class="detail-value">Departure: {{ entry['departure']['identifier'] if entry['departure'] else 'N/A' }}
+Destination: {{ entry['destination']['identifier'] if entry['destination'] else 'N/A' }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Flight Times</span>
+                            <span class="detail-value">Total: {{ entry['total_time'] }}
+Day: {{ entry['conditions']['day'] }}
+Night: {{ entry['conditions']['night'] }}
+PIC: {{ entry['pic_time'] }}
+Dual Received: {{ entry['dual_received'] }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Landings</span>
+                            <span class="detail-value">Day: {{ entry['landings_day'] }}
+Night: {{ entry['landings_night'] }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Running Totals</span>
+                            <span class="detail-value">Ground: {{ entry['running_totals']['ground_training'] if entry['running_totals']['ground_training'] else "0.0" }}
+ASEL: {{ entry['running_totals']['asel_time'] }}
+Cross Country: {{ entry['running_totals']['cross_country'] if entry['running_totals']['cross_country'] else "0.0" }}
+Day: {{ entry['running_totals']['day_time'] }}
+Night: {{ entry['running_totals']['night_time'] }}
+Sim Instrument: {{ entry['running_totals']['sim_instrument'] }}
+Dual Received: {{ entry['running_totals']['dual_received'] }}
+PIC: {{ entry['running_totals']['pic_time'] }}</span>
+                        </div>
+                        {% if entry['remarks'] %}
+                        <div class="detail-item">
+                            <span class="detail-label">Remarks</span>
+                            <span class="detail-value">{{ entry['remarks'] }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        ''', entries=template_entries)
+        
+        return jsonify({
+            'success': True,
+            'table_html': table_html,
+            'total_entries': len(template_entries),
+            'original_total': len(entries_objects)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error filtering flights: {str(e)}")
+        return jsonify({'error': f'Error filtering flights: {str(e)}'}), 500
+
+def apply_flight_filters(entries, filters):
+    """Apply flight filters based on the specified criteria."""
+    logger.info(f"Applying filters: {filters}")
+    
+    if not filters or filters.get('all', True):
+        logger.info("All filter selected or no filters, returning all entries")
+        return entries
+    
+    filtered_entries = []
+    
+    for i, entry in enumerate(entries):
+        include_entry = False
+        
+        # Primary filters (mutually exclusive) - determine base set
+        pic_time = float(entry.pic_time)
+        dual_received = float(entry.dual_received)
+        
+        # Check if any primary filters are selected
+        primary_filters_selected = filters.get('pic', False) or filters.get('dual', False) or filters.get('solo', False)
+        
+        if primary_filters_selected:
+            # PIC filter: flights where pilot was PIC
+            if filters.get('pic', False) and pic_time > 0:
+                include_entry = True
+            
+            # Dual filter: flights where dual instruction was received
+            elif filters.get('dual', False) and dual_received > 0:
+                include_entry = True
+            
+            # Solo filter: flights where pilot was PIC but no dual received
+            elif filters.get('solo', False) and pic_time > 0 and dual_received == 0:
+                include_entry = True
+        else:
+            # No primary filters selected, include all entries for modifier filtering
+            include_entry = True
+        
+        # Apply modifier filters (these are additional requirements)
+        if include_entry:
+            # Night filter: must have night time
+            if filters.get('night', False):
+                night_time = float(entry.conditions.night)
+                if night_time <= 0:
+                    include_entry = False
+                    logger.debug(f"Entry {i} excluded by night filter: night_time={night_time}")
+            
+            # Cross-country filter: must have cross-country time
+            if filters.get('xc', False):
+                xc_time = float(entry.conditions.cross_country)
+                if xc_time <= 0:
+                    include_entry = False
+                    logger.debug(f"Entry {i} excluded by XC filter: xc_time={xc_time}")
+            
+            # Instrument filter: must have simulated or actual instrument time
+            if filters.get('instrument', False):
+                sim_instrument = float(entry.conditions.simulated_instrument)
+                actual_instrument = float(entry.conditions.actual_instrument)
+                instrument_time = sim_instrument + actual_instrument
+                if instrument_time <= 0:
+                    include_entry = False
+                    logger.debug(f"Entry {i} excluded by instrument filter: sim={sim_instrument}, actual={actual_instrument}, total={instrument_time}")
+        
+        if include_entry:
+            filtered_entries.append(entry)
+            logger.debug(f"Entry {i} included: PIC={pic_time}, Dual={dual_received}, Night={float(entry.conditions.night)}, XC={float(entry.conditions.cross_country)}, Instrument={float(entry.conditions.simulated_instrument) + float(entry.conditions.actual_instrument)}")
+    
+    logger.info(f"Filtered {len(entries)} entries down to {len(filtered_entries)}")
+    return filtered_entries
 
 if __name__ == '__main__':
     # Enable hot reloading
