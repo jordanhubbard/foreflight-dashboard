@@ -1,21 +1,78 @@
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from contextlib import contextmanager
 import os
+from typing import List, Optional, Dict, Any
 from src.core.models import InstructorEndorsement
+from src.core.user_models import User, UserPreferences, PasswordResetToken, hash_password, verify_password, generate_password_reset_token
 
-DATABASE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'endorsements.db')
+DATABASE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app.db')
 
 def init_db():
     """Initialize the database and create tables if they don't exist."""
     with get_db() as db:
+        # Users table
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                first_name TEXT NOT NULL,
+                last_name TEXT NOT NULL,
+                pilot_certificate_number TEXT,
+                student_pilot BOOLEAN DEFAULT 0,
+                is_active BOOLEAN DEFAULT 1,
+                is_verified BOOLEAN DEFAULT 0,
+                created_at TEXT NOT NULL,
+                last_login TEXT,
+                preferences TEXT NOT NULL DEFAULT '{}'
+            )
+        ''')
+        
+        # Password reset tokens table
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                token TEXT UNIQUE NOT NULL,
+                expires_at TEXT NOT NULL,
+                used BOOLEAN DEFAULT 0,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+        ''')
+        
+        # User logbooks table (track uploaded files)
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS user_logbooks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                filename TEXT NOT NULL,
+                original_filename TEXT NOT NULL,
+                uploaded_at TEXT NOT NULL,
+                file_size INTEGER NOT NULL,
+                is_active BOOLEAN DEFAULT 1,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+        ''')
+        
+        # Instructor endorsements table (updated to be user-specific)
         db.execute('''
             CREATE TABLE IF NOT EXISTS instructor_endorsements (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
                 start_date TEXT NOT NULL,
-                expiration_date TEXT NOT NULL
+                expiration_date TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
             )
         ''')
+        
+        # Create indexes for better performance
+        db.execute('CREATE INDEX IF NOT EXISTS idx_users_email ON users (email)')
+        db.execute('CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens (token)')
+        db.execute('CREATE INDEX IF NOT EXISTS idx_user_logbooks_user_id ON user_logbooks (user_id)')
+        db.execute('CREATE INDEX IF NOT EXISTS idx_instructor_endorsements_user_id ON instructor_endorsements (user_id)')
+        
         db.commit()
 
 @contextmanager
@@ -28,7 +85,192 @@ def get_db():
     finally:
         conn.close()
 
-def add_endorsement(start_date: datetime) -> InstructorEndorsement:
+# User management functions
+def create_user(email: str, password: str, first_name: str, last_name: str, 
+                pilot_certificate_number: Optional[str] = None, 
+                student_pilot: bool = False) -> User:
+    """Create a new user."""
+    password_hash = hash_password(password)
+    preferences = UserPreferences(student_pilot=student_pilot)
+    
+    with get_db() as db:
+        cursor = db.execute('''
+            INSERT INTO users (email, password_hash, first_name, last_name, 
+                             pilot_certificate_number, student_pilot, created_at, preferences)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (email, password_hash, first_name, last_name, 
+              pilot_certificate_number, student_pilot, 
+              datetime.now(timezone.utc).isoformat(), preferences.json()))
+        db.commit()
+        user_id = cursor.lastrowid
+        
+        # Create user directory
+        create_user_directory(user_id, email)
+        
+        return get_user_by_id(user_id)
+
+
+def get_user_by_id(user_id: int) -> Optional[User]:
+    """Get user by ID."""
+    with get_db() as db:
+        row = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+        if not row:
+            return None
+        return _row_to_user(row)
+
+
+def get_user_by_email(email: str) -> Optional[User]:
+    """Get user by email."""
+    with get_db() as db:
+        row = db.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
+        if not row:
+            return None
+        return _row_to_user(row)
+
+
+def authenticate_user(email: str, password: str) -> Optional[User]:
+    """Authenticate user with email and password."""
+    user = get_user_by_email(email)
+    if not user or not user.is_active:
+        return None
+    
+    if verify_password(password, user.password_hash):
+        # Update last login
+        update_user_last_login(user.id)
+        return user
+    return None
+
+
+def update_user_last_login(user_id: int):
+    """Update user's last login timestamp."""
+    with get_db() as db:
+        db.execute('''
+            UPDATE users SET last_login = ? WHERE id = ?
+        ''', (datetime.now(timezone.utc).isoformat(), user_id))
+        db.commit()
+
+
+def update_user_preferences(user_id: int, preferences: UserPreferences):
+    """Update user preferences."""
+    with get_db() as db:
+        db.execute('''
+            UPDATE users SET preferences = ? WHERE id = ?
+        ''', (preferences.json(), user_id))
+        db.commit()
+
+
+def create_password_reset_token(user_id: int) -> PasswordResetToken:
+    """Create a password reset token for a user."""
+    token = generate_password_reset_token()
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)  # Token expires in 1 hour
+    
+    with get_db() as db:
+        cursor = db.execute('''
+            INSERT INTO password_reset_tokens (user_id, token, expires_at, created_at)
+            VALUES (?, ?, ?, ?)
+        ''', (user_id, token, expires_at.isoformat(), datetime.now(timezone.utc).isoformat()))
+        db.commit()
+        token_id = cursor.lastrowid
+        
+        return PasswordResetToken(
+            id=token_id,
+            user_id=user_id,
+            token=token,
+            expires_at=expires_at,
+            used=False,
+            created_at=datetime.now(timezone.utc)
+        )
+
+
+def get_password_reset_token(token: str) -> Optional[PasswordResetToken]:
+    """Get password reset token by token string."""
+    with get_db() as db:
+        row = db.execute('''
+            SELECT * FROM password_reset_tokens WHERE token = ? AND used = 0
+        ''', (token,)).fetchone()
+        if not row:
+            return None
+        
+        return PasswordResetToken(
+            id=row['id'],
+            user_id=row['user_id'],
+            token=row['token'],
+            expires_at=datetime.fromisoformat(row['expires_at']),
+            used=bool(row['used']),
+            created_at=datetime.fromisoformat(row['created_at'])
+        )
+
+
+def use_password_reset_token(token: str, new_password: str) -> bool:
+    """Use a password reset token to change password."""
+    reset_token = get_password_reset_token(token)
+    if not reset_token or not reset_token.is_valid():
+        return False
+    
+    password_hash = hash_password(new_password)
+    
+    with get_db() as db:
+        # Update user password
+        db.execute('''
+            UPDATE users SET password_hash = ? WHERE id = ?
+        ''', (password_hash, reset_token.user_id))
+        
+        # Mark token as used
+        db.execute('''
+            UPDATE password_reset_tokens SET used = 1 WHERE id = ?
+        ''', (reset_token.id,))
+        
+        db.commit()
+        return True
+
+
+def create_user_directory(user_id: int, email: str):
+    """Create a directory for user files."""
+    from src.core.user_models import generate_user_directory_name
+    import os
+    
+    user_dir = generate_user_directory_name(user_id, email)
+    user_path = os.path.join('uploads', user_dir)
+    os.makedirs(user_path, exist_ok=True)
+    
+    # Create subdirectories
+    os.makedirs(os.path.join(user_path, 'logbooks'), exist_ok=True)
+    os.makedirs(os.path.join(user_path, 'exports'), exist_ok=True)
+    os.makedirs(os.path.join(user_path, 'backups'), exist_ok=True)
+
+
+def get_user_directory(user_id: int, email: str) -> str:
+    """Get the directory path for user files."""
+    from src.core.user_models import generate_user_directory_name
+    user_dir = generate_user_directory_name(user_id, email)
+    return os.path.join('uploads', user_dir)
+
+
+def _row_to_user(row) -> User:
+    """Convert database row to User object."""
+    import json
+    
+    preferences_data = json.loads(row['preferences']) if row['preferences'] else {}
+    preferences = UserPreferences(**preferences_data)
+    
+    return User(
+        id=row['id'],
+        email=row['email'],
+        first_name=row['first_name'],
+        last_name=row['last_name'],
+        pilot_certificate_number=row['pilot_certificate_number'],
+        student_pilot=bool(row['student_pilot']),
+        is_active=bool(row['is_active']),
+        is_verified=bool(row['is_verified']),
+        created_at=datetime.fromisoformat(row['created_at']),
+        last_login=datetime.fromisoformat(row['last_login']) if row['last_login'] else None,
+        preferences=preferences,
+        password_hash=row['password_hash']
+    )
+
+
+# Legacy endorsement functions (updated for user-specific data)
+def add_endorsement(user_id: int, start_date: datetime) -> InstructorEndorsement:
     """Add a new endorsement to the database."""
     expiration_date = InstructorEndorsement.calculate_expiration(start_date)
     with get_db() as db:

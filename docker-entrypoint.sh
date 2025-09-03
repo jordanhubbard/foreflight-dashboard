@@ -21,10 +21,30 @@ else
     python -m uvicorn src.api.routes:app --host=0.0.0.0 --port=5051 --reload &
     UVICORN_PID=$!
 
+    # Start React dev server in background (if frontend directory exists)
+    if [ -d "/app/frontend" ]; then
+        echo "Starting React development server..."
+        cd /app/frontend
+        npm install --silent
+        npm run dev &
+        REACT_PID=$!
+        cd /app
+    else
+        REACT_PID=""
+    fi
+
     # Handle shutdown signals
-    trap 'kill $FLASK_PID $UVICORN_PID; exit 0' SIGTERM SIGINT
+    if [ -n "$REACT_PID" ]; then
+        trap 'kill $FLASK_PID $UVICORN_PID $REACT_PID; exit 0' SIGTERM SIGINT
+    else
+        trap 'kill $FLASK_PID $UVICORN_PID; exit 0' SIGTERM SIGINT
+    fi
 
     # Keep the script running
     echo "Services started. Press Ctrl+C to stop."
-    wait $FLASK_PID $UVICORN_PID
+    if [ -n "$REACT_PID" ]; then
+        wait $FLASK_PID $UVICORN_PID $REACT_PID
+    else
+        wait $FLASK_PID $UVICORN_PID
+    fi
 fi

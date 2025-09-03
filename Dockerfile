@@ -10,6 +10,14 @@ ARG FLASK_ENV=development
 FROM python:${PYTHON_VERSION}-slim AS base
 WORKDIR /app
 
+# Install system dependencies including Node.js
+RUN apt-get update && apt-get install -y \
+    gcc \
+    curl \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
 # Set environment variables
 ENV PYTHONPATH=/app \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -46,6 +54,9 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Copy the application code
 COPY . .
 
+# Build frontend (skip if build fails during testing)
+RUN cd frontend && npm install && (npm run build || echo "Frontend build failed, continuing...")
+
 # Set Flask app environment variable
 ENV FLASK_APP=src/app.py
 
@@ -80,7 +91,11 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Copy only necessary files for production
 COPY src/ /app/src/
+COPY frontend/ /app/frontend/
 COPY docker-entrypoint.sh /docker-entrypoint.sh
+
+# Build frontend for production
+RUN cd frontend && npm install --production && npm run build
 
 # Set Flask app environment variable
 ENV FLASK_APP=src/app.py

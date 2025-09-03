@@ -1,0 +1,157 @@
+"""Test configuration and fixtures."""
+
+import os
+import tempfile
+import pytest
+from fastapi.testclient import TestClient
+from flask import Flask
+from unittest.mock import Mock
+import shutil
+from pathlib import Path
+
+# Import applications
+from src.api.routes import app as fastapi_app
+from src.core.auth_models import db, User, Role
+from src.core.security import create_user_datastore
+
+# Test database configuration
+TEST_DATABASE_URL = "sqlite:///:memory:"
+
+@pytest.fixture
+def temp_dir():
+    """Create a temporary directory for test files."""
+    temp_dir = tempfile.mkdtemp()
+    yield temp_dir
+    shutil.rmtree(temp_dir)
+
+@pytest.fixture
+def sample_csv_content():
+    """Sample ForeFlight CSV content for testing."""
+    return (
+        'ForeFlight Logbook Import,This row is required for importing into ForeFlight. Do not delete or modify.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n'
+        ',,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n'
+        'Aircraft Table,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n'
+        'AircraftID,TypeCode,Year,Make,Model,GearType,EngineType,equipType (FAA),aircraftClass (FAA),complexAircraft (FAA),taa (FAA),highPerformance (FAA),pressurized (FAA),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n'
+        'N125CM,CH7A,,Bellanca,7ECA,fixed_tailwheel,Piston,aircraft,airplane_single_engine_land,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n'
+        'N198JJ,8KCAB,,American Champion,8KCAB,fixed_tailwheel,Piston,aircraft,airplane_single_engine_land,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n'
+        ',,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n'
+        'Flights Table,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n'
+        'Date,AircraftID,From,To,TotalTime,Night,ActualInstrument,SimulatedInstrument,CrossCountry,DualGiven,PIC,SIC,DualReceived,Solo,DayLandingsFullStop,NightLandingsFullStop,PilotComments,InstructorComments,Distance\n'
+        '2023-01-01,N125CM,KOAK,KSFO,2.0,0.0,0.0,0.0,0.0,0.0,2.0,0.0,0.0,2.0,1,0,First solo,,10\n'
+        '2023-01-02,N198JJ,KSFO,KOAK,1.5,0.0,0.0,0.0,0.0,0.0,1.5,0.0,0.0,1.5,1,0,,Instructor comment,8\n'
+    )
+
+@pytest.fixture
+def sample_csv_file(temp_dir, sample_csv_content):
+    """Create a temporary CSV file with sample data."""
+    csv_path = os.path.join(temp_dir, "test_logbook.csv")
+    with open(csv_path, 'w') as f:
+        f.write(sample_csv_content)
+    return csv_path
+
+@pytest.fixture
+def fastapi_client():
+    """FastAPI test client."""
+    return TestClient(fastapi_app)
+
+@pytest.fixture
+def flask_test_client():
+    """Flask test client with test configuration."""
+    from flask import Flask
+    from flask_mail import Mail
+    from src.core.security import init_security
+    
+    # Create a fresh Flask app for testing
+    app = Flask(__name__)
+    app.config.update({
+        "TESTING": True,
+        "SQLALCHEMY_DATABASE_URI": TEST_DATABASE_URL,
+        "SQLALCHEMY_TRACK_MODIFICATIONS": False,
+        "SECRET_KEY": "test-secret-key",
+        "WTF_CSRF_ENABLED": False,
+        "SECURITY_JOIN_USER_ROLES": True,
+        "SECURITY_PASSWORD_SINGLE_HASH": False,
+        "SECURITY_PASSWORD_HASH": "plaintext",
+        "SECURITY_PASSWORD_SALT": "test-salt",
+        "MAIL_SUPPRESS_SEND": True,
+        "SECURITY_SEND_REGISTER_EMAIL": False,
+        "SECURITY_SEND_PASSWORD_CHANGE_EMAIL": False,
+        "SECURITY_SEND_PASSWORD_RESET_EMAIL": False,
+        "SECURITY_SEND_PASSWORD_RESET_NOTICE_EMAIL": False
+    })
+    
+    # Initialize extensions
+    db.init_app(app)
+    mail = Mail(app)
+    
+    with app.test_client() as client:
+        with app.app_context():
+            # Create tables
+            db.create_all()
+            
+            # Initialize Flask-Security
+            security = init_security(app, mail)
+            
+            yield client
+
+@pytest.fixture
+def test_user(flask_test_client):
+    """Create a test user."""
+    user_datastore = create_user_datastore()
+    user = user_datastore.create_user(
+        email="test@example.com",
+        password="testpass",
+        first_name="Test",
+        last_name="User",
+        student_pilot=False
+    )
+    db.session.commit()
+    return user
+
+@pytest.fixture
+def admin_user(flask_test_client):
+    """Create an admin user."""
+    user_datastore = create_user_datastore()
+    admin_role = user_datastore.find_role('admin')
+    user = user_datastore.create_user(
+        email="admin@example.com",
+        password="adminpass",
+        first_name="Admin",
+        last_name="User",
+        roles=[admin_role],
+        student_pilot=False
+    )
+    db.session.commit()
+    return user
+
+@pytest.fixture
+def student_user(flask_test_client):
+    """Create a student pilot user."""
+    user_datastore = create_user_datastore()
+    student_role = user_datastore.find_role('student')
+    user = user_datastore.create_user(
+        email="student@example.com",
+        password="studentpass",
+        first_name="Student",
+        last_name="Pilot",
+        roles=[student_role],
+        student_pilot=True
+    )
+    db.session.commit()
+    return user
+
+@pytest.fixture
+def authenticated_client(flask_test_client, test_user):
+    """Flask test client with authenticated user."""
+    with flask_test_client.session_transaction() as sess:
+        sess['user_id'] = test_user.id
+        sess['_fresh'] = True
+    return flask_test_client
+
+@pytest.fixture
+def mock_upload_folder(temp_dir, monkeypatch):
+    """Mock the upload folder to use temporary directory."""
+    upload_dir = os.path.join(temp_dir, "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+    monkeypatch.setattr("src.app.app.config", {"UPLOAD_FOLDER": upload_dir})
+    return upload_dir

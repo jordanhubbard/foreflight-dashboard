@@ -1,14 +1,19 @@
 """ForeFlight Logbook Manager web application."""
 
 import csv
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, current_app
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 from src.validate_csv import validate_logbook
 from src.core.models import RunningTotals, LogbookEntry, Aircraft, Airport, FlightConditions
-from src.db import init_db, add_endorsement, get_all_endorsements, delete_endorsement, verify_pic_endorsements
+from src.core.auth_models import db, User, Role, UserLogbook, InstructorEndorsement
+from src.core.security import init_security, create_user_datastore, setup_user_directories, get_user_directory
+from flask_mail import Mail
+from flask_security import login_required, current_user, roles_required
+from flask_cors import CORS
+from flask_wtf.csrf import CSRFProtect
 import logging.handlers
 import shutil
 import time
@@ -49,12 +54,47 @@ for name in logging.root.manager.loggerDict:
 # Flask will look for templates in the 'templates' directory inside the application package
 import os
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
-app.secret_key = 'your-secret-key-here'  # Required for flash messages
+
+# Configuration
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
+# Database configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///app/app.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Email configuration
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'localhost')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() in ['true', 'on', '1']
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@foreflight-dashboard.com')
+
+# Initialize extensions
+db.init_app(app)
+mail = Mail(app)
+CORS(app, supports_credentials=True)
+csrf = CSRFProtect(app)
+
+# Initialize Flask-Security-Too
+security = init_security(app, mail)
+
+# Setup user directories
+setup_user_directories(app)
+
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+
+
+# Initialize database tables (only if they don't exist)
+with app.app_context():
+    try:
+        db.create_all()
+    except Exception as e:
+        logger.warning(f"Database tables may already exist: {e}")
 
 def convert_entries_to_template_data(entries):
     """Convert LogbookEntry objects to template-friendly dictionaries."""
@@ -278,13 +318,17 @@ def prepare_aircraft_stats(entries):
     return sorted(aircraft_list, key=lambda x: x['count'], reverse=True)
 
 @app.route('/')
+@login_required
 def index():
     """Render the main page."""
-    init_db_if_needed()
+    # Get user's active logbook
+    active_logbook = UserLogbook.query.filter_by(
+        user_id=current_user.id, 
+        is_active=True
+    ).order_by(UserLogbook.uploaded_at.desc()).first()
     
-    # Check if a logbook was uploaded in this session
-    logbook_filename = session.get('logbook_filename')
-    is_student_pilot = session.get('is_student_pilot', False)
+    logbook_filename = active_logbook.filename if active_logbook else None
+    is_student_pilot = current_user.student_pilot
     
     # Initialize default values
     entries = []
@@ -351,9 +395,10 @@ def index():
     )
 
 @app.route('/upload', methods=['POST'])
+@login_required
 def upload_file():
     """Handle file upload and validation."""
-    logger.info("Starting file upload process")
+    logger.info(f"Starting file upload process for user {current_user.email}")
     
     if 'file' not in request.files:
         logger.warning("No file part in request")
@@ -372,15 +417,38 @@ def upload_file():
         return redirect(url_for('index'))
     
     try:
-        # Save uploaded file
+        # Get user-specific directory
+        user_dir = get_user_directory(current_user)
+        os.makedirs(user_dir, exist_ok=True)
+        
+        # Save uploaded file to user directory
         filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        filepath = os.path.join(user_dir, 'logbooks', filename)
         file.save(filepath)
         logger.info(f"Saved uploaded file to {filepath}")
         
-        # Store filename and student pilot state in session for persistence
-        session['logbook_filename'] = filename
-        session['is_student_pilot'] = request.form.get('student_pilot') == 'on'
+        # Deactivate previous logbooks for this user
+        UserLogbook.query.filter_by(user_id=current_user.id, is_active=True).update({'is_active': False})
+        
+        # Create new logbook record
+        user_logbook = UserLogbook(
+            user_id=current_user.id,
+            filename=filename,
+            original_filename=file.filename,
+            file_size=os.path.getsize(filepath),
+            is_active=True
+        )
+        db.session.add(user_logbook)
+        db.session.commit()
+        
+        # Update user preferences if student pilot status changed
+        is_student_pilot = request.form.get('student_pilot') == 'on'
+        if current_user.student_pilot != is_student_pilot:
+            current_user.student_pilot = is_student_pilot
+            preferences = current_user.get_preferences()
+            preferences['student_pilot'] = is_student_pilot
+            current_user.set_preferences(preferences)
+            db.session.commit()
         
         # Create debug copy
         debug_filepath = os.path.join(app.config['UPLOAD_FOLDER'], 'debug_' + filename)
@@ -739,6 +807,171 @@ def apply_flight_filters(entries, filters):
     
     logger.info(f"Filtered {len(entries)} entries down to {len(filtered_entries)}")
     return filtered_entries
+
+# API Routes for React Frontend
+@app.route('/api/user')
+@login_required
+def api_get_user():
+    """Get current user information."""
+    return jsonify(current_user.to_dict())
+
+@app.route('/api/user', methods=['PUT'])
+@login_required
+def api_update_user():
+    """Update user profile."""
+    data = request.get_json()
+    
+    # Update user fields
+    if 'first_name' in data:
+        current_user.first_name = data['first_name']
+    if 'last_name' in data:
+        current_user.last_name = data['last_name']
+    if 'pilot_certificate_number' in data:
+        current_user.pilot_certificate_number = data['pilot_certificate_number']
+    if 'student_pilot' in data:
+        current_user.student_pilot = data['student_pilot']
+    
+    db.session.commit()
+    return jsonify(current_user.to_dict())
+
+@app.route('/api/logbook')
+@login_required
+def api_get_logbook():
+    """Get user's logbook data."""
+    # Get user's active logbook
+    active_logbook = UserLogbook.query.filter_by(
+        user_id=current_user.id, 
+        is_active=True
+    ).order_by(UserLogbook.uploaded_at.desc()).first()
+    
+    if not active_logbook:
+        return jsonify({
+            'entries': [],
+            'stats': {},
+            'all_time_stats': {},
+            'aircraft_stats': [],
+            'recent_experience': {}
+        })
+    
+    # Load and process logbook data
+    user_dir = get_user_directory(current_user)
+    filepath = os.path.join(user_dir, 'logbooks', active_logbook.filename)
+    
+    if not os.path.exists(filepath):
+        return jsonify({
+            'entries': [],
+            'stats': {},
+            'all_time_stats': {},
+            'aircraft_stats': [],
+            'recent_experience': {}
+        })
+    
+    try:
+        # Process the logbook file
+        entries, stats, all_time_stats, aircraft_stats, recent_experience = process_logbook_file(filepath)
+        
+        return jsonify({
+            'entries': convert_entries_to_template_data(entries),
+            'stats': stats,
+            'all_time_stats': all_time_stats,
+            'aircraft_stats': aircraft_stats,
+            'recent_experience': recent_experience
+        })
+    except Exception as e:
+        logger.error(f"Error processing logbook: {e}")
+        return jsonify({'error': 'Failed to process logbook'}), 500
+
+@app.route('/api/upload', methods=['POST'])
+@login_required
+def api_upload_logbook():
+    """Upload logbook file via API."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if not file.filename.endswith('.csv'):
+        return jsonify({'error': 'Only CSV files are allowed'}), 400
+    
+    try:
+        # Get user-specific directory
+        user_dir = get_user_directory(current_user)
+        os.makedirs(user_dir, exist_ok=True)
+        
+        # Save uploaded file to user directory
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(user_dir, 'logbooks', filename)
+        file.save(filepath)
+        
+        # Deactivate previous logbooks for this user
+        UserLogbook.query.filter_by(user_id=current_user.id, is_active=True).update({'is_active': False})
+        
+        # Create new logbook record
+        user_logbook = UserLogbook(
+            user_id=current_user.id,
+            filename=filename,
+            original_filename=file.filename,
+            file_size=os.path.getsize(filepath),
+            is_active=True
+        )
+        db.session.add(user_logbook)
+        db.session.commit()
+        
+        return jsonify({'message': 'File uploaded successfully'})
+    except Exception as e:
+        logger.error(f"Error uploading file: {e}")
+        return jsonify({'error': 'Failed to upload file'}), 500
+
+@app.route('/api/endorsements')
+@login_required
+def api_get_endorsements():
+    """Get user's endorsements."""
+    endorsements = InstructorEndorsement.query.filter_by(user_id=current_user.id).all()
+    return jsonify([endorsement.to_dict() for endorsement in endorsements])
+
+@app.route('/api/endorsements', methods=['POST'])
+@login_required
+def api_add_endorsement():
+    """Add a new endorsement."""
+    data = request.get_json()
+    start_date = datetime.fromisoformat(data['start_date'])
+    
+    endorsement = InstructorEndorsement(
+        user_id=current_user.id,
+        start_date=start_date,
+        expiration_date=InstructorEndorsement.calculate_expiration(start_date)
+    )
+    
+    db.session.add(endorsement)
+    db.session.commit()
+    
+    return jsonify(endorsement.to_dict())
+
+@app.route('/api/endorsements/<int:endorsement_id>', methods=['DELETE'])
+@login_required
+def api_delete_endorsement(endorsement_id):
+    """Delete an endorsement."""
+    endorsement = InstructorEndorsement.query.filter_by(
+        id=endorsement_id, 
+        user_id=current_user.id
+    ).first()
+    
+    if not endorsement:
+        return jsonify({'error': 'Endorsement not found'}), 404
+    
+    db.session.delete(endorsement)
+    db.session.commit()
+    
+    return jsonify({'message': 'Endorsement deleted successfully'})
+
+# Serve React app for all other routes
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_react_app(path):
+    """Serve the React application."""
+    return render_template('react_index.html')
 
 if __name__ == '__main__':
     # Enable hot reloading

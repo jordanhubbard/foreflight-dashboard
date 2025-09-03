@@ -13,3 +13,24 @@ fastapi==0.110.0
 uvicorn==0.27.1
 requests==2.31.0
 python-multipart==0.0.7
+# Authentication dependencies - Flask-Security-Too (modern successor to Flask-Security)
+flask-security-too==5.6.2
+flask-sqlalchemy==3.1.1
+flask-mail==0.9.1
+flask-wtf==1.2.1
+wtforms==3.1.1
+email-validator==2.1.0
+bcrypt==4.1.2
+
+# API and CORS support for React frontend
+flask-cors==4.0.0
+flask-restful==0.3.10
+
+# Testing dependencies
+pytest==8.0.2
+pytest-asyncio==0.23.5
+pytest-cov==4.0.0
+pytest-mock==3.12.0
+httpx==0.27.0
+factory-boy==3.3.0
+faker==24.0.0
