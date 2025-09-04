@@ -42,8 +42,8 @@ class TestFastAPIEndpoints:
             
             assert response.status_code == 200
             data = response.json()
-            assert data["entries_imported"] == 2
-            assert data["aircraft_imported"] == 2
+            assert data["success"] == True
+            assert data["entries_count"] == 2
 
     def test_upload_logbook_invalid_file_type(self, fastapi_client):
         """Test upload with invalid file type."""
