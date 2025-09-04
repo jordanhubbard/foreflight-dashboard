@@ -70,9 +70,9 @@ class ForeFlightClient:
         Returns:
             List of LogbookEntry objects
         """
-        # If using local data (CSV file)
-        if self.csv_file_path:
-            entries = self.logbook_entries
+        # If using local data (CSV file) or have logbook_entries (e.g., in tests)
+        if (hasattr(self, 'csv_file_path') and self.csv_file_path) or (hasattr(self, 'logbook_entries') and self.logbook_entries is not None):
+            entries = self.logbook_entries if hasattr(self, 'logbook_entries') else []
             
             # Apply date filtering if provided
             if start_date or end_date:
@@ -149,28 +149,49 @@ class ForeFlightClient:
         return True
         
     def get_aircraft_list(self) -> List[Aircraft]:
-        """Retrieve aircraft list from ForeFlight.
+        """Retrieve aircraft list from ForeFlight or local data.
         
         Returns:
             List of Aircraft objects
         """
+        # If using local data (CSV file) or mocked data
+        if hasattr(self, 'csv_file_path') and self.csv_file_path:
+            return self.aircraft_list
+        
+        # If aircraft_list is already populated (e.g., in tests)
+        if hasattr(self, 'aircraft_list') and self.aircraft_list:
+            return self.aircraft_list
+        
+        # API mode
         response = self._make_request('GET', '/aircraft')
         return [Aircraft(**aircraft) for aircraft in response.get('aircraft', [])]
         
     def get_statistics(self) -> Dict:
-        """Get flight statistics.
+        """Get flight statistics from local data or API.
         
         Returns:
             Dictionary containing flight statistics
         """
-        # For now, return empty stats - would normally call API
+        # If using local data or have logbook entries
+        if hasattr(self, 'logbook_entries') and self.logbook_entries:
+            entries = self.logbook_entries
+            return {
+                'total_flights': len(entries),
+                'total_time': sum(entry.total_time for entry in entries),
+                'pic_time': sum(entry.pic_time for entry in entries),
+                'cross_country_time': sum(entry.conditions.cross_country for entry in entries),
+                'instrument_time': sum(entry.conditions.actual_instrument + entry.conditions.simulated_instrument for entry in entries),
+                'night_time': sum(entry.conditions.night for entry in entries)
+            }
+        
+        # API mode or empty stats
         return {
             'total_flights': 0,
-            'total_hours': 0.0,
-            'pic_hours': 0.0,
-            'cross_country_hours': 0.0,
-            'instrument_hours': 0.0,
-            'night_hours': 0.0
+            'total_time': 0.0,
+            'pic_time': 0.0,
+            'cross_country_time': 0.0,
+            'instrument_time': 0.0,
+            'night_time': 0.0
         }
         
     def get_recent_flights(self, days: int = 30) -> List[LogbookEntry]:
@@ -182,6 +203,7 @@ class ForeFlightClient:
         Returns:
             List of recent LogbookEntry objects
         """
+        from datetime import datetime, timedelta
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
         return self.get_logbook_entries(start_date, end_date) 
