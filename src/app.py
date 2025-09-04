@@ -61,7 +61,11 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Database configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///app/app.db')
+# Ensure data directory exists
+data_dir = os.path.join(os.getcwd(), 'data')
+os.makedirs(data_dir, exist_ok=True)
+db_path = os.path.join(data_dir, 'app.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', f'sqlite:///{db_path}')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Email configuration

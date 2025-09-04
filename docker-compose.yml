@@ -19,6 +19,7 @@ services:
       - ./frontend:/app/frontend  # Mount frontend for hot reloading
       - ./uploads:/app/uploads
       - ./logs:/app/logs
+      - ./data:/app/data  # Mount data directory for database
       - ./tests:/app/tests  # Mount tests directory
     restart: unless-stopped
     environment:
