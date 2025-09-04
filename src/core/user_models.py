@@ -98,14 +98,14 @@ class User(UserMixin):
     email: str
     first_name: str
     last_name: str
-    pilot_certificate_number: Optional[str]
-    student_pilot: bool
-    is_active: bool
-    is_verified: bool
-    created_at: datetime
-    last_login: Optional[datetime]
-    preferences: UserPreferences
     password_hash: str
+    is_active: bool = True
+    is_verified: bool = False
+    student_pilot: bool = False
+    pilot_certificate_number: Optional[str] = None
+    created_at: datetime = None
+    last_login: Optional[datetime] = None
+    preferences: UserPreferences = None
     
     def get_id(self):
         """Required by Flask-Login."""
@@ -132,9 +132,9 @@ class User(UserMixin):
             'student_pilot': self.student_pilot,
             'is_active': self.is_active,
             'is_verified': self.is_verified,
-            'created_at': self.created_at.isoformat(),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_login': self.last_login.isoformat() if self.last_login else None,
-            'preferences': self.preferences.dict(),
+            'preferences': self.preferences.dict() if self.preferences else {},
             'full_name': self.full_name,
             'display_name': self.display_name
         }

@@ -812,12 +812,14 @@ def apply_flight_filters(entries, filters):
     logger.info(f"Filtered {len(entries)} entries down to {len(filtered_entries)}")
     return filtered_entries
 
-# API Routes for React Frontend
-@app.route('/api/user')
-@login_required
-def api_get_user():
-    """Get current user information."""
-    return jsonify(current_user.to_dict())
+def register_api_routes(app):
+    """Register API routes on the given Flask app."""
+    
+    @app.route('/api/user')
+    @login_required
+    def api_get_user():
+        """Get current user information."""
+        return jsonify(current_user.to_dict())
 
 @app.route('/api/user', methods=['PUT'])
 @login_required
