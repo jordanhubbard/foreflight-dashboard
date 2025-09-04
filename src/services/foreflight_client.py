@@ -2,10 +2,10 @@
 
 import requests
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from src.core.config import FOREFLIGHT_API_KEY, FOREFLIGHT_API_SECRET, FOREFLIGHT_API_BASE_URL
-from src.core.models import LogbookEntry
+from src.core.models import LogbookEntry, Aircraft
 
 class ForeFlightClient:
     """Client for interacting with the ForeFlight API."""
@@ -98,10 +98,52 @@ class ForeFlightClient:
                                     json=entry.model_dump(exclude={'id'}))
         return LogbookEntry(**response)
         
-    def delete_logbook_entry(self, entry_id: str) -> None:
+    def delete_logbook_entry(self, entry_id: str) -> bool:
         """Delete a logbook entry from ForeFlight.
         
         Args:
             entry_id: ID of the entry to delete
+            
+        Returns:
+            True if deleted successfully
         """
-        self._make_request('DELETE', f'/logbook/entries/{entry_id}') 
+        self._make_request('DELETE', f'/logbook/entries/{entry_id}')
+        return True
+        
+    def get_aircraft_list(self) -> List[Aircraft]:
+        """Retrieve aircraft list from ForeFlight.
+        
+        Returns:
+            List of Aircraft objects
+        """
+        response = self._make_request('GET', '/aircraft')
+        return [Aircraft(**aircraft) for aircraft in response.get('aircraft', [])]
+        
+    def get_statistics(self) -> Dict:
+        """Get flight statistics.
+        
+        Returns:
+            Dictionary containing flight statistics
+        """
+        # For now, return empty stats - would normally call API
+        return {
+            'total_flights': 0,
+            'total_hours': 0.0,
+            'pic_hours': 0.0,
+            'cross_country_hours': 0.0,
+            'instrument_hours': 0.0,
+            'night_hours': 0.0
+        }
+        
+    def get_recent_flights(self, days: int = 30) -> List[LogbookEntry]:
+        """Get recent flights within specified days.
+        
+        Args:
+            days: Number of days to look back
+            
+        Returns:
+            List of recent LogbookEntry objects
+        """
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+        return self.get_logbook_entries(start_date, end_date) 

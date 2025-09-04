@@ -104,9 +104,9 @@ def init_security(app: Flask, mail: Mail):
         'SECURITY_JOIN_USER_ROLES': True,
         
         # Password hashing
-        'SECURITY_PASSWORD_SINGLE_HASH': False,
-        'SECURITY_PASSWORD_HASH': 'bcrypt',
-        'SECURITY_PASSWORD_SALT': app.config.get('SECRET_KEY', 'dev-secret-key'),
+        'SECURITY_PASSWORD_SINGLE_HASH': app.config.get('SECURITY_PASSWORD_SINGLE_HASH', False),
+        'SECURITY_PASSWORD_HASH': app.config.get('SECURITY_PASSWORD_HASH', 'bcrypt'),
+        'SECURITY_PASSWORD_SALT': app.config.get('SECURITY_PASSWORD_SALT', app.config.get('SECRET_KEY', 'dev-secret-key')),
         
         # Email settings
         'SECURITY_EMAIL_SENDER': app.config.get('MAIL_DEFAULT_SENDER', 'noreply@foreflight-dashboard.com'),
