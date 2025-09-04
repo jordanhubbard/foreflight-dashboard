@@ -149,10 +149,13 @@ def create_default_admin(app: Flask, user_datastore):
     """Create a default admin user if no users exist."""
     with app.app_context():
         if not user_datastore.find_user(email='admin@foreflight-dashboard.com'):
+            from passlib.hash import bcrypt
             admin_role = user_datastore.find_role('admin')
+            # Hash password using bcrypt directly (matches Flask-Security-Too default)
+            hashed_password = bcrypt.hash('admin123')
             user_datastore.create_user(
                 email='admin@foreflight-dashboard.com',
-                password=hashlib.sha256('admin123'.encode()).hexdigest(),
+                password=hashed_password,
                 first_name='Admin',
                 last_name='User',
                 roles=[admin_role],

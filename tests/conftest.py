@@ -97,10 +97,11 @@ def flask_test_client():
 @pytest.fixture
 def test_user(flask_test_client):
     """Create a test user."""
+    from passlib.hash import bcrypt
     user_datastore = create_user_datastore()
     user = user_datastore.create_user(
         email="test@example.com",
-        password="testpass",
+        password=bcrypt.hash("testpass"),
         first_name="Test",
         last_name="User",
         student_pilot=False
@@ -111,11 +112,12 @@ def test_user(flask_test_client):
 @pytest.fixture
 def admin_user(flask_test_client):
     """Create an admin user."""
+    from passlib.hash import bcrypt
     user_datastore = create_user_datastore()
     admin_role = user_datastore.find_role('admin')
     user = user_datastore.create_user(
         email="admin@example.com",
-        password="adminpass",
+        password=bcrypt.hash("adminpass"),
         first_name="Admin",
         last_name="User",
         roles=[admin_role],
@@ -127,11 +129,12 @@ def admin_user(flask_test_client):
 @pytest.fixture
 def student_user(flask_test_client):
     """Create a student pilot user."""
+    from passlib.hash import bcrypt
     user_datastore = create_user_datastore()
     student_role = user_datastore.find_role('student')
     user = user_datastore.create_user(
         email="student@example.com",
-        password="studentpass",
+        password=bcrypt.hash("studentpass"),
         first_name="Student",
         last_name="Pilot",
         roles=[student_role],
