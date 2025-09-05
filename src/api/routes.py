@@ -19,6 +19,7 @@ from src.core.models import LogbookEntry
 from src.services.foreflight_client import ForeFlightClient
 from src.services.importer import ForeFlightImporter
 from src.core.validation import validate_csv
+from src.core.account_manager import AccountManager
 
 # Configure logging
 logging.basicConfig(
@@ -352,4 +353,113 @@ async def delete_entry(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
+        )
+
+
+# Account Management API Endpoints
+@app.post("/api/admin/accounts/create-from-file")
+async def create_accounts_from_file(
+    file_path: str = "test-accounts.json",
+    request: Request = None
+):
+    """Create accounts from a JSON file.
+    
+    This endpoint is for administrative use to create test or production accounts
+    from a JSON file containing account definitions.
+    """
+    try:
+        # Import Flask app to get the application context
+        from src.app import app as flask_app
+        
+        with flask_app.app_context():
+            # Ensure database tables exist
+            from src.core.auth_models import db
+            from src.core.security import create_user_datastore
+            
+            db.create_all()
+            
+            # Create default roles if they don't exist
+            user_datastore = create_user_datastore()
+            roles = [
+                ('admin', 'Administrator - Full access to all features'),
+                ('pilot', 'Certified Pilot - Access to all pilot features'),
+                ('student', 'Student Pilot - Access to student-specific features'),
+                ('instructor', 'Flight Instructor - Can manage student endorsements')
+            ]
+            
+            for role_name, description in roles:
+                if not user_datastore.find_role(role_name):
+                    user_datastore.create_role(name=role_name, description=description)
+            
+            db.session.commit()
+            
+            # Create accounts from JSON
+            manager = AccountManager(flask_app)
+            
+            # Validate the JSON file first
+            if not manager.validate_accounts_json(file_path):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Account validation failed. Please check the JSON file."
+                )
+            
+            created_users = manager.create_accounts_from_json(file_path)
+            
+            # Return summary
+            user_summaries = []
+            for user in created_users:
+                user_summaries.append({
+                    "email": user.email,
+                    "name": f"{user.first_name} {user.last_name}",
+                    "roles": [role.name for role in user.roles],
+                    "student_pilot": user.student_pilot,
+                    "created": True
+                })
+            
+            return {
+                "success": True,
+                "message": f"Successfully created {len(created_users)} accounts",
+                "accounts": user_summaries
+            }
+            
+    except Exception as e:
+        logger.error(f"Error creating accounts from file: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error creating accounts: {str(e)}"
+        )
+
+
+@app.post("/api/admin/accounts/validate-file")
+async def validate_accounts_file(file_path: str = "test-accounts.json"):
+    """Validate account definitions in a JSON file.
+    
+    This endpoint validates the structure and content of an accounts JSON file
+    without actually creating the accounts.
+    """
+    try:
+        from src.core.account_manager import validate_accounts_file
+        
+        if validate_accounts_file(file_path):
+            return {
+                "success": True,
+                "message": "All account definitions are valid",
+                "file_path": file_path
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Some account definitions are invalid"
+            )
+            
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Account file not found: {file_path}"
+        )
+    except Exception as e:
+        logger.error(f"Error validating accounts file: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error validating accounts file: {str(e)}"
         ) 

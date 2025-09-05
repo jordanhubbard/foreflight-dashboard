@@ -71,7 +71,8 @@ def init_database():
         print("\nDefault admin credentials:")
         print("Email: admin@foreflight-dashboard.com")
         print("Password: admin123")
-        print("\nPlease change the admin password after first login!")
+        print("\nTo create additional test accounts, run: make test-accounts")
+        print("Please change the admin password after first login!")
 
 if __name__ == '__main__':
     init_database()

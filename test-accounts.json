@@ -1,0 +1,44 @@
+{
+  "accounts": [
+    {
+      "email": "admin@foreflight-dashboard.com",
+      "password": "admin123",
+      "first_name": "Admin",
+      "last_name": "User",
+      "is_admin": true,
+      "student_pilot": false,
+      "pilot_certificate_number": null,
+      "roles": ["admin"]
+    },
+    {
+      "email": "x@y.com",
+      "password": "z",
+      "first_name": "Test",
+      "last_name": "User",
+      "is_admin": false,
+      "student_pilot": false,
+      "pilot_certificate_number": null,
+      "roles": ["pilot"]
+    },
+    {
+      "email": "student@example.com",
+      "password": "student123",
+      "first_name": "Student",
+      "last_name": "Pilot",
+      "is_admin": false,
+      "student_pilot": true,
+      "pilot_certificate_number": "S12345",
+      "roles": ["student"]
+    },
+    {
+      "email": "instructor@example.com",
+      "password": "instructor123",
+      "first_name": "Flight",
+      "last_name": "Instructor",
+      "is_admin": false,
+      "student_pilot": false,
+      "pilot_certificate_number": "CFI67890",
+      "roles": ["instructor", "pilot"]
+    }
+  ]
+}

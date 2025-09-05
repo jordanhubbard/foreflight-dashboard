@@ -13,14 +13,18 @@ help:
 	@echo ""
 	@echo "  start        - Build and start the complete application"
 	@echo "  stop         - Stop the running application"
+	@echo "  logs         - View application logs"
 	@echo "  clean        - Complete cleanup: stop, remove containers, images, database, and files"
 	@echo "  test         - Run all tests with coverage reporting"
+	@echo "  test-accounts - Create test accounts from test-accounts.json"
 	@echo ""
 	@echo "Usage:"
-	@echo "  make start   # First time setup and run"
-	@echo "  make stop    # Stop the application"
-	@echo "  make clean   # Complete cleanup (removes all data!)"
-	@echo "  make test    # Run tests with coverage"
+	@echo "  make start         # First time setup and run"
+	@echo "  make stop          # Stop the application"
+	@echo "  make logs          # View application logs"
+	@echo "  make clean         # Complete cleanup (removes all data!)"
+	@echo "  make test          # Run tests with coverage"
+	@echo "  make test-accounts # Create test accounts for debugging"
 
 # Start the application - builds everything and runs the container
 .PHONY: start
@@ -36,7 +40,7 @@ start:
 	@echo "🔧 API: http://localhost:5051"
 	@echo "⚛️  React Dev: http://localhost:3000"
 	@echo ""
-	@echo "To view logs: docker-compose -f $(COMPOSE_FILE) logs -f"
+	@echo "To view logs: make logs"
 	@echo "To stop: make stop"
 
 # Stop the running application
@@ -45,6 +49,13 @@ stop:
 	@echo "🛑 Stopping ForeFlight Dashboard..."
 	-docker-compose -f $(COMPOSE_FILE) down 2>/dev/null || true
 	@echo "✅ Application stopped successfully!"
+
+# View application logs
+.PHONY: logs
+logs:
+	@echo "📋 Viewing ForeFlight Dashboard logs..."
+	@echo "Press Ctrl+C to stop viewing logs"
+	docker-compose -f $(COMPOSE_FILE) logs -f
 
 # Clean up everything - stop, remove container, clean images, and reset data
 .PHONY: clean
@@ -79,3 +90,20 @@ test:
 	docker-compose -f $(COMPOSE_FILE) build
 	docker-compose -f $(COMPOSE_FILE) run --rm foreflight-dashboard pytest tests/ -v --cov=src --cov-report=html --cov-report=term --cov-report=xml
 	@echo "✅ Tests completed. Coverage report generated in htmlcov/"
+
+# Create test accounts from JSON file
+.PHONY: test-accounts
+test-accounts:
+	@echo "👥 Creating test accounts from test-accounts.json..."
+	@if [ ! -f test-accounts.json ]; then \
+		echo "❌ test-accounts.json not found in project root"; \
+		exit 1; \
+	fi
+	@docker-compose -f $(COMPOSE_FILE) run --rm foreflight-dashboard python create_test_accounts.py
+	@echo "✅ Test accounts created successfully!"
+	@echo ""
+	@echo "📋 You can now use these accounts to test the application:"
+	@echo "   - Admin: admin@foreflight-dashboard.com / admin123"
+	@echo "   - Test:  x@y.com / z"
+	@echo "   - Student: student@example.com / student123"
+	@echo "   - Instructor: instructor@example.com / instructor123"
