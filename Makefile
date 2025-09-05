@@ -13,13 +13,13 @@ help:
 	@echo ""
 	@echo "  start        - Build and start the complete application"
 	@echo "  stop         - Stop the running application"
-	@echo "  clean        - Stop, remove container, and clean up images"
+	@echo "  clean        - Complete cleanup: stop, remove containers, images, database, and files"
 	@echo "  test         - Run all tests with coverage reporting"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make start   # First time setup and run"
 	@echo "  make stop    # Stop the application"
-	@echo "  make clean   # Complete cleanup"
+	@echo "  make clean   # Complete cleanup (removes all data!)"
 	@echo "  make test    # Run tests with coverage"
 
 # Start the application - builds everything and runs the container
@@ -46,7 +46,7 @@ stop:
 	-docker-compose -f $(COMPOSE_FILE) down 2>/dev/null || true
 	@echo "✅ Application stopped successfully!"
 
-# Clean up everything - stop, remove container, and clean images
+# Clean up everything - stop, remove container, clean images, and reset data
 .PHONY: clean
 clean: stop
 	@echo "🧹 Cleaning up Docker resources..."
@@ -55,7 +55,21 @@ clean: stop
 	-docker rmi $(IMAGE_NAME):dev 2>/dev/null || true
 	-docker rmi $(IMAGE_NAME):prod 2>/dev/null || true
 	-docker rmi $(IMAGE_NAME):test 2>/dev/null || true
-	@echo "✅ Cleanup complete!"
+	@echo "🗑️  Cleaning up application data..."
+	-rm -f data/app.db 2>/dev/null || true
+	-rm -rf uploads/* 2>/dev/null || true
+	-rm -rf logs/*.log* 2>/dev/null || true
+	-find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	-find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	-find . -type f -name ".coverage" -delete 2>/dev/null || true
+	-rm -rf htmlcov/ 2>/dev/null || true
+	-rm -rf .pytest_cache/ 2>/dev/null || true
+	-rm -rf frontend/node_modules/.cache/ 2>/dev/null || true
+	@echo "✅ Complete cleanup finished!"
+	@echo ""
+	@echo "🔄 All data, logs, and caches removed"
+	@echo "📊 Database will be recreated on next start"
+	@echo "👤 Default users will be recreated"
 	@echo ""
 	@echo "To start fresh: make start"
 

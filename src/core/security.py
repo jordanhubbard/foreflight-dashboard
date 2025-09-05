@@ -5,6 +5,7 @@ from datetime import timedelta, datetime
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_mail import Mail
 from flask_security import Security, SQLAlchemyUserDatastore
+from flask_security.signals import user_registered
 import hashlib
 from flask_security.utils import send_mail
 from flask_security.forms import RegisterForm, LoginForm, ForgotPasswordForm, ResetPasswordForm
@@ -21,8 +22,6 @@ class ExtendedRegisterForm(RegisterForm):
     pilot_certificate_number = StringField('Pilot Certificate Number (Optional)', 
                                          validators=[Length(max=20)])
     student_pilot = BooleanField('I am a student pilot')
-    agree_to_terms = BooleanField('I agree to the Terms and Conditions', 
-                                validators=[DataRequired()])
 
 
 class ExtendedLoginForm(LoginForm):
@@ -43,10 +42,10 @@ def init_security(app: Flask, mail: Mail):
     
     # Security configuration
     security_config = {
-        # Basic settings
+        # Basic settings - use Flask-Security-Too's password hashing
         'SECURITY_PASSWORD_HASH': 'bcrypt',
         'SECURITY_PASSWORD_SALT': app.config.get('SECRET_KEY', 'dev-secret-key'),
-        'SECURITY_PASSWORD_SINGLE_HASH': True,
+        'SECURITY_PASSWORD_SINGLE_HASH': False,
         
         # User registration
         'SECURITY_REGISTERABLE': True,
@@ -103,10 +102,10 @@ def init_security(app: Flask, mail: Mail):
         # User roles
         'SECURITY_JOIN_USER_ROLES': True,
         
-        # Password hashing
-        'SECURITY_PASSWORD_SINGLE_HASH': app.config.get('SECURITY_PASSWORD_SINGLE_HASH', False),
-        'SECURITY_PASSWORD_HASH': app.config.get('SECURITY_PASSWORD_HASH', 'bcrypt'),
-        'SECURITY_PASSWORD_SALT': app.config.get('SECURITY_PASSWORD_SALT', app.config.get('SECRET_KEY', 'dev-secret-key')),
+        # Password hashing - use Flask-Security-Too's password hashing
+        'SECURITY_PASSWORD_SINGLE_HASH': False,
+        'SECURITY_PASSWORD_HASH': 'bcrypt',
+        'SECURITY_PASSWORD_SALT': app.config.get('SECRET_KEY', 'dev-secret-key'),
         
         # Email settings
         'SECURITY_EMAIL_SENDER': app.config.get('MAIL_DEFAULT_SENDER', 'noreply@foreflight-dashboard.com'),
@@ -121,6 +120,24 @@ def init_security(app: Flask, mail: Mail):
     
     # Initialize Security
     security = Security(app, user_datastore, register_form=ExtendedRegisterForm)
+    
+    # Register signal handler for user registration
+    @user_registered.connect_via(app)
+    def user_registered_sighandler(sender, user, confirm_token, form_data, **extra):
+        """Handle user registration to save extended form fields."""
+        # form_data is the actual form object, check if it has our extended fields
+        if hasattr(form_data, 'first_name') and hasattr(form_data.first_name, 'data'):
+            user.first_name = form_data.first_name.data
+        if hasattr(form_data, 'last_name') and hasattr(form_data.last_name, 'data'):
+            user.last_name = form_data.last_name.data
+        if hasattr(form_data, 'pilot_certificate_number') and hasattr(form_data.pilot_certificate_number, 'data'):
+            user.pilot_certificate_number = form_data.pilot_certificate_number.data
+        if hasattr(form_data, 'student_pilot') and hasattr(form_data.student_pilot, 'data'):
+            user.student_pilot = form_data.student_pilot.data
+        db.session.commit()
+        
+        # Create user directory
+        create_user_directory(user)
     
     # Create default roles if they don't exist
     with app.app_context():
@@ -149,10 +166,15 @@ def create_default_admin(app: Flask, user_datastore):
     """Create a default admin user if no users exist."""
     with app.app_context():
         if not user_datastore.find_user(email='admin@foreflight-dashboard.com'):
+            from flask_security.utils import get_hmac
             from passlib.hash import bcrypt
             admin_role = user_datastore.find_role('admin')
-            # Hash password using bcrypt directly (matches Flask-Security-Too default)
-            hashed_password = bcrypt.hash('admin123')
+            # Create password hash using Flask-Security-Too's exact HMAC process
+            password = 'admin123'
+            # Use Flask-Security-Too's get_hmac function to ensure compatibility
+            hmac_password = get_hmac(password)
+            # Then hash with bcrypt
+            hashed_password = bcrypt.hash(hmac_password)
             user_datastore.create_user(
                 email='admin@foreflight-dashboard.com',
                 password=hashed_password,
