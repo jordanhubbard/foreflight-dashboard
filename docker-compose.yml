@@ -11,9 +11,9 @@ services:
         FLASK_ENV: development
         BUILDKIT_INLINE_CACHE: 1
     ports:
-      - "8081:8081"  # Flask UI
-      - "5051:5051"  # FastAPI backend
-      - "3000:3000"  # React dev server
+      - "${FLASK_PORT:-8081}:8081"  # Flask UI
+      - "${FASTAPI_PORT:-5051}:5051"  # FastAPI backend
+      - "${REACT_DEV_PORT:-3000}:3000"  # React dev server
     volumes:
       - ./src:/app/src  # Mount source code for hot reloading
       - ./frontend:/app/frontend  # Mount frontend for hot reloading

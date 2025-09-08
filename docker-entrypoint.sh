@@ -13,12 +13,12 @@ else
     echo "Starting Flask application..."
     cd /app
     export PYTHONPATH=/app
-    python -m src.app --host=0.0.0.0 --port=8081 &
+    python -m src.app --host=0.0.0.0 --port=${FLASK_PORT:-8081} &
     FLASK_PID=$!
 
     # Start FastAPI application in background
     echo "Starting FastAPI application..."
-    python -m uvicorn src.api.routes:app --host=0.0.0.0 --port=5051 --reload &
+    python -m uvicorn src.api.routes:app --host=0.0.0.0 --port=${FASTAPI_PORT:-5051} --reload &
     UVICORN_PID=$!
 
     # In production, React dev server is not needed - Flask serves the built static files
