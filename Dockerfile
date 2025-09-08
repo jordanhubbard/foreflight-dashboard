@@ -92,7 +92,7 @@ COPY frontend/ /app/frontend/
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-# Build frontend for production
+# Build frontend for production (install all deps including devDeps for build)
 RUN cd frontend && npm install && npm run build && npm prune --production
 
 # Set Flask app environment variable
