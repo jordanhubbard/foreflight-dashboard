@@ -2,12 +2,11 @@
 # Simplified Docker-based workflow with just three essential commands
 
 # Port Configuration (can be overridden by environment variables)
-FLASK_PORT ?= 8081
+# Note: Flask has been eliminated! 🔥 FastAPI now handles everything
 FASTAPI_PORT ?= 5051
 REACT_DEV_PORT ?= 3000
 
 # Export ports for use in docker-compose and other tools
-export FLASK_PORT
 export FASTAPI_PORT
 export REACT_DEV_PORT
 
@@ -29,14 +28,15 @@ help:
 	@echo "  test-accounts - Create test accounts from test-accounts.json"
 	@echo ""
 	@echo "Port Configuration:"
-	@echo "  FLASK_PORT     = $(FLASK_PORT) (Flask web UI)"
-	@echo "  FASTAPI_PORT   = $(FASTAPI_PORT) (FastAPI backend)"
+	@echo "  FASTAPI_PORT   = $(FASTAPI_PORT) (Modern FastAPI app - replaces Flask!)"
 	@echo "  REACT_DEV_PORT = $(REACT_DEV_PORT) (React dev server)"
+	@echo ""
+	@echo "🔥 Flask has been eliminated! FastAPI now handles everything! 🔥"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make start                              # Use default ports"
-	@echo "  FLASK_PORT=9000 make start              # Use custom Flask port"
-	@echo "  FLASK_PORT=9000 FASTAPI_PORT=9001 make start  # Use custom ports"
+	@echo "  FASTAPI_PORT=9000 make start            # Use custom FastAPI port"
+	@echo "  FASTAPI_PORT=9000 REACT_DEV_PORT=9001 make start  # Use custom ports"
 	@echo "  make stop                               # Stop the application"
 	@echo "  make logs                               # View application logs"
 	@echo "  make clean                              # Complete cleanup (removes all data!)"
@@ -52,10 +52,11 @@ start:
 	docker-compose -f $(COMPOSE_FILE) up -d
 	@echo "Initializing database with default users..."
 	docker-compose -f $(COMPOSE_FILE) exec foreflight-dashboard python src/init_db.py
-	@echo "✅ Application started successfully!"
-	@echo "🌐 Web UI: http://localhost:$(FLASK_PORT)"
-	@echo "🔧 API: http://localhost:$(FASTAPI_PORT)"
-	@echo "⚛️  React Dev: http://localhost:$(REACT_DEV_PORT)"
+	@echo "✅ Modern FastAPI Application started successfully!"
+	@echo "🔥 Flask eliminated! FastAPI now handles everything! 🔥"
+	@echo "🌐 Web App: http://localhost:$(FASTAPI_PORT)"
+	@echo "📚 API Docs: http://localhost:$(FASTAPI_PORT)/docs"
+	@echo "⚛️  React Dev: http://localhost:$(REACT_DEV_PORT) (development only)"
 	@echo ""
 	@echo "To view logs: make logs"
 	@echo "To stop: make stop"

@@ -11,9 +11,8 @@ services:
         FLASK_ENV: development
         BUILDKIT_INLINE_CACHE: 1
     ports:
-      - "${FLASK_PORT:-8081}:8081"  # Flask UI
-      - "${FASTAPI_PORT:-5051}:5051"  # FastAPI backend
-      - "${REACT_DEV_PORT:-3000}:3000"  # React dev server
+      - "${FASTAPI_PORT:-5051}:5051"  # Modern FastAPI app (replaces Flask!)
+      - "${REACT_DEV_PORT:-3000}:3000"  # React dev server (development only)
     volumes:
       - ./src:/app/src  # Mount source code for hot reloading
       - ./frontend:/app/frontend  # Mount frontend for hot reloading
@@ -34,7 +33,7 @@ services:
     stdin_open: true
     # Set healthcheck to ensure container is running properly
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8081/')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5051/health')"]
       interval: 30s
       timeout: 10s
       retries: 3

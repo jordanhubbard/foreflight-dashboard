@@ -59,12 +59,12 @@ RUN cd frontend && npm install && (npm run build || echo "Frontend build failed,
 ENV FLASK_APP=src/app.py
 
 # Set default port environment variables (can be overridden at runtime)
-ENV FLASK_PORT=8081
+# Note: Flask has been eliminated! 🔥 FastAPI now handles everything
 ENV FASTAPI_PORT=5051
 ENV REACT_DEV_PORT=3000
 
-# Expose ports for Flask and FastAPI
-EXPOSE $FLASK_PORT $FASTAPI_PORT $REACT_DEV_PORT
+# Expose ports for FastAPI and React dev server
+EXPOSE $FASTAPI_PORT $REACT_DEV_PORT
 
 # Use the entrypoint script
 ENTRYPOINT ["/docker-entrypoint.sh"]
@@ -104,12 +104,12 @@ RUN cd frontend && npm install && npm run build && npm prune --production
 ENV FLASK_APP=src/app.py
 
 # Set default port environment variables (can be overridden at runtime)
-ENV FLASK_PORT=8081
+# Note: Flask has been eliminated! 🔥 FastAPI now handles everything
 ENV FASTAPI_PORT=5051
 ENV REACT_DEV_PORT=3000
 
-# Expose ports for Flask and FastAPI
-EXPOSE $FLASK_PORT $FASTAPI_PORT
+# Expose ports for FastAPI
+EXPOSE $FASTAPI_PORT
 
 # Use the entrypoint script
 ENTRYPOINT ["/docker-entrypoint.sh"]
