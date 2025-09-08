@@ -187,31 +187,6 @@ def create_default_admin(app: Flask, user_datastore):
             print("Created default admin user: admin@foreflight-dashboard.com / admin123")
 
 
-def create_test_user(app: Flask, user_datastore):
-    """Create a test user for debugging purposes."""
-    with app.app_context():
-        if not user_datastore.find_user(email='x@y.com'):
-            from flask_security.utils import get_hmac
-            from passlib.hash import bcrypt
-            pilot_role = user_datastore.find_role('pilot')
-            # Create password hash using Flask-Security-Too's exact HMAC process
-            password = 'z'
-            # Use Flask-Security-Too's get_hmac function to ensure compatibility
-            hmac_password = get_hmac(password)
-            # Then hash with bcrypt
-            hashed_password = bcrypt.hash(hmac_password)
-            user_datastore.create_user(
-                email='x@y.com',
-                password=hashed_password,
-                first_name='Test',
-                last_name='User',
-                roles=[pilot_role],
-                confirmed_at=datetime.now()
-            )
-            db.session.commit()
-            print("Created test user: x@y.com / z")
-
-
 def setup_user_directories(app: Flask):
     """Set up user directories for file storage."""
     import os

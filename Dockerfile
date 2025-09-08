@@ -59,7 +59,7 @@ RUN cd frontend && npm install && (npm run build || echo "Frontend build failed,
 ENV FLASK_APP=src/app.py
 
 # Expose ports for Flask and FastAPI
-EXPOSE 5050 5051
+EXPOSE 8081 5051
 
 # Use the entrypoint script
 ENTRYPOINT ["/docker-entrypoint.sh"]
@@ -90,15 +90,16 @@ RUN pip install -r requirements.txt
 COPY src/ /app/src/
 COPY frontend/ /app/frontend/
 COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # Build frontend for production
-RUN cd frontend && npm install --production && npm run build
+RUN cd frontend && npm install && npm run build && npm prune --production
 
 # Set Flask app environment variable
 ENV FLASK_APP=src/app.py
 
 # Expose ports for Flask and FastAPI
-EXPOSE 5050 5051
+EXPOSE 8081 5051
 
 # Use the entrypoint script
 ENTRYPOINT ["/docker-entrypoint.sh"]

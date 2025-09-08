@@ -21,8 +21,8 @@ else
     python -m uvicorn src.api.routes:app --host=0.0.0.0 --port=5051 --reload &
     UVICORN_PID=$!
 
-    # Start React dev server in background (if frontend directory exists)
-    if [ -d "/app/frontend" ]; then
+    # In production, React dev server is not needed - Flask serves the built static files
+    if [ "$FLASK_ENV" = "development" ] && [ -d "/app/frontend" ]; then
         echo "Starting React development server..."
         cd /app/frontend
         npm install --silent
@@ -30,6 +30,7 @@ else
         REACT_PID=$!
         cd /app
     else
+        echo "Production mode: Flask will serve built React static files"
         REACT_PID=""
     fi
 
