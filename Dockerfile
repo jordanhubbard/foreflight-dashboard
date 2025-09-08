@@ -44,12 +44,10 @@ ENV FLASK_DEBUG=${FLASK_DEBUG} \
     FLASK_ENV=${FLASK_ENV}
 
 # Install development and testing dependencies
-RUN --mount=type=cache,id=pip-dev,target=/root/.cache/pip \
-    pip install pytest pytest-cov flake8 black isort
+RUN pip install pytest pytest-cov flake8 black isort
 
 # Install application dependencies
-RUN --mount=type=cache,id=pip-app,target=/root/.cache/pip \
-    pip install -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Copy the application code
 COPY . .
@@ -86,8 +84,7 @@ ENV FLASK_DEBUG=${FLASK_DEBUG} \
     FLASK_ENV=${FLASK_ENV}
 
 # Install only production dependencies
-RUN --mount=type=cache,id=pip-prod,target=/root/.cache/pip \
-    pip install -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Copy only necessary files for production
 COPY src/ /app/src/
