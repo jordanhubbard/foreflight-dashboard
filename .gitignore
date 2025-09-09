@@ -17,6 +17,18 @@ venv/
 env/
 .env
 
+# Frontend build artifacts and dependencies
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/coverage/
+
+# Package manager files
+frontend/package-lock.json
+frontend/yarn.lock
+frontend/pnpm-lock.yaml
+
 # IDE specific
 .vscode/
 .idea/
@@ -26,3 +38,18 @@ env/
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+
+# Docker
+.dockerignore
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

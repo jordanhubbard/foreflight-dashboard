@@ -1,8 +1,9 @@
 """Validation utilities for ForeFlight logbook files."""
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 from pathlib import Path
 import logging
+import pandas as pd
 
 from src.services.importer import ForeFlightImporter
 
@@ -31,20 +32,28 @@ def validate_csv(csv_path: str) -> Dict[str, Any]:
             'success': False,
             'stage': 'initial',
             'error': None,
+            'warnings': [],
             'details': {
                 'total_lines': len(lines),
                 'empty_lines': sum(1 for line in lines if not line.strip()),
                 'sample_lines': lines[:5],  # First 5 lines for inspection
                 'sections': {
                     'aircraft_table': {'found': False, 'line': None},
-                    'flights_table': {'found': False, 'line': None}
+                    'flights_table': {'found': False, 'line': None},
+                    'foreflight_header': {'found': False, 'line': None}
                 }
             }
         }
         
         # Look for section markers
         for i, line in enumerate(lines):
-            if "Aircraft Table" in line:
+            if "ForeFlight Logbook Import" in line:
+                result['details']['sections']['foreflight_header'] = {
+                    'found': True,
+                    'line': i + 1,
+                    'content': line
+                }
+            elif "Aircraft Table" in line:
                 result['details']['sections']['aircraft_table'] = {
                     'found': True,
                     'line': i + 1,
@@ -56,6 +65,10 @@ def validate_csv(csv_path: str) -> Dict[str, Any]:
                     'line': i + 1,
                     'content': line
                 }
+        
+        # Check for ForeFlight header
+        if not result['details']['sections']['foreflight_header']['found']:
+            result['warnings'].append('Missing ForeFlight Logbook Import header - file may not be from ForeFlight')
         
         # Validate basic structure
         if not result['details']['sections']['aircraft_table']['found']:
@@ -91,6 +104,17 @@ def validate_csv(csv_path: str) -> Dict[str, Any]:
                     'sample': importer.flights_df.head(2).to_dict('records')
                 }
                 
+                # Check for invalid numeric values
+                numeric_columns = ['TotalTime', 'Night', 'ActualInstrument', 'SimulatedInstrument', 
+                                 'CrossCountry', 'DualGiven', 'PIC', 'SIC', 'DualReceived', 'Solo']
+                for col in numeric_columns:
+                    if col in importer.flights_df.columns:
+                        # Try to convert to numeric and check for errors
+                        try:
+                            pd.to_numeric(importer.flights_df[col], errors='raise')
+                        except (ValueError, TypeError):
+                            result['warnings'].append(f'Invalid numeric values found in column: {col}')
+                
             # Try creating entries
             entries = importer.import_entries()
             result['details']['entries'] = {
@@ -118,6 +142,13 @@ def validate_csv(csv_path: str) -> Dict[str, Any]:
             
         return result
         
+    except FileNotFoundError as e:
+        return {
+            'success': False,
+            'stage': 'file_read',
+            'error': f'File not found: {csv_path}',
+            'details': {}
+        }
     except Exception as e:
         return {
             'success': False,

@@ -10,9 +10,8 @@ import shutil
 from pathlib import Path
 
 # Import applications
-from src.api.routes import app as fastapi_app
+from src.main import app as fastapi_app
 from src.core.auth_models import db, User, Role
-from src.core.security import create_user_datastore
 
 # Test database configuration
 TEST_DATABASE_URL = "sqlite:///:memory:"

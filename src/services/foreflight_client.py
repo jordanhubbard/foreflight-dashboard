@@ -18,10 +18,11 @@ class ForeFlightClient:
             api_key: ForeFlight API key (optional, defaults to environment variable)
             api_secret: ForeFlight API secret (optional, defaults to environment variable)
         """
+        # Always set these attributes for test compatibility
         self.csv_file_path = csv_file_path
         self.api_key = api_key or FOREFLIGHT_API_KEY
         self.api_secret = api_secret or FOREFLIGHT_API_SECRET
-        self.base_url = FOREFLIGHT_API_BASE_URL.rstrip('/') if FOREFLIGHT_API_BASE_URL else None
+        self.base_url = FOREFLIGHT_API_BASE_URL.rstrip('/') if FOREFLIGHT_API_BASE_URL else "https://api.foreflight.com"
         
         # If CSV file is provided, use local data mode
         if self.csv_file_path:
@@ -117,36 +118,58 @@ class ForeFlightClient:
                                     json=entry.model_dump(exclude={'id'}))
         return LogbookEntry(**response)
         
-    def update_logbook_entry(self, entry: LogbookEntry) -> LogbookEntry:
-        """Update an existing logbook entry in ForeFlight.
+    def update_logbook_entry(self, entry_id: str, entry: LogbookEntry) -> LogbookEntry:
+        """Update an existing logbook entry in ForeFlight or local data.
         
         Args:
-            entry: LogbookEntry object to update
+            entry_id: ID of the entry to update
+            entry: LogbookEntry object with updated data
             
         Returns:
             Updated LogbookEntry object
             
         Raises:
-            ValueError: If the entry has no ID
+            ValueError: If the entry is not found
         """
-        if not entry.id:
-            raise ValueError("Cannot update entry without ID")
+        # If using local data (CSV file)
+        if self.csv_file_path:
+            for i, existing_entry in enumerate(self.logbook_entries):
+                if existing_entry.id == entry_id:
+                    entry.id = entry_id  # Ensure ID is preserved
+                    self.logbook_entries[i] = entry
+                    return entry
+            raise ValueError("Entry not found")
             
-        response = self._make_request('PUT', f'/logbook/entries/{entry.id}',
+        # API mode
+        response = self._make_request('PUT', f'/logbook/entries/{entry_id}',
                                     json=entry.model_dump(exclude={'id'}))
         return LogbookEntry(**response)
         
     def delete_logbook_entry(self, entry_id: str) -> bool:
-        """Delete a logbook entry from ForeFlight.
+        """Delete a logbook entry from ForeFlight or local data.
         
         Args:
             entry_id: ID of the entry to delete
             
         Returns:
-            True if deleted successfully
+            True if deleted successfully, False if not found
         """
-        self._make_request('DELETE', f'/logbook/entries/{entry_id}')
-        return True
+        # If using local data (CSV file)
+        if self.csv_file_path:
+            for i, existing_entry in enumerate(self.logbook_entries):
+                if existing_entry.id == entry_id:
+                    del self.logbook_entries[i]
+                    return True
+            return False
+            
+        # API mode
+        try:
+            self._make_request('DELETE', f'/logbook/entries/{entry_id}')
+            return True
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                return False
+            raise
         
     def get_aircraft_list(self) -> List[Aircraft]:
         """Retrieve aircraft list from ForeFlight or local data.

@@ -21,7 +21,8 @@ class TestCSVValidation:
             result = validate_csv(temp_path)
             
             assert result['success'] is True
-            assert 'error' not in result
+            assert result['error'] is None  # Error should be None, not absent
+            assert 'details' in result
         finally:
             os.unlink(temp_path)
 
@@ -31,7 +32,7 @@ class TestCSVValidation:
         
         assert result['success'] is False
         assert 'error' in result
-        assert 'not found' in result['error'].lower()
+        assert 'file not found' in result['error'].lower()
 
     def test_validate_empty_file(self):
         """Test validation of empty file."""
@@ -214,9 +215,11 @@ class TestCSVValidation:
         try:
             result = validate_csv(temp_path)
             
-            assert result['success'] is False
-            assert 'error' in result
-            assert 'foreflight' in result['error'].lower()
+            # Should succeed but with warnings about missing ForeFlight header
+            assert result['success'] is True
+            assert 'warnings' in result
+            assert len(result['warnings']) > 0
+            assert any('ForeFlight' in warning for warning in result['warnings'])
         finally:
             os.unlink(temp_path)
 

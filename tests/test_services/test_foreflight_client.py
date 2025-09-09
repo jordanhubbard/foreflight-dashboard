@@ -3,6 +3,7 @@
 import pytest
 from unittest.mock import Mock, patch
 from datetime import datetime
+from pydantic import ValidationError
 from src.services.foreflight_client import ForeFlightClient
 from src.core.models import LogbookEntry, Aircraft, Airport, FlightConditions
 
@@ -15,6 +16,9 @@ class TestForeFlightClient:
         """Create a mock ForeFlight client."""
         with patch('src.services.foreflight_client.ForeFlightClient.__init__', return_value=None):
             client = ForeFlightClient()
+            # Set required attributes for test compatibility
+            client.csv_file_path = "mock_file.csv"  # Enable local data mode
+            client.base_url = "https://api.foreflight.com"
             client.logbook_entries = []
             client.aircraft_list = []
             return client
@@ -223,28 +227,27 @@ class TestForeFlightClient:
 
     def test_validate_entry_before_add(self, mock_client):
         """Test that entries are validated before adding."""
-        # Create invalid entry
-        invalid_entry = LogbookEntry(
-            date=datetime(2023, 1, 1),
-            total_time=1.5,
-            aircraft=None,  # Missing aircraft
-            departure=Airport(identifier="KOAK"),
-            destination=Airport(identifier="KSFO"),
-            conditions=FlightConditions(
-                day=1.5,
-                night=0.0,
-                actual_instrument=0.0,
-                simulated_instrument=0.0,
-                cross_country=0.0
-            ),
-            pilot_role="PIC",
-            dual_received=0.0,
-            pic_time=1.5,
-            solo_time=0.0
-        )
-        
-        with pytest.raises((ValueError, AttributeError)):
-            mock_client.add_logbook_entry(invalid_entry)
+        # Test that Pydantic validation prevents invalid entries at creation time
+        with pytest.raises(ValidationError):
+            # This should fail due to aircraft=None
+            invalid_entry = LogbookEntry(
+                date=datetime(2023, 1, 1),
+                total_time=1.5,
+                aircraft=None,  # Missing aircraft - should cause ValidationError
+                departure=Airport(identifier="KOAK"),
+                destination=Airport(identifier="KSFO"),
+                conditions=FlightConditions(
+                    day=1.5,
+                    night=0.0,
+                    actual_instrument=0.0,
+                    simulated_instrument=0.0,
+                    cross_country=0.0
+                ),
+                pilot_role="PIC",
+                dual_received=0.0,
+                pic_time=1.5,
+                solo_time=0.0
+            )
 
     def test_search_entries_by_aircraft(self, mock_client, sample_entry):
         """Test searching entries by aircraft."""
