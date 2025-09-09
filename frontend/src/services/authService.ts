@@ -1,20 +1,22 @@
 import axios, { AxiosResponse } from 'axios'
 import { User, RegisterData } from '../hooks/useAuthStore'
 
+// JWT token storage
+const TOKEN_KEY = 'auth_token'
+
 // Create axios instance with default config
 const api = axios.create({
   baseURL: '/api',
-  withCredentials: true, // Important for session-based auth
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-// Add request interceptor to include CSRF token
+// Add request interceptor to include JWT token
 api.interceptors.request.use((config) => {
-  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
-  if (csrfToken) {
-    config.headers['X-CSRFToken'] = csrfToken
+  const token = localStorage.getItem(TOKEN_KEY)
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
@@ -24,7 +26,8 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized access
+      // Clear invalid token and redirect to login
+      localStorage.removeItem(TOKEN_KEY)
       window.location.href = '/login'
     }
     return Promise.reject(error)
@@ -33,83 +36,60 @@ api.interceptors.response.use(
 
 export const authService = {
   async login(email: string, password: string, remember = false): Promise<User> {
-    const formData = new FormData()
-    formData.append('email', email)
-    formData.append('password', password)
-    if (remember) {
-      formData.append('remember', 'true')
-    }
-
-    await api.post('/login', formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+    const response: AxiosResponse<{access_token: string, token_type: string, user: User}> = await api.post('/auth/login', {
+      email,
+      password
     })
 
-    // For session-based auth, we need to get user info separately
-    return this.getCurrentUser()
+    const { access_token, user } = response.data
+    
+    // Store JWT token
+    localStorage.setItem(TOKEN_KEY, access_token)
+    
+    return user
   },
 
   async register(userData: RegisterData): Promise<void> {
-    const formData = new FormData()
-    Object.entries(userData).forEach(([key, value]) => {
-      if (typeof value === 'boolean') {
-        formData.append(key, value ? 'true' : 'false')
-      } else {
-        formData.append(key, String(value))
-      }
-    })
-
-    await api.post('/register', formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    })
+    await api.post('/auth/register', userData)
   },
 
   async logout(): Promise<void> {
-    await api.post('/logout')
+    try {
+      await api.post('/auth/logout')
+    } finally {
+      // Always clear token regardless of API response
+      localStorage.removeItem(TOKEN_KEY)
+    }
   },
 
   async forgotPassword(email: string): Promise<void> {
-    const formData = new FormData()
-    formData.append('email', email)
-
-    await api.post('/forgot', formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    })
+    // TODO: Implement forgot password in FastAPI backend
+    throw new Error('Forgot password feature not yet implemented')
   },
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
-    const formData = new FormData()
-    formData.append('password', newPassword)
-    formData.append('password_confirm', newPassword)
-
-    await api.post(`/reset/${token}`, formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    })
+    // TODO: Implement password reset in FastAPI backend
+    throw new Error('Password reset feature not yet implemented')
   },
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    const formData = new FormData()
-    formData.append('password', currentPassword)
-    formData.append('new_password', newPassword)
-    formData.append('new_password_confirm', newPassword)
-
-    await api.post('/change', formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    })
+    // TODO: Implement change password in FastAPI backend
+    throw new Error('Change password feature not yet implemented')
   },
 
   async getCurrentUser(): Promise<User> {
+    const token = localStorage.getItem(TOKEN_KEY)
+    if (!token) {
+      throw new Error('No authentication token found')
+    }
+    
     const response: AxiosResponse<User> = await api.get('/user')
     return response.data
+  },
+
+  // Check if user has a valid token
+  isAuthenticated(): boolean {
+    return !!localStorage.getItem(TOKEN_KEY)
   },
 
   async updateProfile(userData: Partial<User>): Promise<User> {

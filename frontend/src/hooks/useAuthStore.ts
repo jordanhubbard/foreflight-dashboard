@@ -53,7 +53,7 @@ type AuthStore = AuthState & AuthActions
 
 export const useAuthStore = create<AuthStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // State
       user: null,
       isAuthenticated: false,
@@ -194,3 +194,24 @@ export const useAuthStore = create<AuthStore>()(
     }
   )
 )
+
+// Initialize auth state when the store is created
+const initializeAuth = async () => {
+  const store = useAuthStore.getState()
+  
+  // Check if we have a token and try to validate it
+  if (authService.isAuthenticated()) {
+    try {
+      await store.checkAuth()
+    } catch (error) {
+      // Token is invalid, clear auth state
+      store.logout()
+    }
+  } else {
+    // No token, set loading to false
+    useAuthStore.setState({ isLoading: false })
+  }
+}
+
+// Auto-initialize when the module loads
+initializeAuth()
