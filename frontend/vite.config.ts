@@ -6,40 +6,15 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0',
-    port: parseInt(process.env.REACT_DEV_PORT || '3000'),
+    port: parseInt(process.env.REACT_DEV_PORT || '3001'),
     proxy: {
       '/api': {
-        target: `http://localhost:${process.env.FLASK_PORT || '8081'}`,
+        target: `http://localhost:${process.env.FASTAPI_PORT || '5051'}`,
         changeOrigin: true,
         secure: false,
       },
-      '/login': {
-        target: `http://localhost:${process.env.FLASK_PORT || '8081'}`,
-        changeOrigin: true,
-        secure: false,
-      },
-      '/register': {
-        target: `http://localhost:${process.env.FLASK_PORT || '8081'}`,
-        changeOrigin: true,
-        secure: false,
-      },
-      '/logout': {
-        target: `http://localhost:${process.env.FLASK_PORT || '8081'}`,
-        changeOrigin: true,
-        secure: false,
-      },
-      '/reset': {
-        target: `http://localhost:${process.env.FLASK_PORT || '8081'}`,
-        changeOrigin: true,
-        secure: false,
-      },
-      '/forgot': {
-        target: `http://localhost:${process.env.FLASK_PORT || '8081'}`,
-        changeOrigin: true,
-        secure: false,
-      },
-      '/change': {
-        target: `http://localhost:${process.env.FLASK_PORT || '8081'}`,
+      '/health': {
+        target: `http://localhost:${process.env.FASTAPI_PORT || '5051'}`,
         changeOrigin: true,
         secure: false,
       }

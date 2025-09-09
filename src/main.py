@@ -92,6 +92,13 @@ upload_dir.mkdir(exist_ok=True)
 # Mount static files for React build
 static_path = Path(__file__).parent / "static"
 static_path.mkdir(exist_ok=True)
+
+# Mount the dist directory directly for React assets
+dist_path = static_path / "dist"
+if dist_path.exists():
+    app.mount("/assets", StaticFiles(directory=str(dist_path / "assets")), name="assets")
+    
+# Mount general static files
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
 # Templates for any server-side rendering needed
@@ -374,10 +381,13 @@ async def root():
         if index_file.exists():
             with open(index_file, 'r', encoding='utf-8') as f:
                 content = f.read()
+            # Fix relative paths in the HTML to work with FastAPI static file serving
+            content = content.replace('="/assets/', '="/assets/')
             return HTMLResponse(content=content)
         else:
             # Fallback for development
-            return HTMLResponse(content="""
+            logger.warning(f"React build not found at {index_file}")
+            return HTMLResponse(content=f"""
             <!DOCTYPE html>
             <html>
             <head>
@@ -385,8 +395,10 @@ async def root():
             </head>
             <body>
                 <h1>ForeFlight Dashboard</h1>
-                <p>React build not found. Please build the frontend:</p>
+                <p>React build not found at: <code>{index_file}</code></p>
+                <p>Please build the frontend:</p>
                 <pre>cd frontend && npm run build</pre>
+                <p>Or run in development mode with React dev server.</p>
             </body>
             </html>
             """)
