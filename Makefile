@@ -15,6 +15,14 @@ IMAGE_NAME=foreflight-dashboard
 CONTAINER_NAME=foreflight-dashboard-container
 COMPOSE_FILE=docker-compose.yml
 
+# Docker BuildKit optimization settings
+export DOCKER_BUILDKIT=1
+export BUILDKIT_PROGRESS=plain
+export BUILDKIT_INLINE_CACHE=1
+
+# Docker Compose build optimizations
+COMPOSE_BUILD_OPTS=--parallel --pull
+
 # Default target
 .PHONY: help test
 help:
@@ -28,6 +36,7 @@ help:
 	@echo "  test-python  - Run Python/FastAPI tests only"
 	@echo "  test-api     - Run API integration tests only"
 	@echo "  test-accounts - Create test accounts from test-accounts.json"
+	@echo "  build-prod   - Build optimized production image with buildx"
 	@echo ""
 	@echo "Port Configuration:"
 	@echo "  FASTAPI_PORT   = $(FASTAPI_PORT) (Modern FastAPI app - replaces Flask!)"
@@ -49,8 +58,8 @@ help:
 .PHONY: start
 start:
 	@echo "🚀 Starting ForeFlight Dashboard..."
-	@echo "Building and starting services with docker-compose..."
-	docker-compose -f $(COMPOSE_FILE) build
+	@echo "Building and starting services with optimized BuildKit..."
+	docker-compose -f $(COMPOSE_FILE) build $(COMPOSE_BUILD_OPTS)
 	docker-compose -f $(COMPOSE_FILE) up -d
 	@echo "Initializing database with default users..."
 	docker-compose -f $(COMPOSE_FILE) exec foreflight-dashboard python src/init_db.py
@@ -110,8 +119,8 @@ clean: stop
 .PHONY: test
 test:
 	@echo "🧪 Running comprehensive test suite..."
-	@echo "📦 Building test containers..."
-	docker-compose -f $(COMPOSE_FILE) build
+	@echo "📦 Building test containers with optimized BuildKit..."
+	docker-compose -f $(COMPOSE_FILE) build $(COMPOSE_BUILD_OPTS)
 	@echo ""
 	@echo "🐍 Running Python/FastAPI tests..."
 	docker-compose -f $(COMPOSE_FILE) run --rm foreflight-dashboard pytest tests/ -v --cov=src --cov-report=html --cov-report=term --cov-report=xml
@@ -134,7 +143,7 @@ test:
 .PHONY: test-python
 test-python:
 	@echo "🐍 Running Python tests only..."
-	docker-compose -f $(COMPOSE_FILE) build
+	docker-compose -f $(COMPOSE_FILE) build $(COMPOSE_BUILD_OPTS)
 	docker-compose -f $(COMPOSE_FILE) run --rm foreflight-dashboard pytest tests/ -v --cov=src --cov-report=term
 	@echo "✅ Python tests completed!"
 
@@ -143,7 +152,7 @@ test-python:
 .PHONY: test-api
 test-api:
 	@echo "🌐 Running API integration tests..."
-	docker-compose -f $(COMPOSE_FILE) build
+	docker-compose -f $(COMPOSE_FILE) build $(COMPOSE_BUILD_OPTS)
 	docker-compose -f $(COMPOSE_FILE) up -d
 	@sleep 10  # Wait for services to be ready
 	docker-compose -f $(COMPOSE_FILE) exec -T foreflight-dashboard pytest tests/test_fastapi/ -v
@@ -166,3 +175,20 @@ test-accounts:
 	@echo "   - Test:  x@y.com / z"
 	@echo "   - Student: student@example.com / student123"
 	@echo "   - Instructor: instructor@example.com / instructor123"
+
+# Build optimized production image with buildx
+.PHONY: build-prod
+build-prod:
+	@echo "🏗️  Building optimized production image with buildx..."
+	@echo "🚀 Using multi-platform build with cache optimization..."
+	docker buildx build \
+		--platform linux/amd64,linux/arm64 \
+		--target production \
+		--cache-from type=registry,ref=$(IMAGE_NAME):cache \
+		--cache-to type=registry,ref=$(IMAGE_NAME):cache,mode=max \
+		--build-arg BUILDKIT_INLINE_CACHE=1 \
+		--tag $(IMAGE_NAME):latest \
+		--tag $(IMAGE_NAME):prod \
+		--push \
+		.
+	@echo "✅ Production image built and pushed with optimal caching!"

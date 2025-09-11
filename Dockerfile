@@ -11,7 +11,9 @@ FROM python:${PYTHON_VERSION}-slim AS base
 WORKDIR /app
 
 # Install system dependencies including Node.js
-RUN apt-get update && apt-get install -y \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y \
     gcc \
     curl \
     && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
@@ -44,16 +46,19 @@ ENV FLASK_DEBUG=${FLASK_DEBUG} \
     FLASK_ENV=${FLASK_ENV}
 
 # Install development and testing dependencies
-RUN pip install pytest pytest-cov flake8 black isort
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install pytest pytest-cov flake8 black isort
 
 # Install application dependencies
-RUN pip install -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
 
 # Copy the application code
 COPY . .
 
 # Build frontend (skip if build fails during testing)
-RUN cd frontend && npm install && (npm run build || echo "Frontend build failed, continuing...")
+RUN --mount=type=cache,target=/root/.npm \
+    cd frontend && npm install && (npm run build || echo "Frontend build failed, continuing...")
 
 # Set Flask app environment variable
 ENV FLASK_APP=src/app.py
@@ -87,7 +92,8 @@ ARG FLASK_ENV=production
 ENV FLASK_ENV=${FLASK_ENV}
 
 # Install only production dependencies
-RUN pip install -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
 
 # Copy only necessary files for production
 COPY src/ /app/src/
@@ -96,7 +102,8 @@ COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 # Build frontend for production (install all deps including devDeps for build)
-RUN cd frontend && npm install && npm run build && npm prune --production
+RUN --mount=type=cache,target=/root/.npm \
+    cd frontend && npm install && npm run build && npm prune --production
 
 # Set default port environment variables (can be overridden at runtime)
 # Note: Flask has been eliminated! 🔥 FastAPI now handles everything

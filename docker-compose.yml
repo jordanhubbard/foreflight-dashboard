@@ -10,6 +10,10 @@ services:
         FLASK_DEBUG: 1
         FLASK_ENV: development
         BUILDKIT_INLINE_CACHE: 1
+      # BuildKit optimizations for faster builds
+      cache_from:
+        - foreflight-dashboard:dev
+        - foreflight-dashboard:latest
     ports:
       - "${FASTAPI_PORT:-5051}:5051"  # Modern FastAPI app (replaces Flask!)
       - "${REACT_DEV_PORT:-3000}:3000"  # React dev server (development only)
