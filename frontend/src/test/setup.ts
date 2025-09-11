@@ -1,19 +1,24 @@
 import '@testing-library/jest-dom'
 
 // Mock IntersectionObserver
-(global as any).IntersectionObserver = class IntersectionObserver {
-  constructor() {}
-  disconnect() {}
-  observe() {}
-  unobserve() {}
+(global as any).IntersectionObserver = function IntersectionObserver(
+  _callback: IntersectionObserverCallback, 
+  _options?: IntersectionObserverInit
+) {
+  return {
+    disconnect: () => {},
+    observe: (_target: Element) => {},
+    unobserve: (_target: Element) => {},
+  }
 }
 
 // Mock ResizeObserver
-(global as any).ResizeObserver = class ResizeObserver {
-  constructor() {}
-  disconnect() {}
-  observe() {}
-  unobserve() {}
+(global as any).ResizeObserver = function ResizeObserver(_callback: ResizeObserverCallback) {
+  return {
+    disconnect: () => {},
+    observe: (_target: Element) => {},
+    unobserve: (_target: Element) => {},
+  }
 }
 
 // Mock matchMedia

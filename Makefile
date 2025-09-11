@@ -118,7 +118,7 @@ test:
 	docker-compose -f $(COMPOSE_FILE) run --rm foreflight-dashboard pytest tests/ -v --cov=src --cov-report=html --cov-report=term --cov-report=xml
 	@echo ""
 	@echo "⚛️  Running Frontend tests..."
-	docker-compose -f $(COMPOSE_FILE) run --rm foreflight-dashboard bash -c "cd frontend && npm run test:ci"
+	docker-compose -f $(COMPOSE_FILE) run --rm --entrypoint="" foreflight-dashboard bash -c "cd frontend && npm run test:ci"
 	@echo ""
 	@echo "🌐 Running API endpoint integration tests..."
 	@echo "Starting application for API tests..."
@@ -147,7 +147,7 @@ test-python:
 test-frontend:
 	@echo "⚛️  Running Frontend tests only..."
 	docker-compose -f $(COMPOSE_FILE) build
-	docker-compose -f $(COMPOSE_FILE) run --rm foreflight-dashboard bash -c "cd frontend && npm run test:ci"
+	docker-compose -f $(COMPOSE_FILE) run --rm --entrypoint="" foreflight-dashboard bash -c "cd frontend && npm run test:ci"
 	@echo "✅ Frontend tests completed!"
 
 # Run only API integration tests
