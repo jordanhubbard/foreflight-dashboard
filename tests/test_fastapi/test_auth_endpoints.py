@@ -79,7 +79,7 @@ class TestAuthEndpoints:
         response = client.post("/api/auth/logout", headers=auth_headers)
         
         assert response.status_code == 200
-        assert "successfully logged out" in response.json()["message"]
+        assert "successfully logged out" in response.json()["message"].lower()
 
     def test_logout_without_auth(self, client: TestClient):
         """Test logout without authentication."""

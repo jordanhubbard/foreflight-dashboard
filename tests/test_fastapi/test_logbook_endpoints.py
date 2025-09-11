@@ -16,7 +16,7 @@ class TestLogbookEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert "entries" in data
-        assert "statistics" in data
+        assert "stats" in data  # API returns "stats" not "statistics"
         assert isinstance(data["entries"], list)
 
     def test_get_logbook_unauthorized(self, client: TestClient):

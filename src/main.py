@@ -192,9 +192,10 @@ async def get_current_user_optional(
 # Exception handlers
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    # Don't include body in response as it may contain non-serializable data like FormData
     return JSONResponse(
         status_code=422,
-        content={"detail": exc.errors(), "body": exc.body}
+        content={"detail": exc.errors()}
     )
 
 @app.exception_handler(HTTPException)
@@ -366,7 +367,7 @@ async def register(
     return UserResponse.model_validate(user)
 
 @app.post("/api/auth/logout")
-async def logout():
+async def logout(current_user: User = Depends(get_current_user)):
     """Logout user (client should discard token)."""
     return {"message": "Successfully logged out"}
 
@@ -633,6 +634,10 @@ async def delete_endorsement(
 @app.get("/{path:path}", response_class=HTMLResponse)
 async def serve_spa(path: str):
     """Serve React SPA for all routes (client-side routing)."""
+    # Don't serve SPA for API routes - let them return proper 404
+    if path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="API endpoint not found")
+    
     return await root()
 
 # Initialize database on startup

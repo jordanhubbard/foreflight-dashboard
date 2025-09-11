@@ -114,21 +114,29 @@ def test_user(client):
 @pytest.fixture
 def auth_headers(client):
     """Get authentication headers for API requests."""
-    # First register a test user
+    # First register a test user with unique email to avoid conflicts
+    import time
+    unique_email = f"test{int(time.time())}@example.com"
+    
     register_data = {
-        "email": "test@example.com",
+        "email": unique_email,
         "password": "testpassword", 
         "first_name": "Test",
         "last_name": "User"
     }
     
-    # Try to register (may fail if user exists)
-    client.post("/api/auth/register", json=register_data)
+    # Register user
+    register_response = client.post("/api/auth/register", json=register_data)
+    
+    # If registration fails, try to login with the existing user
+    if register_response.status_code != 200:
+        # Try with a common test email
+        unique_email = "test@example.com"
     
     # Login to get token
     login_response = client.post(
         "/api/auth/login",
-        json={"email": "test@example.com", "password": "testpassword"}
+        json={"email": unique_email, "password": "testpassword"}
     )
     
     if login_response.status_code == 200:
@@ -242,54 +250,7 @@ def flask_test_client():
             
             yield client
 
-@pytest.fixture
-def test_user(flask_test_client):
-    """Create a test user."""
-    from passlib.hash import bcrypt
-    user_datastore = create_user_datastore()
-    user = user_datastore.create_user(
-        email="test@example.com",
-        password=bcrypt.hash("testpass"),
-        first_name="Test",
-        last_name="User",
-        student_pilot=False
-    )
-    db.session.commit()
-    return user
-
-@pytest.fixture
-def admin_user(flask_test_client):
-    """Create an admin user."""
-    from passlib.hash import bcrypt
-    user_datastore = create_user_datastore()
-    admin_role = user_datastore.find_role('admin')
-    user = user_datastore.create_user(
-        email="admin@example.com",
-        password=bcrypt.hash("adminpass"),
-        first_name="Admin",
-        last_name="User",
-        roles=[admin_role],
-        student_pilot=False
-    )
-    db.session.commit()
-    return user
-
-@pytest.fixture
-def student_user(flask_test_client):
-    """Create a student pilot user."""
-    from passlib.hash import bcrypt
-    user_datastore = create_user_datastore()
-    student_role = user_datastore.find_role('student')
-    user = user_datastore.create_user(
-        email="student@example.com",
-        password=bcrypt.hash("studentpass"),
-        first_name="Student",
-        last_name="Pilot",
-        roles=[student_role],
-        student_pilot=True
-    )
-    db.session.commit()
-    return user
+# Remove Flask-specific fixtures that are causing errors
 
 @pytest.fixture
 def authenticated_client(flask_test_client, test_user):
