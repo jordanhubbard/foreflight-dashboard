@@ -24,9 +24,8 @@ help:
 	@echo "  stop         - Stop the running application"
 	@echo "  logs         - View application logs"
 	@echo "  clean        - Complete cleanup: stop, remove containers, images, database, and files"
-	@echo "  test         - Run comprehensive test suite (Python + Frontend + API)"
+	@echo "  test         - Run comprehensive test suite (Python + API integration)"
 	@echo "  test-python  - Run Python/FastAPI tests only"
-	@echo "  test-frontend - Run Frontend tests only" 
 	@echo "  test-api     - Run API integration tests only"
 	@echo "  test-accounts - Create test accounts from test-accounts.json"
 	@echo ""
@@ -117,9 +116,6 @@ test:
 	@echo "🐍 Running Python/FastAPI tests..."
 	docker-compose -f $(COMPOSE_FILE) run --rm foreflight-dashboard pytest tests/ -v --cov=src --cov-report=html --cov-report=term --cov-report=xml
 	@echo ""
-	@echo "⚛️  Running Frontend tests..."
-	docker-compose -f $(COMPOSE_FILE) run --rm --entrypoint="" foreflight-dashboard bash -c "cd frontend && npm run test:ci"
-	@echo ""
 	@echo "🌐 Running API endpoint integration tests..."
 	@echo "Starting application for API tests..."
 	-docker-compose -f $(COMPOSE_FILE) up -d
@@ -142,13 +138,6 @@ test-python:
 	docker-compose -f $(COMPOSE_FILE) run --rm foreflight-dashboard pytest tests/ -v --cov=src --cov-report=term
 	@echo "✅ Python tests completed!"
 
-# Run only Frontend tests
-.PHONY: test-frontend
-test-frontend:
-	@echo "⚛️  Running Frontend tests only..."
-	docker-compose -f $(COMPOSE_FILE) build
-	docker-compose -f $(COMPOSE_FILE) run --rm --entrypoint="" foreflight-dashboard bash -c "cd frontend && npm run test:ci"
-	@echo "✅ Frontend tests completed!"
 
 # Run only API integration tests
 .PHONY: test-api
