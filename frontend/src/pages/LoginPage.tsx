@@ -137,7 +137,7 @@ const LoginPage: React.FC = () => {
               </Typography>
             </Box>
 
-            <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+            <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
               <TextField
                 {...register('email')}
                 fullWidth
@@ -162,6 +162,12 @@ const LoginPage: React.FC = () => {
                 type={showPassword ? 'text' : 'password'}
                 error={!!errors.password}
                 helperText={errors.password?.message}
+                inputProps={{
+                  minLength: 1,
+                  maxLength: 128,
+                  pattern: ".*",
+                  title: "Password can be any length",
+                }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">

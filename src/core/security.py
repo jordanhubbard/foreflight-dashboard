@@ -107,6 +107,11 @@ def init_security(app: Flask, mail: Mail):
         'SECURITY_PASSWORD_HASH': 'bcrypt',
         'SECURITY_PASSWORD_SALT': app.config.get('SECRET_KEY', 'dev-secret-key'),
         
+        # Password validation - allow short passwords for test accounts
+        'SECURITY_PASSWORD_LENGTH_MIN': 1,
+        'SECURITY_PASSWORD_LENGTH_MAX': 128,
+        'SECURITY_PASSWORD_COMPLEXITY_CHECKER': None,
+        
         # Email settings
         'SECURITY_EMAIL_SENDER': app.config.get('MAIL_DEFAULT_SENDER', 'noreply@foreflight-dashboard.com'),
         

@@ -13,7 +13,6 @@ services:
       # BuildKit optimizations for faster builds
       cache_from:
         - foreflight-dashboard:dev
-        - foreflight-dashboard:latest
     ports:
       - "${FASTAPI_PORT:-5051}:5051"  # Modern FastAPI app (replaces Flask!)
       - "${REACT_DEV_PORT:-3000}:3000"  # React dev server (development only)

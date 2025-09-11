@@ -33,6 +33,7 @@ help:
 	@echo "  stop         - Stop the running application"
 	@echo "  logs         - View application logs"
 	@echo "  clean        - Complete cleanup: stop, remove containers, images, database, and files"
+	@echo "  clean-cache  - Clean Docker build cache only (faster than full clean)"
 	@echo "  test         - Run comprehensive test suite (Python + API integration)"
 	@echo "  test-python  - Run Python/FastAPI tests only"
 	@echo "  test-api     - Run API integration tests only"
@@ -115,6 +116,17 @@ clean: stop
 	@echo "👤 Default users will be recreated"
 	@echo ""
 	@echo "To start fresh: make start"
+
+# Clean Docker build cache only (faster than full clean)
+.PHONY: clean-cache
+clean-cache:
+	@echo "🧹 Cleaning Docker build cache..."
+	-docker builder prune -f 2>/dev/null || true
+	-docker system prune -f 2>/dev/null || true
+	@echo "✅ Docker build cache cleaned!"
+	@echo ""
+	@echo "🔄 Next build will be fresh (no cache)"
+	@echo "To start: make start"
 
 # Run all tests with coverage reporting - CONTAINER ONLY
 .PHONY: test
