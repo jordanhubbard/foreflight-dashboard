@@ -15,10 +15,11 @@ IMAGE_NAME=foreflight-dashboard
 CONTAINER_NAME=foreflight-dashboard-container
 COMPOSE_FILE=docker-compose.yml
 
-# Docker BuildKit optimization settings
+# Docker BuildKit optimization settings for local development
 export DOCKER_BUILDKIT=1
 export BUILDKIT_PROGRESS=plain
 export BUILDKIT_INLINE_CACHE=1
+export DOCKERFILE=Dockerfile.local
 
 # Docker Compose build optimizations
 COMPOSE_BUILD_OPTS=--parallel --pull

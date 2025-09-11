@@ -3,7 +3,7 @@ services:
     image: foreflight-dashboard:dev
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: ${DOCKERFILE:-Dockerfile}
       target: development
       args:
         PYTHON_VERSION: ${PYTHON_VERSION:-3.11}

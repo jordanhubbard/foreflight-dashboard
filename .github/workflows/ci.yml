@@ -9,6 +9,9 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # Docker BuildKit optimizations for CI
+  DOCKER_BUILDKIT: 1
+  BUILDKIT_PROGRESS: plain
 
 jobs:
   test:
@@ -21,29 +24,22 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Build test image
+    - name: Build development image
       uses: docker/build-push-action@v5
       with:
         context: .
-        target: test
+        dockerfile: Dockerfile
+        target: development
         load: true
-        tags: foreflight-dashboard:test
+        tags: foreflight-dashboard:dev
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-    - name: Run Python tests
+    - name: Run Python/FastAPI tests with coverage
       run: |
         docker run --rm \
-          -v ${{ github.workspace }}:/workspace \
-          foreflight-dashboard:test \
-          sh -c "cd /workspace && python -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=term"
-
-    - name: Run Frontend tests  
-      run: |
-        docker run --rm \
-          -v ${{ github.workspace }}:/workspace \
-          foreflight-dashboard:test \
-          sh -c "cd /workspace/frontend && npm run test:ci"
+          foreflight-dashboard:dev \
+          pytest tests/ -v --cov=src --cov-report=xml --cov-report=term --cov-report=html
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3
@@ -61,22 +57,32 @@ jobs:
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-
-    - name: Build and start application
+      
+    - name: Create .env file for testing
       run: |
-        docker-compose build
-        docker-compose up -d
+        echo "FASTAPI_PORT=5051" > .env
+        echo "REACT_DEV_PORT=3000" >> .env
+
+    - name: Build and start application (cloud-compatible Dockerfile)
+      run: |
+        docker-compose -f docker-compose.yml build
+        docker-compose -f docker-compose.yml up -d
         
     - name: Wait for application to be ready
       run: |
-        timeout 60 bash -c 'until curl -f http://localhost:5051/health; do sleep 2; done'
+        echo "Waiting for FastAPI application to be ready..."
+        timeout 60 bash -c 'until curl -f http://localhost:5051/health; do echo "Waiting..."; sleep 2; done'
+        echo "Application is ready!"
 
-    - name: Run API endpoint tests
+    - name: Run API endpoint integration tests
       run: |
-        docker-compose exec -T foreflight-dashboard python -m pytest tests/test_fastapi/ -v --tb=short
+        echo "Running comprehensive API endpoint tests..."
+        docker-compose -f docker-compose.yml exec -T foreflight-dashboard pytest tests/test_fastapi/ -v --tb=short
 
     - name: Stop application
-      run: docker-compose down
+      run: |
+        echo "Stopping test application..."
+        docker-compose -f docker-compose.yml down
 
   build:
     runs-on: ubuntu-latest

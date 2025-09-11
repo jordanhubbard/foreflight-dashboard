@@ -1,4 +1,7 @@
 # syntax=docker/dockerfile:1.4
+# LOCAL DEVELOPMENT DOCKERFILE WITH CACHE MOUNTS
+# This version includes cache mounts for faster local builds
+# Use this for: make start, make test, docker-compose up
 
 # Build arguments
 ARG PYTHON_VERSION=3.11
@@ -10,9 +13,10 @@ ARG FLASK_ENV=development
 FROM python:${PYTHON_VERSION}-slim AS base
 WORKDIR /app
 
-# Install system dependencies including Node.js
-# Note: Cache mounts removed for cloud deployment compatibility
-RUN apt-get update && apt-get install -y \
+# Install system dependencies including Node.js with cache mounts
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y \
     gcc \
     curl \
     && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
@@ -44,19 +48,20 @@ ARG FLASK_ENV
 ENV FLASK_DEBUG=${FLASK_DEBUG} \
     FLASK_ENV=${FLASK_ENV}
 
-# Install development and testing dependencies
-# Note: Cache mounts removed for cloud deployment compatibility
-RUN pip install pytest pytest-cov flake8 black isort
+# Install development and testing dependencies with cache mounts
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install pytest pytest-cov flake8 black isort
 
-# Install application dependencies
-RUN pip install -r requirements.txt
+# Install application dependencies with cache mounts
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
 
 # Copy the application code
 COPY . .
 
-# Build frontend (skip if build fails during testing)
-# Note: Cache mounts removed for cloud deployment compatibility
-RUN cd frontend && npm install && (npm run build || echo "Frontend build failed, continuing...")
+# Build frontend with cache mounts (skip if build fails during testing)
+RUN --mount=type=cache,target=/root/.npm \
+    cd frontend && npm install && (npm run build || echo "Frontend build failed, continuing...")
 
 # Set Flask app environment variable
 ENV FLASK_APP=src/app.py
@@ -89,9 +94,9 @@ FROM base AS production
 ARG FLASK_ENV=production
 ENV FLASK_ENV=${FLASK_ENV}
 
-# Install only production dependencies
-# Note: Cache mounts removed for cloud deployment compatibility
-RUN pip install -r requirements.txt
+# Install only production dependencies with cache mounts
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
 
 # Copy only necessary files for production
 COPY src/ /app/src/
@@ -99,9 +104,9 @@ COPY frontend/ /app/frontend/
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-# Build frontend for production (install all deps including devDeps for build)
-# Note: Cache mounts removed for cloud deployment compatibility
-RUN cd frontend && npm install && npm run build && npm prune --production
+# Build frontend for production with cache mounts (install all deps including devDeps for build)
+RUN --mount=type=cache,target=/root/.npm \
+    cd frontend && npm install && npm run build && npm prune --production
 
 # Set default port environment variables (can be overridden at runtime)
 # Note: Flask has been eliminated! 🔥 FastAPI now handles everything
