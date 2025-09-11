@@ -12,7 +12,7 @@
     },
     {
       "email": "x@y.com",
-      "password": "z",
+      "password": "testpass123",
       "first_name": "Test",
       "last_name": "User",
       "is_admin": false,

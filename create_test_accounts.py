@@ -60,7 +60,11 @@ def create_test_accounts():
                     continue
                 
                 # Create password hash using Flask-Security-Too compatible method
-                hmac_password = get_hmac(password)
+                # We need to set up the HMAC salt manually since we're outside Flask context
+                import hashlib
+                import hmac
+                salt = 'dev-secret-key'  # Use the same salt as in the app config
+                hmac_password = hmac.new(salt.encode('utf-8'), password.encode('utf-8'), hashlib.sha512).hexdigest()
                 hashed_password = bcrypt.hash(hmac_password)
                 
                 # Generate unique identifier

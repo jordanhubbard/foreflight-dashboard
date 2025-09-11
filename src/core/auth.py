@@ -36,7 +36,22 @@ class AuthenticationError(HTTPException):
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    # First try direct bcrypt verification
+    if pwd_context.verify(plain_password, hashed_password):
+        return True
+    
+    # If that fails, try Flask-Security-Too's HMAC + bcrypt method
+    # We need to manually implement the HMAC since we're outside Flask context
+    try:
+        import hashlib
+        import hmac
+        # Use the same salt as in the Flask app config
+        salt = 'dev-secret-key'
+        hmac_password = hmac.new(salt.encode('utf-8'), plain_password.encode('utf-8'), hashlib.sha512).hexdigest()
+        return pwd_context.verify(hmac_password, hashed_password)
+    except Exception:
+        # If HMAC verification fails, fall back to direct verification
+        return False
 
 def get_password_hash(password: str) -> str:
     """Hash a password."""
