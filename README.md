@@ -10,6 +10,8 @@
 
 A free, open-source tool for managing and analyzing ForeFlight logbook data. This application helps pilots organize, analyze, and visualize their flight data from ForeFlight. **This is not commercial software - no terms to agree to, completely free to use.**
 
+🐳 **Container-First Architecture**: This application is designed exclusively for containerized deployment. All operations run inside Docker containers for consistency, security, and easy deployment to any container platform.
+
 ## Features
 
 - Import ForeFlight logbook data
@@ -180,6 +182,58 @@ cd frontend
 npm test                           # Interactive test runner
 npm run test:ci                    # CI mode with coverage
 ```
+
+## 🚀 Production Deployment
+
+This application is designed for **container-only deployment** and can be deployed on any platform that supports Docker containers:
+
+### Supported Platforms
+
+- **[Railway.com](https://railway.app/)** - One-click deployment from GitHub
+- **[DigitalOcean App Platform](https://www.digitalocean.com/products/app-platform)** - Managed container hosting
+- **[Heroku Container Registry](https://devcenter.heroku.com/articles/container-registry-and-runtime)** - Container-based Heroku apps
+- **[AWS ECS/Fargate](https://aws.amazon.com/ecs/)** - Amazon's container service
+- **[Google Cloud Run](https://cloud.google.com/run)** - Serverless container platform
+- **[Azure Container Instances](https://azure.microsoft.com/en-us/services/container-instances/)** - Simple container hosting
+
+### Deployment Requirements
+
+- **Container Runtime**: Docker or compatible (Podman, containerd)
+- **Port**: Application runs on port 5051 (configurable via `FASTAPI_PORT`)
+- **Database**: SQLite (included) or PostgreSQL (via environment variables)
+- **Memory**: Minimum 512MB RAM recommended
+- **Storage**: Persistent volume for database and uploads (optional)
+
+### Environment Variables
+
+```bash
+# Application
+FASTAPI_PORT=5051              # API server port
+SECRET_KEY=your-secret-key     # JWT signing key (auto-generated if not set)
+
+# Database (optional - defaults to SQLite)
+DATABASE_URL=postgresql://user:pass@host:port/db
+
+# File Storage (optional - defaults to local filesystem)
+UPLOAD_PATH=/app/uploads       # Persistent volume mount point
+```
+
+### Quick Deploy Examples
+
+#### Railway.com
+1. Fork this repository
+2. Connect to Railway.com
+3. Deploy directly from GitHub
+4. Railway automatically detects the Dockerfile
+
+#### DigitalOcean App Platform
+1. Create new app from GitHub repository
+2. Select "Dockerfile" as build method
+3. Set port to 5051
+4. Deploy!
+
+### Health Check
+All deployments include a health check endpoint at `/health`
 
 ## License
 

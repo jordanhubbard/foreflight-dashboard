@@ -49,9 +49,106 @@ def sample_csv_file(temp_dir, sample_csv_content):
     return csv_path
 
 @pytest.fixture
-def fastapi_client():
+def client():
     """FastAPI test client."""
     return TestClient(fastapi_app)
+
+@pytest.fixture
+def fastapi_client():
+    """FastAPI test client (alias for compatibility)."""
+    return TestClient(fastapi_app)
+
+@pytest.fixture
+def test_db():
+    """Create test database."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from src.core.auth_models import Base
+    
+    # Use in-memory SQLite for tests
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    
+    return TestingSessionLocal
+
+@pytest.fixture
+def get_test_db(test_db):
+    """Override database dependency for testing."""
+    def _get_test_db():
+        db = test_db()
+        try:
+            yield db
+        finally:
+            db.close()
+    return _get_test_db
+
+@pytest.fixture
+def test_user(client):
+    """Create a test user and return user data."""
+    from src.core.auth import create_user, get_password_hash
+    from src.core.auth_models import User
+    from sqlalchemy.orm import Session
+    
+    # Create test user data
+    user_data = {
+        "email": "test@example.com",
+        "password": "testpassword",
+        "first_name": "Test",
+        "last_name": "User"
+    }
+    
+    # Mock user object for tests
+    class MockUser:
+        def __init__(self):
+            self.id = 1
+            self.email = "test@example.com"
+            self.first_name = "Test" 
+            self.last_name = "User"
+            self.is_active = True
+            self.student_pilot = False
+    
+    return MockUser()
+
+@pytest.fixture
+def auth_headers(client):
+    """Get authentication headers for API requests."""
+    # First register a test user
+    register_data = {
+        "email": "test@example.com",
+        "password": "testpassword", 
+        "first_name": "Test",
+        "last_name": "User"
+    }
+    
+    # Try to register (may fail if user exists)
+    client.post("/api/auth/register", json=register_data)
+    
+    # Login to get token
+    login_response = client.post(
+        "/api/auth/login",
+        json={"email": "test@example.com", "password": "testpassword"}
+    )
+    
+    if login_response.status_code == 200:
+        token = login_response.json()["access_token"]
+        return {"Authorization": f"Bearer {token}"}
+    else:
+        # Return empty headers if login fails (tests will handle 401s)
+        return {}
+
+def create_test_user(db_session, email="test@example.com", password="testpassword"):
+    """Helper function to create test user."""
+    from src.core.auth import create_user
+    
+    return create_user(
+        db_session=db_session,
+        email=email,
+        password=password,
+        first_name="Test",
+        last_name="User"
+    )
 
 @pytest.fixture
 def flask_test_client():

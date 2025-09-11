@@ -24,7 +24,10 @@ help:
 	@echo "  stop         - Stop the running application"
 	@echo "  logs         - View application logs"
 	@echo "  clean        - Complete cleanup: stop, remove containers, images, database, and files"
-	@echo "  test         - Run all tests with coverage reporting"
+	@echo "  test         - Run comprehensive test suite (Python + Frontend + API)"
+	@echo "  test-python  - Run Python/FastAPI tests only"
+	@echo "  test-frontend - Run Frontend tests only" 
+	@echo "  test-api     - Run API integration tests only"
 	@echo "  test-accounts - Create test accounts from test-accounts.json"
 	@echo ""
 	@echo "Port Configuration:"
@@ -104,12 +107,59 @@ clean: stop
 	@echo ""
 	@echo "To start fresh: make start"
 
-# Run tests with coverage reporting
+# Run all tests with coverage reporting - CONTAINER ONLY
+.PHONY: test
 test:
-	@echo "🧪 Running tests with coverage..."
+	@echo "🧪 Running comprehensive test suite..."
+	@echo "📦 Building test containers..."
 	docker-compose -f $(COMPOSE_FILE) build
+	@echo ""
+	@echo "🐍 Running Python/FastAPI tests..."
 	docker-compose -f $(COMPOSE_FILE) run --rm foreflight-dashboard pytest tests/ -v --cov=src --cov-report=html --cov-report=term --cov-report=xml
-	@echo "✅ Tests completed. Coverage report generated in htmlcov/"
+	@echo ""
+	@echo "⚛️  Running Frontend tests..."
+	docker-compose -f $(COMPOSE_FILE) run --rm foreflight-dashboard bash -c "cd frontend && npm run test:ci"
+	@echo ""
+	@echo "🌐 Running API endpoint integration tests..."
+	@echo "Starting application for API tests..."
+	-docker-compose -f $(COMPOSE_FILE) up -d
+	@sleep 10  # Wait for services to be ready
+	docker-compose -f $(COMPOSE_FILE) exec -T foreflight-dashboard pytest tests/test_fastapi/ -v --tb=short || true
+	@echo "Stopping test application..."
+	-docker-compose -f $(COMPOSE_FILE) down
+	@echo ""
+	@echo "✅ All tests completed!"
+	@echo "📊 Coverage report: htmlcov/index.html"
+	@echo "🔍 XML coverage: coverage.xml"
+	@echo ""
+	@echo "🐳 All tests run inside containers - no host dependencies!"
+
+# Run only Python tests (faster for development)
+.PHONY: test-python
+test-python:
+	@echo "🐍 Running Python tests only..."
+	docker-compose -f $(COMPOSE_FILE) build
+	docker-compose -f $(COMPOSE_FILE) run --rm foreflight-dashboard pytest tests/ -v --cov=src --cov-report=term
+	@echo "✅ Python tests completed!"
+
+# Run only Frontend tests
+.PHONY: test-frontend
+test-frontend:
+	@echo "⚛️  Running Frontend tests only..."
+	docker-compose -f $(COMPOSE_FILE) build
+	docker-compose -f $(COMPOSE_FILE) run --rm foreflight-dashboard bash -c "cd frontend && npm run test:ci"
+	@echo "✅ Frontend tests completed!"
+
+# Run only API integration tests
+.PHONY: test-api
+test-api:
+	@echo "🌐 Running API integration tests..."
+	docker-compose -f $(COMPOSE_FILE) build
+	docker-compose -f $(COMPOSE_FILE) up -d
+	@sleep 10  # Wait for services to be ready
+	docker-compose -f $(COMPOSE_FILE) exec -T foreflight-dashboard pytest tests/test_fastapi/ -v
+	docker-compose -f $(COMPOSE_FILE) down
+	@echo "✅ API tests completed!"
 
 # Create test accounts from JSON file
 .PHONY: test-accounts

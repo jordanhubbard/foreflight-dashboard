@@ -1,0 +1,39 @@
+# Cursor AI Rules for ForeFlight Dashboard
+
+## CRITICAL: Container-Only Operations
+
+**ALL operations must be performed inside Docker containers. NEVER run commands directly on the host system.**
+
+### Rules for AI Assistants:
+
+1. **Testing**: Always use `make test` which automatically starts containers and runs tests inside them
+2. **Development**: Use `make start` to run the application in containers  
+3. **Database operations**: Use `docker exec` to run database commands inside containers
+4. **Package management**: 
+   - Python: Use `docker exec` to run pip commands inside containers
+   - Node.js: Use `docker exec` to run npm commands inside containers
+5. **Building**: Use `docker-compose build` or `make build`
+6. **Debugging**: Use `docker logs` and `docker exec` for container inspection
+
+### Deployment:
+
+This application is designed for **container-only deployment** on platforms like:
+- Railway.com
+- DigitalOcean App Platform  
+- Heroku Container Registry
+- AWS ECS/Fargate
+- Google Cloud Run
+- Azure Container Instances
+
+### Never Do:
+- `pip install` on host
+- `npm install` on host  
+- Direct Python/Node execution on host
+- Database operations outside containers
+- File operations outside container context
+
+### Always Do:
+- Use `make` targets which handle container orchestration
+- Use `docker exec` for any container operations
+- Use `docker logs` for debugging
+- Keep all dependencies in Dockerfile/requirements.txt/package.json
