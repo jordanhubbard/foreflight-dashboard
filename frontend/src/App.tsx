@@ -1,6 +1,8 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { Box } from '@mui/material'
+import { useEffect } from 'react'
 import { useAuthStore } from './hooks/useAuthStore'
+import { setNavigationCallback } from './services/authService'
 import Layout from './components/Layout'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -12,6 +14,14 @@ import LoadingSpinner from './components/LoadingSpinner'
 
 function App() {
   const { isAuthenticated, isLoading } = useAuthStore()
+  const navigate = useNavigate()
+
+  // Set up navigation callback for auth service
+  useEffect(() => {
+    setNavigationCallback((path: string) => {
+      navigate(path, { replace: true })
+    })
+  }, [navigate])
 
   if (isLoading) {
     return (

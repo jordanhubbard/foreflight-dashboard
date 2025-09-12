@@ -27,17 +27,9 @@ import {
 } from '@mui/icons-material'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '../hooks/useAuthStore'
-import { authService } from '../services/authService'
+import { authService, type LogbookData } from '../services/authService'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '../components/LoadingSpinner'
-
-interface LogbookData {
-  entries: any[]
-  stats: any
-  all_time_stats: any
-  aircraft_stats: any[]
-  recent_experience: any
-}
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuthStore()
@@ -56,11 +48,18 @@ const DashboardPage: React.FC = () => {
     try {
       setIsLoading(true)
       const data = await authService.getLogbookData()
-      console.log('Logbook data received:', data)
-      console.log('First entry aircraft:', data?.entries?.[0]?.aircraft)
       setLogbookData(data)
     } catch (error) {
       console.error('Failed to load logbook data:', error)
+      toast.error('Failed to load logbook data. Please try again.')
+      // Set empty data to prevent UI crashes
+      setLogbookData({
+        entries: [],
+        stats: { total_hours: 0, total_time: 0 },
+        all_time_stats: { total_hours: 0, total_time: 0 },
+        aircraft_stats: [],
+        recent_experience: { total_hours: 0, total_time: 0 }
+      })
     } finally {
       setIsLoading(false)
     }

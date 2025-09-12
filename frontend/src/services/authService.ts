@@ -1,8 +1,105 @@
 import axios, { AxiosResponse } from 'axios'
 import { User, RegisterData } from '../hooks/useAuthStore'
 
+// Type definitions for API responses
+interface LogbookData {
+  entries: LogbookEntry[]
+  stats: LogbookStats
+  all_time: LogbookStats
+  recent_experience: LogbookStats
+  aircraft_stats: AircraftStat[]
+  logbook_filename: string | null
+  error_count: number
+  student_pilot?: boolean
+}
+
+interface LogbookEntry {
+  date: string
+  aircraft: {
+    registration: string
+    type: string
+    category_class: string
+  }
+  departure: { identifier: string | null }
+  destination: { identifier: string | null }
+  route: string
+  total_time: number
+  pic_time: number
+  dual_received: number
+  solo_time: number
+  conditions: {
+    day: number
+    night: number
+    cross_country: number
+    simulated_instrument: number
+    actual_instrument: number
+  }
+  landings_day: number
+  landings_night: number
+  pilot_role: string
+  remarks: string | null
+  running_totals: {
+    total_time: number
+    pic_time: number
+    dual_received: number
+    cross_country: number
+    day_time: number
+    night_time: number
+    sim_instrument: number
+  }
+}
+
+interface LogbookStats {
+  total_time: number
+  total_hours: number
+  total_pic: number
+  total_dual: number
+  total_night: number
+  total_cross_country: number
+  total_sim_instrument: number
+  total_landings: number
+  total_time_asel: number
+  total_time_tailwheel: number
+  total_time_complex: number
+  total_time_high_performance: number
+}
+
+interface AircraftStat {
+  registration: string
+  type: string
+  total_time: number
+  flights: number
+}
+
+interface Endorsement {
+  id: number
+  type: string
+  start_date: string
+  instructor_name?: string
+  created_at: string
+}
+
+interface UploadResponse {
+  message: string
+  filename: string
+  entries_count: number
+}
+
+interface EndorsementVerification {
+  valid: boolean
+  missing_endorsements: string[]
+  warnings: string[]
+}
+
 // JWT token storage
 const TOKEN_KEY = 'auth_token'
+
+// Navigation callback for handling auth redirects
+let navigationCallback: ((path: string) => void) | null = null
+
+export const setNavigationCallback = (callback: (path: string) => void) => {
+  navigationCallback = callback
+}
 
 // Create axios instance with default config
 const api = axios.create({
@@ -28,7 +125,12 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Clear invalid token and redirect to login
       localStorage.removeItem(TOKEN_KEY)
-      window.location.href = '/login'
+      if (navigationCallback) {
+        navigationCallback('/login')
+      } else {
+        // Fallback to hard navigation only if callback not set
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }
@@ -97,12 +199,12 @@ export const authService = {
     return response.data
   },
 
-  async uploadLogbook(file: File, isStudentPilot: boolean): Promise<any> {
+  async uploadLogbook(file: File, isStudentPilot: boolean): Promise<UploadResponse> {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('student_pilot', isStudentPilot ? 'true' : 'false')
 
-    const response = await api.post('/upload', formData, {
+    const response: AxiosResponse<UploadResponse> = await api.post('/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -111,21 +213,21 @@ export const authService = {
     return response.data
   },
 
-  async getLogbookData(): Promise<any> {
-    const response = await api.get('/logbook')
+  async getLogbookData(): Promise<LogbookData> {
+    const response: AxiosResponse<LogbookData> = await api.get('/logbook')
     return response.data
   },
 
-  async getEndorsements(): Promise<any[]> {
-    const response = await api.get('/endorsements')
+  async getEndorsements(): Promise<Endorsement[]> {
+    const response: AxiosResponse<Endorsement[]> = await api.get('/endorsements')
     return response.data
   },
 
-  async addEndorsement(startDate: string): Promise<any> {
+  async addEndorsement(startDate: string): Promise<Endorsement> {
     const formData = new FormData()
     formData.append('start_date', startDate)
 
-    const response = await api.post('/endorsements', formData, {
+    const response: AxiosResponse<Endorsement> = await api.post('/endorsements', formData, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
@@ -138,10 +240,21 @@ export const authService = {
     await api.delete(`/endorsements/${endorsementId}`)
   },
 
-  async verifyPICEndorsements(entries: any[]): Promise<any> {
-    const response = await api.post('/verify-pic', { entries })
+  async verifyPICEndorsements(entries: LogbookEntry[]): Promise<EndorsementVerification> {
+    const response: AxiosResponse<EndorsementVerification> = await api.post('/verify-pic', { entries })
     return response.data
   },
 }
 
 export default authService
+
+// Export types for use in other components
+export type {
+  LogbookData,
+  LogbookEntry,
+  LogbookStats,
+  AircraftStat,
+  Endorsement,
+  UploadResponse,
+  EndorsementVerification
+}

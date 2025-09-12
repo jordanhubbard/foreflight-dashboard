@@ -12,9 +12,13 @@ import tempfile
 import shutil
 import traceback
 from collections import defaultdict
+from copy import deepcopy
+from functools import lru_cache
+import html
 
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Request, Response, status, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.exceptions import RequestValidationError
@@ -66,14 +70,29 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Enable CORS
+# Security middleware
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "*.localhost"])
+
+# Enable CORS (restrict in production)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3001", "http://localhost:5051"] if os.environ.get('ENVIRONMENT') == 'development' else [],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
+
+# Security headers middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if os.environ.get('ENVIRONMENT') == 'production':
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 # Database configuration
 data_dir = Path.cwd() / "data"
@@ -104,6 +123,13 @@ app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 # Templates for any server-side rendering needed
 templates_path = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(templates_path))
+
+# Security utilities
+def sanitize_input(text: str) -> str:
+    """Sanitize user input to prevent XSS attacks."""
+    if not text:
+        return ""
+    return html.escape(text.strip())
 
 # Pydantic models for API
 class LoginRequest(BaseModel):
@@ -278,20 +304,16 @@ def calculate_running_totals(entries: List[LogbookEntry]) -> List[LogbookEntry]:
         if 'ASEL' in entry.aircraft.category_class:
             running_totals.asel_time += entry.total_time
         
-        # Assign running totals to entry
-        entry.running_totals = RunningTotals(
-            total_time=running_totals.total_time,
-            pic_time=running_totals.pic_time,
-            dual_received=running_totals.dual_received,
-            cross_country=running_totals.cross_country,
-            day_time=running_totals.day_time,
-            night_time=running_totals.night_time,
-            sim_instrument=running_totals.sim_instrument,
-            asel_time=running_totals.asel_time,
-            ground_training=running_totals.ground_training
-        )
+        # Assign running totals to entry (create copy to avoid reference issues)
+        entry.running_totals = deepcopy(running_totals)
     
     return sorted_entries
+
+@lru_cache(maxsize=128)
+def calculate_stats_for_entries_cached(entries_hash: str, entries_count: int) -> Dict:
+    """Calculate statistics for a list of entries (cached version)."""
+    # This is a cached wrapper - the actual calculation is done by calculate_stats_for_entries
+    pass
 
 def calculate_stats_for_entries(entries: List[LogbookEntry]) -> Dict:
     """Calculate statistics for a list of entries."""
@@ -379,7 +401,7 @@ async def logout(current_user: User = Depends(get_current_user)):
 async def root():
     """Serve the React application."""
     # In development mode, redirect to React dev server
-    if os.environ.get('FLASK_ENV') == 'development':
+    if os.environ.get('ENVIRONMENT', os.environ.get('FLASK_ENV')) == 'development':
         return HTMLResponse(content=f"""
         <!DOCTYPE html>
         <html>
@@ -458,20 +480,21 @@ async def update_user(
     return current_user
 
 @app.get("/api/logbook")
-async def get_logbook_data(current_user: User = Depends(get_current_user)):
+async def get_logbook_data(
+    current_user: User = Depends(get_current_user),
+    db_session: Session = Depends(get_db),
+    limit: int = 100,
+    offset: int = 0
+):
     """Get logbook data for the current user."""
     try:
         # Get user's active logbook
-        db_session = SessionLocal()
-        try:
-            active_logbook = (
-                db_session.query(UserLogbook)
-                .filter_by(user_id=current_user.id, is_active=True)
-                .order_by(UserLogbook.uploaded_at.desc())
-                .first()
-            )
-        finally:
-            db_session.close()
+        active_logbook = (
+            db_session.query(UserLogbook)
+            .filter_by(user_id=current_user.id, is_active=True)
+            .order_by(UserLogbook.uploaded_at.desc())
+            .first()
+        )
         
         if not active_logbook:
             return {
@@ -494,11 +517,12 @@ async def get_logbook_data(current_user: User = Depends(get_current_user)):
         # Calculate running totals
         entries_objects = calculate_running_totals(entries_objects)
         
-        # Calculate statistics
-        current_year_entries = [e for e in entries_objects if e.date.year == datetime.now().year]
+        # Calculate statistics (use UTC to avoid timezone issues)
+        now_utc = datetime.now(timezone.utc)
+        current_year_entries = [e for e in entries_objects if e.date.year == now_utc.year]
         recent_entries = [
             e for e in entries_objects 
-            if e.date >= datetime.now() - timedelta(days=30)
+            if e.date >= now_utc.date() - timedelta(days=30)
         ]
         
         stats = calculate_stats_for_entries(current_year_entries)

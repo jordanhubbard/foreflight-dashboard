@@ -90,7 +90,7 @@ class LogbookEntry(BaseModel):
     date: datetime
     departure_time: Optional[time] = None
     arrival_time: Optional[time] = None
-    total_time: float
+    total_time: float = Field(ge=0.0, description="Total flight time must be non-negative")
     
     # Aircraft information
     aircraft: Aircraft
@@ -106,14 +106,38 @@ class LogbookEntry(BaseModel):
     # Additional fields
     remarks: Optional[str] = None
     pilot_role: str = "PIC"
-    dual_received: float = 0.0
-    pic_time: float = 0.0
-    solo_time: float = 0.0
-    ground_training: float = 0.0
-    landings_day: int = 0
-    landings_night: int = 0
+    dual_received: float = Field(ge=0.0, description="Dual received time must be non-negative")
+    pic_time: float = Field(ge=0.0, description="PIC time must be non-negative")
+    solo_time: float = Field(ge=0.0, description="Solo time must be non-negative")
+    ground_training: float = Field(ge=0.0, description="Ground training time must be non-negative")
+    landings_day: int = Field(ge=0, description="Day landings must be non-negative")
+    landings_night: int = Field(ge=0, description="Night landings must be non-negative")
     instructor_name: Optional[str] = None
     instructor_comments: Optional[str] = None
+    
+    @validator('date')
+    def validate_date_not_future(cls, v):
+        """Ensure flight date is not in the future."""
+        if v.date() > datetime.now().date():
+            raise ValueError('Flight date cannot be in the future')
+        return v
+    
+    @validator('pic_time', 'dual_received', 'solo_time')
+    def validate_flight_times(cls, v, values):
+        """Ensure flight times don't exceed total time."""
+        if 'total_time' in values:
+            total_time = values['total_time']
+            if v > total_time:
+                raise ValueError(f'Flight time component ({v}) cannot exceed total time ({total_time})')
+        return v
+    
+    @validator('pilot_role')
+    def validate_pilot_role(cls, v):
+        """Ensure pilot role is valid."""
+        valid_roles = ['PIC', 'SIC', 'Dual', 'Solo', 'Instructor']
+        if v not in valid_roles:
+            raise ValueError(f'Pilot role must be one of: {", ".join(valid_roles)}')
+        return v
     
     # Running totals
     running_totals: Optional[RunningTotals] = None

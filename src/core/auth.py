@@ -80,13 +80,17 @@ def verify_token(token: str) -> Optional[Dict[str, Any]]:
 def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     """Authenticate a user with email and password."""
     user = db.query(User).filter(User.email == email).first()
-    if not user:
-        return None
-    if not verify_password(password, user.password):
-        return None
-    if not user.active:
-        return None
-    return user
+    
+    # Always verify password to prevent timing attacks, even for non-existent users
+    if user:
+        password_valid = verify_password(password, user.password)
+        if password_valid and user.active:
+            return user
+    else:
+        # Perform dummy password verification to maintain consistent timing
+        verify_password(password, "$2b$12$dummy.hash.to.prevent.timing.attacks.abcdefghijklmnopqrstuvwx")
+    
+    return None
 
 def get_current_user_from_token(
     credentials: Optional[HTTPAuthorizationCredentials],
