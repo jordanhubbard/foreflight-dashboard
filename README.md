@@ -185,55 +185,353 @@ npm run test:ci                    # CI mode with coverage
 
 ## 🚀 Production Deployment
 
-This application is designed for **container-only deployment** and can be deployed on any platform that supports Docker containers:
+This application is designed for **container-first deployment** and can be deployed on any platform that supports Docker containers. The application is fully self-contained and includes everything needed to run in production.
 
-### Supported Platforms
-
-- **[Railway.com](https://railway.app/)** - One-click deployment from GitHub
-- **[DigitalOcean App Platform](https://www.digitalocean.com/products/app-platform)** - Managed container hosting
-- **[Heroku Container Registry](https://devcenter.heroku.com/articles/container-registry-and-runtime)** - Container-based Heroku apps
-- **[AWS ECS/Fargate](https://aws.amazon.com/ecs/)** - Amazon's container service
-- **[Google Cloud Run](https://cloud.google.com/run)** - Serverless container platform
-- **[Azure Container Instances](https://azure.microsoft.com/en-us/services/container-instances/)** - Simple container hosting
-
-### Deployment Requirements
+### 📋 Deployment Requirements
 
 - **Container Runtime**: Docker or compatible (Podman, containerd)
-- **Port**: Application runs on port 5051 (configurable via `FASTAPI_PORT`)
-- **Database**: SQLite (included) or PostgreSQL (via environment variables)
-- **Memory**: Minimum 512MB RAM recommended
-- **Storage**: Persistent volume for database and uploads (optional)
+- **Memory**: Minimum 512MB RAM (1GB+ recommended for production)
+- **Storage**: 1GB+ for database and file uploads (persistent volume recommended)
+- **Network**: Single port exposure (configurable, defaults to 3001 for UI)
 
-### Environment Variables
+### 🌍 Environment Variables
 
 ```bash
-# Application
-FASTAPI_PORT=5051              # API server port
-SECRET_KEY=your-secret-key     # JWT signing key (auto-generated if not set)
+# Application Configuration
+ENVIRONMENT=production         # Set to 'production' for production deployment
+FASTAPI_PORT=5051             # FastAPI backend port (internal)
+REACT_DEV_PORT=3001           # React frontend port (primary UI)
+SECRET_KEY=your-secret-key    # JWT signing key (REQUIRED in production)
 
-# Database (optional - defaults to SQLite)
+# Database Configuration (optional - defaults to SQLite)
 DATABASE_URL=postgresql://user:pass@host:port/db
+DB_PATH=/app/data/app.db      # SQLite database location
 
-# File Storage (optional - defaults to local filesystem)
-UPLOAD_PATH=/app/uploads       # Persistent volume mount point
+# File Storage
+UPLOAD_PATH=/app/uploads      # File upload directory
+DATA_PATH=/app/data          # Application data directory
+
+# Security (Production)
+ALLOWED_HOSTS=yourdomain.com,*.yourdomain.com  # Restrict host access
+CORS_ORIGINS=https://yourdomain.com            # CORS allowed origins
 ```
 
-### Quick Deploy Examples
+### 🐳 Container Platforms
 
-#### Railway.com
-1. Fork this repository
-2. Connect to Railway.com
-3. Deploy directly from GitHub
-4. Railway automatically detects the Dockerfile
+## 🚀 Railway.com (Recommended - Easiest)
 
-#### DigitalOcean App Platform
-1. Create new app from GitHub repository
-2. Select "Dockerfile" as build method
-3. Set port to 5051
-4. Deploy!
+**Free tier available, automatic HTTPS, custom domains**
 
-### Health Check
-All deployments include a health check endpoint at `/health`
+1. **Fork this repository** to your GitHub account
+2. **Connect to Railway**: Visit [railway.app](https://railway.app) and sign in with GitHub
+3. **Deploy**: Click "New Project" → "Deploy from GitHub repo" → Select your fork
+4. **Configure**:
+   ```bash
+   # Railway automatically detects the Dockerfile
+   # Set these environment variables in Railway dashboard:
+   ENVIRONMENT=production
+   SECRET_KEY=your-random-secret-key-here
+   ```
+5. **Access**: Railway provides a public URL automatically
+
+**Cost**: Free tier (500 hours/month), $5/month for unlimited
+
+---
+
+## 🌊 DigitalOcean App Platform
+
+**Managed container hosting with built-in CI/CD**
+
+1. **Create App**: Visit [DigitalOcean App Platform](https://cloud.digitalocean.com/apps)
+2. **Connect Repository**: Link your GitHub repository
+3. **Configure Build**:
+   ```yaml
+   # .do/app.yaml (create this file in your repo root)
+   name: foreflight-dashboard
+   services:
+   - name: web
+     source_dir: /
+     github:
+       repo: your-username/foreflight-dashboard
+       branch: main
+     dockerfile_path: Dockerfile
+     http_port: 3001
+     instance_count: 1
+     instance_size_slug: basic-xxs
+     environment_slug: node-js
+     envs:
+     - key: ENVIRONMENT
+       value: production
+     - key: SECRET_KEY
+       value: your-secret-key
+       type: SECRET
+   ```
+4. **Deploy**: DigitalOcean automatically builds and deploys
+
+**Cost**: $5/month for basic plan
+
+---
+
+## 📦 Heroku Container Registry
+
+**Traditional PaaS with container support**
+
+1. **Install Heroku CLI** and login: `heroku login`
+2. **Create App**:
+   ```bash
+   heroku create your-app-name
+   heroku container:login
+   ```
+3. **Configure Environment**:
+   ```bash
+   heroku config:set ENVIRONMENT=production
+   heroku config:set SECRET_KEY=$(openssl rand -base64 32)
+   heroku config:set FASTAPI_PORT=$PORT
+   ```
+4. **Deploy**:
+   ```bash
+   heroku container:push web
+   heroku container:release web
+   ```
+
+**Cost**: $7/month for basic dyno
+
+---
+
+## ☁️ AWS ECS/Fargate
+
+**Scalable container service with AWS integration**
+
+1. **Build and Push Image**:
+   ```bash
+   # Create ECR repository
+   aws ecr create-repository --repository-name foreflight-dashboard
+   
+   # Get login token
+   aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 123456789012.dkr.ecr.us-east-1.amazonaws.com
+   
+   # Build and push
+   docker build -t foreflight-dashboard .
+   docker tag foreflight-dashboard:latest 123456789012.dkr.ecr.us-east-1.amazonaws.com/foreflight-dashboard:latest
+   docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/foreflight-dashboard:latest
+   ```
+
+2. **Create ECS Task Definition**:
+   ```json
+   {
+     "family": "foreflight-dashboard",
+     "networkMode": "awsvpc",
+     "requiresCompatibilities": ["FARGATE"],
+     "cpu": "256",
+     "memory": "512",
+     "containerDefinitions": [
+       {
+         "name": "foreflight-dashboard",
+         "image": "123456789012.dkr.ecr.us-east-1.amazonaws.com/foreflight-dashboard:latest",
+         "portMappings": [
+           {
+             "containerPort": 3001,
+             "protocol": "tcp"
+           }
+         ],
+         "environment": [
+           {"name": "ENVIRONMENT", "value": "production"},
+           {"name": "SECRET_KEY", "value": "your-secret-key"}
+         ]
+       }
+     ]
+   }
+   ```
+
+3. **Create ECS Service** with Application Load Balancer
+
+**Cost**: ~$15-30/month depending on usage
+
+---
+
+## 🏃 Google Cloud Run
+
+**Serverless container platform, pay-per-use**
+
+1. **Enable Cloud Run API** in Google Cloud Console
+2. **Build and Deploy**:
+   ```bash
+   # Install gcloud CLI and authenticate
+   gcloud auth login
+   gcloud config set project your-project-id
+   
+   # Deploy directly from source
+   gcloud run deploy foreflight-dashboard \
+     --source . \
+     --platform managed \
+     --region us-central1 \
+     --allow-unauthenticated \
+     --port 3001 \
+     --set-env-vars ENVIRONMENT=production,SECRET_KEY=your-secret-key
+   ```
+
+**Cost**: Pay-per-request, free tier available
+
+---
+
+## 🔷 Azure Container Instances
+
+**Simple container hosting**
+
+1. **Create Resource Group**:
+   ```bash
+   az group create --name foreflight-rg --location eastus
+   ```
+
+2. **Deploy Container**:
+   ```bash
+   az container create \
+     --resource-group foreflight-rg \
+     --name foreflight-dashboard \
+     --image your-registry/foreflight-dashboard:latest \
+     --ports 3001 \
+     --environment-variables ENVIRONMENT=production SECRET_KEY=your-secret-key \
+     --cpu 1 \
+     --memory 1
+   ```
+
+**Cost**: ~$10-20/month for basic configuration
+
+---
+
+## 🏠 Self-Hosted (VPS/Dedicated Server)
+
+**Full control, any VPS provider (Linode, Vultr, etc.)**
+
+1. **Server Setup** (Ubuntu/Debian):
+   ```bash
+   # Install Docker
+   curl -fsSL https://get.docker.com -o get-docker.sh
+   sh get-docker.sh
+   sudo usermod -aG docker $USER
+   
+   # Install Docker Compose
+   sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+   sudo chmod +x /usr/local/bin/docker-compose
+   ```
+
+2. **Deploy Application**:
+   ```bash
+   # Clone repository
+   git clone https://github.com/your-username/foreflight-dashboard.git
+   cd foreflight-dashboard
+   
+   # Create production environment file
+   cat > .env.production << EOF
+   ENVIRONMENT=production
+   SECRET_KEY=$(openssl rand -base64 32)
+   FASTAPI_PORT=5051
+   REACT_DEV_PORT=3001
+   EOF
+   
+   # Deploy with Docker Compose
+   docker-compose -f docker-compose.yml --env-file .env.production up -d
+   ```
+
+3. **Setup Reverse Proxy** (Nginx):
+   ```nginx
+   server {
+       listen 80;
+       server_name yourdomain.com;
+       
+       location / {
+           proxy_pass http://localhost:3001;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
+   }
+   ```
+
+4. **SSL Certificate** (Let's Encrypt):
+   ```bash
+   sudo apt install certbot python3-certbot-nginx
+   sudo certbot --nginx -d yourdomain.com
+   ```
+
+**Cost**: $5-20/month depending on VPS provider
+
+---
+
+### 🔒 Production Security Checklist
+
+- [ ] Set `ENVIRONMENT=production`
+- [ ] Generate strong `SECRET_KEY` (32+ random characters)
+- [ ] Configure `ALLOWED_HOSTS` for your domain
+- [ ] Set up HTTPS/SSL certificates
+- [ ] Configure `CORS_ORIGINS` for your domain
+- [ ] Use persistent volumes for data storage
+- [ ] Set up automated backups
+- [ ] Monitor application logs
+- [ ] Configure health checks
+- [ ] Set up monitoring/alerting
+
+### 📊 Monitoring & Health Checks
+
+All deployments include built-in health monitoring:
+
+- **Health Check Endpoint**: `GET /health`
+- **API Documentation**: `GET /api/docs`
+- **Application Logs**: Available in container logs
+- **Metrics**: Basic performance metrics available
+
+### 🔄 Updates & Maintenance
+
+**Automated Updates** (recommended):
+```bash
+# Set up GitHub Actions for automatic deployment
+# See .github/workflows/deploy.yml for examples
+```
+
+**Manual Updates**:
+```bash
+# Pull latest changes
+git pull origin main
+
+# Rebuild and restart
+docker-compose down
+docker-compose up --build -d
+```
+
+### 💾 Data Persistence
+
+**Important**: Configure persistent storage for production:
+
+```yaml
+# docker-compose.override.yml for production
+version: '3.8'
+services:
+  foreflight-dashboard:
+    volumes:
+      - ./data:/app/data          # Database persistence
+      - ./uploads:/app/uploads    # File upload persistence
+```
+
+### 🆘 Troubleshooting
+
+**Common Issues**:
+
+1. **Port Conflicts**: Ensure ports 3001 and 5051 are available
+2. **Memory Issues**: Increase container memory to 1GB+
+3. **Database Permissions**: Ensure write permissions for `/app/data`
+4. **File Upload Issues**: Ensure write permissions for `/app/uploads`
+
+**Debug Mode**:
+```bash
+# Enable debug logging
+docker-compose exec foreflight-dashboard tail -f /app/logs/foreflight.log
+```
+
+**Getting Help**:
+- Check the [GitHub Issues](https://github.com/your-username/foreflight-dashboard/issues)
+- Review container logs: `docker-compose logs -f`
+- Verify health check: `curl http://localhost:3001/health`
 
 ## License
 
