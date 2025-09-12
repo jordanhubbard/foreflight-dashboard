@@ -40,12 +40,14 @@ else
 
     # Keep the script running
     echo "✅ Services started successfully!"
-    echo "🌐 FastAPI App: http://localhost:${FASTAPI_PORT:-5051}"
-    echo "📚 API Docs: http://localhost:${FASTAPI_PORT:-5051}/docs"
     if [ -n "$REACT_PID" ]; then
-        echo "⚛️  React Dev: http://localhost:${REACT_DEV_PORT:-3000}"
+        echo "🎯 PRIMARY UI: http://localhost:${REACT_DEV_PORT:-3001} (React dev server with live reload)"
+        echo "🔧 API Backend: http://localhost:${FASTAPI_PORT:-5051} (internal - use UI instead)"
+        echo "📚 API Docs: http://localhost:${FASTAPI_PORT:-5051}/docs"
         wait $FASTAPI_PID $REACT_PID
     else
+        echo "🌐 FastAPI App: http://localhost:${FASTAPI_PORT:-5051}"
+        echo "📚 API Docs: http://localhost:${FASTAPI_PORT:-5051}/docs"
         wait $FASTAPI_PID
     fi
 fi

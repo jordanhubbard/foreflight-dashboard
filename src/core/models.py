@@ -74,14 +74,15 @@ class FlightConditions(BaseModel):
 @dataclass
 class RunningTotals:
     """Running totals for various flight metrics."""
-    ground_training: float
-    asel_time: float
-    day_time: float
-    night_time: float
-    sim_instrument: float
-    dual_received: float
-    pic_time: float
-    cross_country: float
+    total_time: float = 0.0
+    ground_training: float = 0.0
+    asel_time: float = 0.0
+    day_time: float = 0.0
+    night_time: float = 0.0
+    sim_instrument: float = 0.0
+    dual_received: float = 0.0
+    pic_time: float = 0.0
+    cross_country: float = 0.0
 
 class LogbookEntry(BaseModel):
     """Main logbook entry model."""

@@ -56,6 +56,8 @@ const DashboardPage: React.FC = () => {
     try {
       setIsLoading(true)
       const data = await authService.getLogbookData()
+      console.log('Logbook data received:', data)
+      console.log('First entry aircraft:', data?.entries?.[0]?.aircraft)
       setLogbookData(data)
     } catch (error) {
       console.error('Failed to load logbook data:', error)
@@ -98,7 +100,7 @@ const DashboardPage: React.FC = () => {
     )
   }
 
-  const hasLogbookData = logbookData && logbookData.entries.length > 0
+  const hasLogbookData = logbookData && logbookData.entries?.length > 0
 
   return (
     <Box>
@@ -179,10 +181,10 @@ const DashboardPage: React.FC = () => {
                   <CardContent>
                     <Box display="flex" alignItems="center" mb={2}>
                       <Schedule color="primary" sx={{ mr: 1 }} />
-                      <Typography variant="h6">Total Hours</Typography>
+                      <Typography variant="h6">Total Flight Hours</Typography>
                     </Box>
                     <Typography variant="h4" color="primary">
-                      {logbookData.stats.total_hours.toFixed(1)}
+                      {logbookData.stats.total_hours?.toFixed(1) || '0.0'}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Flight time
@@ -205,7 +207,7 @@ const DashboardPage: React.FC = () => {
                       <Typography variant="h6">Total Flights</Typography>
                     </Box>
                     <Typography variant="h4" color="primary">
-                      {logbookData.stats.total_flights}
+                      {logbookData.entries?.length || 0}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Completed flights
@@ -228,7 +230,7 @@ const DashboardPage: React.FC = () => {
                       <Typography variant="h6">Aircraft</Typography>
                     </Box>
                     <Typography variant="h4" color="primary">
-                      {logbookData.stats.unique_aircraft}
+                      {logbookData.aircraft_stats?.length || 0}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Different aircraft
@@ -251,7 +253,7 @@ const DashboardPage: React.FC = () => {
                       <Typography variant="h6">Recent Hours</Typography>
                     </Box>
                     <Typography variant="h4" color="primary">
-                      {logbookData.recent_experience.total_hours.toFixed(1)}
+                      {logbookData.recent_experience?.total_hours?.toFixed(1) || '0.0'}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Last 90 days
@@ -300,7 +302,7 @@ const DashboardPage: React.FC = () => {
                 <Typography variant="h6" gutterBottom>
                   Recent Flights
                 </Typography>
-                {logbookData.entries.slice(0, 5).map((entry, index) => (
+                {logbookData.entries?.slice(0, 5).map((entry, index) => (
                   <Box
                     key={index}
                     display="flex"
@@ -312,7 +314,7 @@ const DashboardPage: React.FC = () => {
                   >
                     <Box>
                       <Typography variant="body1">
-                        {entry.date} - {entry.aircraft}
+                        {entry.date} - {entry.aircraft?.registration || 'Unknown'} ({entry.aircraft?.type || 'Unknown'})
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         {entry.route} • {entry.total_time}h

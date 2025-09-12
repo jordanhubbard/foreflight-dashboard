@@ -66,7 +66,6 @@ start:
 	@echo "Initializing database with default users..."
 	docker-compose -f $(COMPOSE_FILE) exec foreflight-dashboard python src/init_db.py
 	@echo "✅ Modern FastAPI Application started successfully!"
-	@echo "🔥 Flask eliminated! FastAPI now handles everything! 🔥"
 	@echo ""
 	@echo "🌐 Main Application: http://localhost:$(FASTAPI_PORT)"
 	@echo "📚 API Documentation: http://localhost:$(FASTAPI_PORT)/docs"
@@ -172,7 +171,7 @@ test-api:
 	docker-compose -f $(COMPOSE_FILE) down
 	@echo "✅ API tests completed!"
 
-# Create test accounts from JSON file
+# Create test accounts from JSON file using lightweight API
 .PHONY: test-accounts
 test-accounts:
 	@echo "👥 Creating test accounts from test-accounts.json..."
@@ -180,7 +179,21 @@ test-accounts:
 		echo "❌ test-accounts.json not found in project root"; \
 		exit 1; \
 	fi
-	@docker-compose -f $(COMPOSE_FILE) run --rm foreflight-dashboard python create_test_accounts.py
+	@echo "🚀 Starting application in background..."
+	@$(MAKE) start > /dev/null 2>&1 &
+	@echo "⏳ Waiting for application to start..."
+	@for i in {1..30}; do \
+		if curl -s http://localhost:$(FASTAPI_PORT)/health > /dev/null 2>&1; then \
+			echo "✅ Application is ready!"; \
+			break; \
+		fi; \
+		echo "⏳ Waiting... ($$i/30)"; \
+		sleep 2; \
+	done
+	@echo "📡 Creating test accounts via API..."
+	@curl -X POST "http://localhost:$(FASTAPI_PORT)/api/admin/accounts/create-from-file?file_path=test-accounts.json" \
+		-H "Content-Type: application/json" \
+		--silent --show-error --fail | jq . || (echo "❌ Failed to create test accounts" && exit 1)
 	@echo "✅ Test accounts created successfully!"
 	@echo ""
 	@echo "📋 You can now use these accounts to test the application:"
@@ -188,6 +201,8 @@ test-accounts:
 	@echo "   - Test:  x@y.com / z"
 	@echo "   - Student: student@example.com / student123"
 	@echo "   - Instructor: instructor@example.com / instructor123"
+	@echo ""
+	@echo "🌐 Application is running at: http://localhost:$(FASTAPI_PORT)"
 
 # Build optimized production image with buildx
 .PHONY: build-prod

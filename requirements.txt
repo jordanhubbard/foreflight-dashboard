@@ -23,7 +23,7 @@ flask-mail==0.9.1
 flask-wtf==1.2.1
 wtforms==3.1.1
 email-validator==2.1.0
-bcrypt==4.1.2
+bcrypt==4.0.1
 
 # API and CORS support for React frontend
 flask-cors==4.0.0

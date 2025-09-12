@@ -214,7 +214,7 @@ def convert_entries_to_template_data(entries: List[LogbookEntry]) -> List[Dict]:
             'date': entry.date.isoformat(),
             'aircraft': {
                 'registration': entry.aircraft.registration,
-                'type': entry.aircraft.type_designation,
+                'type': entry.aircraft.type,
                 'category_class': entry.aircraft.category_class
             },
             'departure': {
@@ -298,6 +298,7 @@ def calculate_stats_for_entries(entries: List[LogbookEntry]) -> Dict:
     if not entries:
         return {
             'total_time': 0.0,
+            'total_hours': 0.0,  # Alias for frontend compatibility
             'total_pic': 0.0,
             'total_dual': 0.0,
             'total_night': 0.0,
@@ -312,6 +313,7 @@ def calculate_stats_for_entries(entries: List[LogbookEntry]) -> Dict:
     
     return {
         'total_time': sum(float(e.total_time) for e in entries),
+        'total_hours': sum(float(e.total_time) for e in entries),  # Alias for frontend compatibility
         'total_pic': sum(float(e.pic_time) for e in entries),
         'total_dual': sum(float(e.dual_received) for e in entries),
         'total_night': sum(float(e.conditions.night) for e in entries),
@@ -376,17 +378,31 @@ async def logout(current_user: User = Depends(get_current_user)):
 @app.get("/", response_class=HTMLResponse)
 async def root():
     """Serve the React application."""
+    # In development mode, redirect to React dev server
+    if os.environ.get('FLASK_ENV') == 'development':
+        return HTMLResponse(content=f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>ForeFlight Dashboard - Development</title>
+            <meta http-equiv="refresh" content="0; url=http://localhost:3001">
+        </head>
+        <body>
+            <h1>ForeFlight Dashboard - Development Mode</h1>
+            <p>Redirecting to React dev server...</p>
+            <p>If you are not redirected automatically, <a href="http://localhost:3001">click here</a>.</p>
+        </body>
+        </html>
+        """)
+    
+    # Production mode: serve built React app
     try:
-        # Try to serve the built React app
         index_file = static_path / "dist" / "index.html"
         if index_file.exists():
             with open(index_file, 'r', encoding='utf-8') as f:
                 content = f.read()
-            # Fix relative paths in the HTML to work with FastAPI static file serving
-            content = content.replace('="/assets/', '="/assets/')
             return HTMLResponse(content=content)
         else:
-            # Fallback for development
             logger.warning(f"React build not found at {index_file}")
             return HTMLResponse(content=f"""
             <!DOCTYPE html>
@@ -399,7 +415,6 @@ async def root():
                 <p>React build not found at: <code>{index_file}</code></p>
                 <p>Please build the frontend:</p>
                 <pre>cd frontend && npm run build</pre>
-                <p>Or run in development mode with React dev server.</p>
             </body>
             </html>
             """)
@@ -639,6 +654,80 @@ async def serve_spa(path: str):
         raise HTTPException(status_code=404, detail="API endpoint not found")
     
     return await root()
+
+# Account Management API Endpoints
+@app.post("/api/admin/accounts/create-from-file")
+async def create_accounts_from_file(
+    file_path: str = "test-accounts.json",
+    request: Request = None
+):
+    """Create accounts from a JSON file.
+    
+    This endpoint is for administrative use to create test or production accounts
+    from a JSON file containing account definitions.
+    """
+    try:
+        # Import Flask app to get the application context
+        from src.app import app as flask_app
+        
+        with flask_app.app_context():
+            # Ensure database tables exist
+            from src.core.auth_models import db
+            from src.core.security import create_user_datastore
+            
+            db.metadata.create_all(bind=engine)
+            
+            # Create default roles if they don't exist
+            user_datastore = create_user_datastore()
+            roles = [
+                ('admin', 'Administrator - Full access to all features'),
+                ('pilot', 'Certified Pilot - Access to all pilot features'),
+                ('student', 'Student Pilot - Access to student-specific features'),
+                ('instructor', 'Flight Instructor - Can manage student endorsements')
+            ]
+            
+            for role_name, description in roles:
+                if not user_datastore.find_role(role_name):
+                    user_datastore.create_role(name=role_name, description=description)
+            
+            db.session.commit()
+            
+            # Create accounts from JSON
+            from src.core.account_manager import AccountManager
+            manager = AccountManager(flask_app)
+            
+            # Validate the JSON file first
+            if not manager.validate_accounts_json(file_path):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Account validation failed. Please check the JSON file."
+                )
+            
+            created_users = manager.create_accounts_from_json(file_path)
+            
+            # Return summary
+            user_summaries = []
+            for user in created_users:
+                user_summaries.append({
+                    "email": user.email,
+                    "name": f"{user.first_name} {user.last_name}",
+                    "roles": [role.name for role in user.roles],
+                    "student_pilot": user.student_pilot,
+                    "created": True
+                })
+            
+            return {
+                "success": True,
+                "message": f"Successfully created {len(created_users)} accounts",
+                "accounts": user_summaries
+            }
+            
+    except Exception as e:
+        logger.error(f"Error creating accounts from file: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error creating accounts: {str(e)}"
+        )
 
 # Initialize database on startup
 @app.on_event("startup")

@@ -14,8 +14,8 @@ services:
       cache_from:
         - foreflight-dashboard:dev
     ports:
-      - "${FASTAPI_PORT:-5051}:5051"  # Modern FastAPI app (replaces Flask!)
-      - "${REACT_DEV_PORT:-3000}:3000"  # React dev server (development only)
+      - "${REACT_DEV_PORT:-3001}:3001"  # React dev server (PRIMARY UI - use this port!)
+      - "${FASTAPI_PORT:-5051}:5051"  # FastAPI backend (internal - proxied by React dev server)
     volumes:
       - ./src:/app/src  # Mount source code for hot reloading
       - ./frontend:/app/frontend  # Mount frontend for hot reloading
