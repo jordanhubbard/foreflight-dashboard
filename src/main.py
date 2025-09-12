@@ -63,11 +63,50 @@ logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="ForeFlight Dashboard",
-    description="Modern aviation logbook management system",
+    title="ForeFlight Dashboard API",
+    description="""
+    ## ForeFlight Dashboard API
+    
+    A comprehensive API for managing ForeFlight logbook data, user authentication, and flight statistics.
+    
+    ### Features
+    - **User Authentication**: JWT-based authentication system
+    - **Logbook Management**: Upload and process ForeFlight CSV logbooks
+    - **Flight Statistics**: Calculate flight time statistics and currency
+    - **Aircraft Analytics**: Track time by aircraft and type
+    - **Student Pilot Support**: Endorsement tracking and validation
+    
+    ### Authentication
+    Most endpoints require authentication using JWT tokens. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your-jwt-token>
+    ```
+    
+    ### File Uploads
+    Logbook files should be in ForeFlight CSV format. The system supports:
+    - Flight entries with aircraft, route, and time information
+    - Running totals calculation
+    - Data validation and error reporting
+    
+    ### Data Models
+    The API uses comprehensive Pydantic models with validation for:
+    - Flight entries with time constraints
+    - Aircraft information
+    - User profiles and preferences
+    - Statistical calculations
+    """,
     version="2.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
+    contact={
+        "name": "ForeFlight Dashboard Support",
+        "url": "https://github.com/jordanhubbard/foreflight-dashboard",
+    },
+    license_info={
+        "name": "MIT License",
+        "url": "https://opensource.org/licenses/MIT",
+    },
 )
 
 # Security middleware
@@ -668,6 +707,17 @@ async def delete_endorsement(
     db_session.commit()
     
     return {"message": "Endorsement deleted successfully"}
+
+# API Documentation routes
+@app.get("/docs", response_class=HTMLResponse)
+async def api_docs_redirect():
+    """Redirect to API documentation."""
+    return RedirectResponse(url="/api/docs", status_code=302)
+
+@app.get("/api-docs", response_class=HTMLResponse) 
+async def api_docs_alt():
+    """Alternative API documentation endpoint."""
+    return RedirectResponse(url="/api/docs", status_code=302)
 
 # Catch-all route for React SPA (must be last!)
 @app.get("/{path:path}", response_class=HTMLResponse)

@@ -27,6 +27,7 @@ import {
   Logout,
   Notifications,
   School,
+  Api,
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../hooks/useAuthStore'
@@ -66,8 +67,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     navigate('/login')
   }
 
-  const handleNavigation = (path: string) => {
-    navigate(path)
+  const handleNavigation = (path: string, external?: boolean) => {
+    if (external) {
+      window.open(path, '_blank')
+    } else {
+      navigate(path)
+    }
     if (isMobile) {
       setMobileOpen(false)
     }
@@ -78,6 +83,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { text: 'Profile', icon: <Person />, path: '/profile' },
     ...(user?.student_pilot ? [{ text: 'Endorsements', icon: <School />, path: '/endorsements' }] : []),
     { text: 'Settings', icon: <Settings />, path: '/settings' },
+    { text: 'API Docs', icon: <Api />, path: '/api/docs', external: true },
   ]
 
   const drawer = (
@@ -96,7 +102,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <ListItem
             button
             key={item.text}
-            onClick={() => handleNavigation(item.path)}
+            onClick={() => handleNavigation(item.path, (item as any).external)}
             selected={location.pathname === item.path}
             sx={{
               '&.Mui-selected': {
