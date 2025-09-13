@@ -1,115 +1,14 @@
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import { Box } from '@mui/material'
-import { useEffect } from 'react'
-import { useAuthStore } from './hooks/useAuthStore'
-import { setNavigationCallback } from './services/authService'
-import Layout from './components/Layout'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import ForgotPasswordPage from './pages/ForgotPasswordPage'
-import ResetPasswordPage from './pages/ResetPasswordPage'
-import DashboardPage from './pages/DashboardPage'
-import ProfilePage from './pages/ProfilePage'
-import LoadingSpinner from './components/LoadingSpinner'
+import UploadPage from './pages/UploadPage'
 
 function App() {
-  const { isAuthenticated, isLoading } = useAuthStore()
-  const navigate = useNavigate()
-
-  // Set up navigation callback for auth service
-  useEffect(() => {
-    setNavigationCallback((path: string) => {
-      navigate(path, { replace: true })
-    })
-  }, [navigate])
-
-  if (isLoading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-      >
-        <LoadingSpinner />
-      </Box>
-    )
-  }
-
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
       <Routes>
-        {/* Public routes */}
-        <Route
-          path="/login"
-          element={
-            isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            isAuthenticated ? <Navigate to="/dashboard" replace /> : <RegisterPage />
-          }
-        />
-        <Route
-          path="/forgot-password"
-          element={
-            isAuthenticated ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage />
-          }
-        />
-        <Route
-          path="/reset-password/:token"
-          element={
-            isAuthenticated ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />
-          }
-        />
-
-        {/* Protected routes */}
-        <Route
-          path="/"
-          element={
-            isAuthenticated ? (
-              <Layout>
-                <DashboardPage />
-              </Layout>
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            isAuthenticated ? (
-              <Layout>
-                <DashboardPage />
-              </Layout>
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            isAuthenticated ? (
-              <Layout>
-                <ProfilePage />
-              </Layout>
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-
-        {/* Catch all route */}
-        <Route
-          path="*"
-          element={
-            <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
-          }
-        />
+        {/* Single route - upload page that leads to dashboard */}
+        <Route path="/" element={<UploadPage />} />
+        <Route path="*" element={<UploadPage />} />
       </Routes>
     </Box>
   )
