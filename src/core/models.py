@@ -270,9 +270,8 @@ class LogbookEntry(BaseModel):
         if self.pilot_role not in valid_roles:
             issues.append(f"Invalid pilot role (must be one of: {', '.join(valid_roles)})")
             
-        # Check for implausibly short flight time
-        if 0 < self.total_time < 0.3:
-            issues.append(f"Flight time of {self.total_time} hours seems implausibly short (less than 18 minutes)")
+        # Note: Removed overly restrictive "implausibly short flight time" check
+        # Short flights (even 10-15 minutes) are valid for nearby airports, pattern work, etc.
             
         # Check flight conditions consistency only if conditions are provided and both day and night are non-zero
         total_condition_time = (
