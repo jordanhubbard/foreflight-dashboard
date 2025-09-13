@@ -26,6 +26,8 @@ interface LogbookEntry {
   pic_time: number
   dual_received: number
   solo_time: number
+  ground_training: number | null
+  night_time: number | null
   conditions: {
     day: number
     night: number
