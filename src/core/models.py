@@ -329,6 +329,33 @@ class LogbookEntry(BaseModel):
                     # Look for indicators of intermediate stops or route planning
                     route_indicators = ['-', '→', 'via', 'VIA', 'stop', 'STOP', 'fuel', 'FUEL']
                     has_route_info = any(indicator in self.remarks for indicator in route_indicators)
+                    
+                    # Also look for airport identifier patterns (3-4 character codes)
+                    import re
+                    # Pattern for airport identifiers: K followed by 3 letters, or 3-4 alphanumeric codes
+                    airport_pattern = r'\b([K][A-Z]{3}|[A-Z0-9]{3,4})\b'
+                    airport_matches = re.findall(airport_pattern, self.remarks.upper())
+                    
+                    # Remove departure and destination from matches to find intermediate airports
+                    departure_id = self.departure.identifier.upper() if self.departure and self.departure.identifier else ""
+                    destination_id = self.destination.identifier.upper() if self.destination and self.destination.identifier else ""
+                    
+                    intermediate_airports = [apt for apt in airport_matches 
+                                           if apt != departure_id and apt != destination_id]
+                    
+                    # If we found intermediate airports, it's a valid route
+                    if intermediate_airports:
+                        has_route_info = True
+                    
+                    # Also check distance - if >25nm, likely not pattern work even without explicit route info
+                    if 'Distance:' in self.remarks:
+                        try:
+                            distance_str = self.remarks.split('Distance:')[1].split('nm')[0].strip()
+                            distance = float(distance_str)
+                            if distance > 25:  # Reasonable threshold for non-pattern work
+                                has_route_info = True
+                        except Exception:
+                            pass
                 
                 # Only flag as error if no route information suggests intermediate stops
                 if not has_route_info:
