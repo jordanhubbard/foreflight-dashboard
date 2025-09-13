@@ -109,7 +109,7 @@ class LogbookEntry(BaseModel):
     dual_received: float = Field(ge=0.0, description="Dual received time must be non-negative")
     pic_time: float = Field(ge=0.0, description="PIC time must be non-negative")
     solo_time: float = Field(ge=0.0, description="Solo time must be non-negative")
-    ground_training: float = Field(ge=0.0, description="Ground training time must be non-negative")
+    ground_training: float = Field(default=0.0, ge=0.0, description="Ground training time must be non-negative")
     landings_day: int = Field(ge=0, description="Day landings must be non-negative")
     landings_night: int = Field(ge=0, description="Night landings must be non-negative")
     instructor_name: Optional[str] = None
@@ -134,7 +134,7 @@ class LogbookEntry(BaseModel):
     @validator('pilot_role')
     def validate_pilot_role(cls, v):
         """Ensure pilot role is valid."""
-        valid_roles = ['PIC', 'SIC', 'Dual', 'Solo', 'Instructor']
+        valid_roles = ['PIC', 'SIC', 'Dual', 'Solo', 'Instructor', 'STUDENT']
         if v not in valid_roles:
             raise ValueError(f'Pilot role must be one of: {", ".join(valid_roles)}')
         return v

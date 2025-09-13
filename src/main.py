@@ -579,9 +579,10 @@ async def get_logbook_data(
         # Calculate statistics (use UTC to avoid timezone issues)
         now_utc = datetime.now(timezone.utc)
         current_year_entries = [e for e in entries_objects if e.date.year == now_utc.year]
+        thirty_days_ago = now_utc.date() - timedelta(days=30)
         recent_entries = [
             e for e in entries_objects 
-            if e.date >= now_utc.date() - timedelta(days=30)
+            if e.date.date() >= thirty_days_ago
         ]
         
         stats = calculate_stats_for_entries(current_year_entries)
