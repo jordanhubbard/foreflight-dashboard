@@ -1,85 +1,24 @@
-# Production Docker Compose Override
-# Use this file for production deployments with persistent storage
-# 
-# Usage:
-#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-#
-# Or create a .env.production file with your environment variables:
-#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
-
-version: '3.8'
+# Production Docker Compose Configuration
+# Use: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 services:
   foreflight-dashboard:
-    # Production environment variables
+    build:
+      dockerfile: Dockerfile  # Use production Dockerfile
+      target: production
     environment:
+      - PYTHONPATH=/app
       - ENVIRONMENT=production
-      - FASTAPI_PORT=5051
-      - REACT_DEV_PORT=3001
-      # SECRET_KEY should be set in .env.production or environment
-      # - SECRET_KEY=${SECRET_KEY}
-    
-    # Persistent volumes for production data
+      - SECRET_KEY=${SECRET_KEY:-change-this-in-production}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/app.db}
+    ports:
+      - "${PORT:-5051}:5051"  # Single port for production
     volumes:
-      - foreflight_data:/app/data           # Database and application data
-      - foreflight_uploads:/app/uploads     # User uploaded files
-      - foreflight_logs:/app/logs           # Application logs
-    
-    # Resource limits for production
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '0.5'
-        reservations:
-          memory: 512M
-          cpus: '0.25'
-    
-    # Health check configuration
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    
-    # Restart policy
+      # Only mount data directories in production, not source code
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
     restart: unless-stopped
-    
-    # Logging configuration
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-# Named volumes for data persistence
-volumes:
-  foreflight_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${DATA_PATH:-./data}
-  
-  foreflight_uploads:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${UPLOAD_PATH:-./uploads}
-  
-  foreflight_logs:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${LOG_PATH:-./logs}
-
-# Production network configuration
-networks:
-  default:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
+    # Remove development-specific settings
+    tty: false
+    stdin_open: false

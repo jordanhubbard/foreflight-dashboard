@@ -7,8 +7,6 @@ services:
       target: development
       args:
         PYTHON_VERSION: ${PYTHON_VERSION:-3.11}
-        FLASK_DEBUG: 1
-        FLASK_ENV: development
         BUILDKIT_INLINE_CACHE: 1
       # BuildKit optimizations for faster builds
       cache_from:
@@ -26,9 +24,7 @@ services:
     restart: unless-stopped
     environment:
       - PYTHONPATH=/app
-      - FLASK_APP=src/app.py
-      - FLASK_DEBUG=1
-      - FLASK_ENV=development
+      - ENVIRONMENT=development
       - BUILDKIT_PROGRESS=plain
       - DOCKER_BUILDKIT=1
     # Use tty and stdin_open for interactive debugging if needed

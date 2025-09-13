@@ -427,19 +427,41 @@ async def logout(current_user: User = Depends(get_current_user)):
 @app.get("/", response_class=HTMLResponse)
 async def root():
     """Serve the React application."""
-    # In development mode, redirect to React dev server
+    # In development mode, return API info instead of serving React
     if os.environ.get('ENVIRONMENT') == 'development':
         return HTMLResponse(content=f"""
         <!DOCTYPE html>
         <html>
         <head>
-            <title>ForeFlight Dashboard - Development</title>
-            <meta http-equiv="refresh" content="0; url=http://localhost:3001">
+            <title>ForeFlight Dashboard API - Development Mode</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }}
+                .container {{ background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                .api-link {{ display: inline-block; margin: 10px 0; padding: 10px 15px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }}
+                .api-link:hover {{ background: #0056b3; }}
+                .dev-info {{ background: #e7f3ff; padding: 15px; border-radius: 4px; margin: 20px 0; }}
+            </style>
         </head>
         <body>
-            <h1>ForeFlight Dashboard - Development Mode</h1>
-            <p>Redirecting to React dev server...</p>
-            <p>If you are not redirected automatically, <a href="http://localhost:3001">click here</a>.</p>
+            <div class="container">
+                <h1>🚀 ForeFlight Dashboard API</h1>
+                <div class="dev-info">
+                    <strong>Development Mode Active</strong><br>
+                    FastAPI backend running on port 5051<br>
+                    React dev server running on port 3001
+                </div>
+                <h2>API Documentation</h2>
+                <a href="/docs" class="api-link">📚 Interactive API Docs (Swagger)</a><br>
+                <a href="/redoc" class="api-link">📖 ReDoc Documentation</a><br>
+                <a href="/health" class="api-link">❤️ Health Check</a>
+                
+                <h2>Frontend Application</h2>
+                <a href="http://localhost:3001" class="api-link">🎨 React Frontend (Port 3001)</a>
+                
+                <h2>Quick Test</h2>
+                <p>Test authentication: <code>POST /api/auth/login</code></p>
+                <p>Default admin: admin@foreflight-dashboard.com / admin123</p>
+            </div>
         </body>
         </html>
         """)

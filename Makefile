@@ -40,6 +40,11 @@ help:
 	@echo "  test-accounts - Create test accounts from test-accounts.json"
 	@echo "  build-prod   - Build optimized production image with buildx"
 	@echo ""
+	@echo "Production Commands:"
+	@echo "  start-prod   - Start application in production mode (single port)"
+	@echo "  stop-prod    - Stop production application"
+	@echo "  logs-prod    - View production logs"
+	@echo ""
 	@echo "Port Configuration:"
 	@echo "  FASTAPI_PORT   = $(FASTAPI_PORT) (Modern FastAPI app - replaces Flask!)"
 	@echo "  REACT_DEV_PORT = $(REACT_DEV_PORT) (React dev server)"
@@ -220,3 +225,31 @@ build-prod:
 		--push \
 		.
 	@echo "✅ Production image built and pushed with optimal caching!"
+
+# Production deployment targets
+.PHONY: start-prod stop-prod logs-prod
+start-prod:
+	@echo "🚀 Starting ForeFlight Dashboard in PRODUCTION mode..."
+	@echo "📦 Building production image..."
+	docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
+	@echo "🌐 Starting production services..."
+	docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+	@echo "🔧 Initializing production database..."
+	docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec foreflight-dashboard python src/init_db.py
+	@echo "✅ Production application started successfully!"
+	@echo ""
+	@echo "🌐 Application: http://localhost:$(FASTAPI_PORT)"
+	@echo "📚 API Docs: http://localhost:$(FASTAPI_PORT)/docs"
+	@echo ""
+	@echo "⚠️  PRODUCTION MODE: React dev server is NOT running"
+	@echo "📦 Serving pre-built React static files from FastAPI"
+
+stop-prod:
+	@echo "🛑 Stopping production application..."
+	docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
+	@echo "✅ Production application stopped!"
+
+logs-prod:
+	@echo "📋 Viewing production logs..."
+	@echo "Press Ctrl+C to stop viewing logs"
+	docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f
