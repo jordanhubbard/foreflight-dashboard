@@ -365,9 +365,9 @@ class LogbookEntry(BaseModel):
         # Check for excessive landings vs flight time
         total_landings = (self.landings_day or 0) + (self.landings_night or 0)
         if total_landings > 0 and self.total_time > 0:
-            # Rough check: more than 10 landings per hour suggests pattern work, not cross-country
+            # Rough check: more than 15 landings per hour (4 minutes per landing) is very aggressive even for tight pattern work
             landings_per_hour = total_landings / self.total_time
-            if landings_per_hour > 10:
+            if landings_per_hour > 15:
                 issues.append(f"Excessive landings for flight time ({total_landings} landings in {self.total_time:.1f} hours)")
         
         # Check night time vs night landings consistency
