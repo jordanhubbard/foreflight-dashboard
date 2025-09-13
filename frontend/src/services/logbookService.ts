@@ -46,6 +46,7 @@ interface LogbookEntry {
     night_time: number
     sim_instrument: number
   }
+  error_explanation: string | null
 }
 
 interface LogbookStats {

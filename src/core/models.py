@@ -300,13 +300,52 @@ class LogbookEntry(BaseModel):
             if abs(total_accounted_time - self.total_time) > 0.1:  # Allow 0.1 hour difference for rounding
                 issues.append(f"Total time ({self.total_time:.1f}) should equal sum of PIC time ({self.pic_time:.1f}) and dual received time ({self.dual_received:.1f})")
 
-        # Check that cross-country time has sufficient distance only if distance is provided
-        if self.conditions.cross_country > 0 and 'Distance:' in self.remarks:
-            try:
-                distance_str = self.remarks.split('Distance:')[1].split('nm')[0].strip()
-                distance = float(distance_str)
-            except Exception:
-                pass
+        # Check pilot role vs time logging conflicts
+        if self.pilot_role == "STUDENT" and self.pic_time > 0:
+            issues.append("Student pilot cannot log PIC time")
+        
+        if self.pilot_role == "PIC" and self.dual_received > 0:
+            issues.append("PIC should not log dual received time (except for complex/high-performance checkout)")
+            
+        if self.pilot_role == "STUDENT" and self.dual_received == 0 and self.total_time > 0:
+            issues.append("Student pilot flights should typically log dual received time")
+
+        # Check cross-country time validity
+        if self.conditions.cross_country > 0:
+            # Cross-country flights should have different departure and destination
+            if (self.departure and self.destination and 
+                self.departure.identifier and self.destination.identifier and
+                self.departure.identifier == self.destination.identifier):
+                issues.append("Cross-country time logged for flight with same departure and destination airport")
+            
+            # Check distance requirement for cross-country (>50nm for private pilot)
+            if 'Distance:' in (self.remarks or ''):
+                try:
+                    distance_str = self.remarks.split('Distance:')[1].split('nm')[0].strip()
+                    distance = float(distance_str)
+                    if distance < 50:
+                        issues.append(f"Cross-country time logged for flight under 50nm ({distance}nm)")
+                except Exception:
+                    pass
+        
+        # Check for excessive landings vs flight time
+        total_landings = (self.landings_day or 0) + (self.landings_night or 0)
+        if total_landings > 0 and self.total_time > 0:
+            # Rough check: more than 10 landings per hour suggests pattern work, not cross-country
+            landings_per_hour = total_landings / self.total_time
+            if landings_per_hour > 10:
+                issues.append(f"Excessive landings for flight time ({total_landings} landings in {self.total_time:.1f} hours)")
+        
+        # Check night time vs night landings consistency
+        if (self.landings_night or 0) > 0 and (self.conditions.night or 0) == 0:
+            issues.append("Night landings logged without night flight time")
+        
+        # Check solo time conflicts
+        if self.solo_time > 0:
+            if self.dual_received > 0:
+                issues.append("Solo time cannot be logged with dual received time")
+            if self.pilot_role not in ["PIC", "STUDENT"]:
+                issues.append("Solo time can only be logged by PIC or student pilots")
 
         # Set error explanation if issues were found
         if issues:

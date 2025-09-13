@@ -207,7 +207,7 @@ def convert_entries_to_template_data(entries: List[LogbookEntry]) -> List[Dict]:
                 'asel_time': float(entry.running_totals.asel_time) if entry.running_totals else 0.0,
                 'ground_training': float(entry.running_totals.ground_training) if entry.running_totals else 0.0
             },
-            'error_explanation': None  # TODO: Add validation error handling
+            'error_explanation': getattr(entry, 'error_explanation', None)
         }
         template_data.append(entry_dict)
     
@@ -391,6 +391,10 @@ async def process_logbook(
             
             # Calculate running totals
             entries_objects = calculate_running_totals(entries_objects)
+            
+            # Validate all entries for errors
+            for entry in entries_objects:
+                entry.validate_entry()
             
             # Calculate statistics (use UTC to avoid timezone issues)
             now_utc = datetime.now(timezone.utc)

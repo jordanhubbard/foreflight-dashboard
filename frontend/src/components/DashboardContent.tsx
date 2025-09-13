@@ -26,6 +26,8 @@ import {
   AccordionSummary,
   AccordionDetails,
   TextField,
+  Alert,
+  Tooltip,
 } from '@mui/material'
 import {
   FlightTakeoff,
@@ -38,6 +40,8 @@ import {
   ExpandMore,
   KeyboardArrowDown,
   KeyboardArrowUp,
+  Error,
+  Warning,
 } from '@mui/icons-material'
 import { LogbookData, LogbookEntry } from '../services/logbookService'
 
@@ -269,6 +273,22 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
             </Typography>
           </Box>
 
+          {/* Error Summary */}
+          {(() => {
+            const errorEntries = filteredEntries.filter(entry => entry.error_explanation)
+            if (errorEntries.length > 0) {
+              return (
+                <Alert severity="warning" sx={{ mb: 3 }}>
+                  <Typography variant="body2">
+                    <strong>{errorEntries.length}</strong> entries have validation issues. 
+                    Invalid entries are highlighted in red with error details available when expanded.
+                  </Typography>
+                </Alert>
+              )
+            }
+            return null
+          })()}
+
           {/* Search and Filter Controls */}
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={12} sm={6} md={3}>
@@ -351,16 +371,33 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredEntries.map((entry, index) => (
+                {filteredEntries.map((entry, index) => {
+                  const hasError = entry.error_explanation !== null && entry.error_explanation !== undefined
+                  return (
                   <React.Fragment key={index}>
-                    <TableRow hover>
+                    <TableRow 
+                      hover
+                      sx={{
+                        backgroundColor: hasError ? '#ffebee' : 'inherit',
+                        '&:hover': {
+                          backgroundColor: hasError ? '#ffcdd2' : 'rgba(0, 0, 0, 0.04)',
+                        },
+                      }}
+                    >
                       <TableCell>
-                        <IconButton
-                          size="small"
-                          onClick={() => toggleRowExpansion(index)}
-                        >
-                          {expandedRows.has(index) ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
-                        </IconButton>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <IconButton
+                            size="small"
+                            onClick={() => toggleRowExpansion(index)}
+                          >
+                            {expandedRows.has(index) ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+                          </IconButton>
+                          {hasError && (
+                            <Tooltip title={entry.error_explanation || 'Invalid entry'}>
+                              <Error color="error" fontSize="small" />
+                            </Tooltip>
+                          )}
+                        </Box>
                       </TableCell>
                       <TableCell>{formatDate(entry.date)}</TableCell>
                       <TableCell>
@@ -438,13 +475,26 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
                                   </Typography>
                                 </Grid>
                               )}
+                              {hasError && (
+                                <Grid item xs={12}>
+                                  <Alert severity="error" sx={{ mt: 1 }}>
+                                    <Typography variant="subtitle2" gutterBottom>
+                                      Data Validation Issues
+                                    </Typography>
+                                    <Typography variant="body2">
+                                      {entry.error_explanation}
+                                    </Typography>
+                                  </Alert>
+                                </Grid>
+                              )}
                             </Grid>
                           </Box>
                         </Collapse>
                       </TableCell>
                     </TableRow>
                   </React.Fragment>
-                ))}
+                  )
+                })}
               </TableBody>
             </Table>
           </TableContainer>
