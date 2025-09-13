@@ -251,17 +251,19 @@ class LogbookEntry(BaseModel):
         """Validate the entry and set error explanation if issues are found."""
         issues = []
         
-        # Check for missing airports
-        if not self.departure or not self.departure.identifier:
-            issues.append("Missing departure airport")
-        if not self.destination or not self.destination.identifier:
-            issues.append("Missing destination airport")
+        # Check for missing airports (only for actual flights, not ground training)
+        if self.total_time > 0:  # Only validate airports if there's flight time
+            if not self.departure or not self.departure.identifier:
+                issues.append("Missing departure airport")
+            if not self.destination or not self.destination.identifier:
+                issues.append("Missing destination airport")
             
-        # Validate aircraft registration (tail number)
-        if not self.aircraft or not self.aircraft.registration:
-            issues.append("Missing aircraft registration")
-        elif not self.aircraft.registration.startswith(('N', 'C-', 'G-')):  # US, Canadian, or UK registrations
-            issues.append(f"Invalid aircraft registration format: {self.aircraft.registration}")
+        # Validate aircraft registration (tail number) - only for flights, not ground training
+        if self.total_time > 0:  # Only validate aircraft for actual flights
+            if not self.aircraft or not self.aircraft.registration:
+                issues.append("Missing aircraft registration")
+            elif not self.aircraft.registration.startswith(('N', 'C-', 'G-')):  # US, Canadian, or UK registrations
+                issues.append(f"Invalid aircraft registration format: {self.aircraft.registration}")
             
         # Validate pilot role
         valid_roles = ["PIC", "SIC", "STUDENT", "INSTRUCTOR", "SPLIT"]
