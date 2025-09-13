@@ -42,7 +42,6 @@ import {
   KeyboardArrowUp,
   Error,
   Warning,
-  School,
   NightsStay,
 } from '@mui/icons-material'
 import { LogbookData, LogbookEntry } from '../services/logbookService'
