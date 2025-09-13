@@ -42,6 +42,8 @@ import {
   KeyboardArrowUp,
   Error,
   Warning,
+  School,
+  NightsStay,
 } from '@mui/icons-material'
 import { LogbookData, LogbookEntry } from '../services/logbookService'
 
@@ -301,6 +303,35 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
             return null
           })()}
 
+          {/* Color Legend */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Entry Color Coding:
+            </Typography>
+            <Box display="flex" flexWrap="wrap" gap={2}>
+              <Box display="flex" alignItems="center" gap={0.5}>
+                <Box sx={{ width: 16, height: 16, backgroundColor: '#ffebee', border: '1px solid #ccc', borderRadius: 0.5 }} />
+                <Error color="error" fontSize="small" />
+                <Typography variant="caption">Validation Errors</Typography>
+              </Box>
+              <Box display="flex" alignItems="center" gap={0.5}>
+                <Box sx={{ width: 16, height: 16, backgroundColor: '#fff8e1', border: '1px solid #ccc', borderRadius: 0.5 }} />
+                <Warning color="warning" fontSize="small" />
+                <Typography variant="caption">Warnings</Typography>
+              </Box>
+              <Box display="flex" alignItems="center" gap={0.5}>
+                <Box sx={{ width: 16, height: 16, backgroundColor: '#e3f2fd', border: '1px solid #ccc', borderRadius: 0.5 }} />
+                <School sx={{ color: '#1976d2' }} fontSize="small" />
+                <Typography variant="caption">Ground Training</Typography>
+              </Box>
+              <Box display="flex" alignItems="center" gap={0.5}>
+                <Box sx={{ width: 16, height: 16, backgroundColor: '#f3e5f5', border: '1px solid #ccc', borderRadius: 0.5 }} />
+                <NightsStay sx={{ color: '#7b1fa2' }} fontSize="small" />
+                <Typography variant="caption">Night Flights</Typography>
+              </Box>
+            </Box>
+          </Box>
+
           {/* Search and Filter Controls */}
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={12} sm={6} md={3}>
@@ -388,9 +419,27 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
                   const hasWarning = entry.warning_explanation !== null && entry.warning_explanation !== undefined
                   const hasIssue = hasError || hasWarning
                   
-                  // Determine background color: red for errors, yellow for warnings
-                  const backgroundColor = hasError ? '#ffebee' : hasWarning ? '#fff8e1' : 'inherit'
-                  const hoverColor = hasError ? '#ffcdd2' : hasWarning ? '#ffecb3' : 'rgba(0, 0, 0, 0.04)'
+                  // Check for special entry types
+                  const isGroundTraining = entry.total_time === 0 && (entry.ground_training || 0) > 0
+                  const hasNightTime = (entry.night_time || 0) > 0
+                  
+                  // Determine background color: errors (red) > warnings (yellow) > ground training (light blue) > night flights (light purple) > default
+                  let backgroundColor = 'inherit'
+                  let hoverColor = 'rgba(0, 0, 0, 0.04)'
+                  
+                  if (hasError) {
+                    backgroundColor = '#ffebee'  // Light red for errors
+                    hoverColor = '#ffcdd2'
+                  } else if (hasWarning) {
+                    backgroundColor = '#fff8e1'  // Light yellow for warnings  
+                    hoverColor = '#ffecb3'
+                  } else if (isGroundTraining) {
+                    backgroundColor = '#e3f2fd'  // Light blue for ground training
+                    hoverColor = '#bbdefb'
+                  } else if (hasNightTime) {
+                    backgroundColor = '#f3e5f5'  // Light purple for night flights
+                    hoverColor = '#e1bee7'
+                  }
                   
                   return (
                   <React.Fragment key={index}>
@@ -419,6 +468,16 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
                           {hasWarning && !hasError && (
                             <Tooltip title={entry.warning_explanation || 'Warning'}>
                               <Warning color="warning" fontSize="small" />
+                            </Tooltip>
+                          )}
+                          {isGroundTraining && !hasIssue && (
+                            <Tooltip title="Ground Training - No flight time logged">
+                              <School sx={{ color: '#1976d2' }} fontSize="small" />
+                            </Tooltip>
+                          )}
+                          {hasNightTime && !hasIssue && !isGroundTraining && (
+                            <Tooltip title={`Night Flight - ${entry.night_time || 0} hours`}>
+                              <NightsStay sx={{ color: '#7b1fa2' }} fontSize="small" />
                             </Tooltip>
                           )}
                         </Box>
