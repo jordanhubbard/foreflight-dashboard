@@ -47,6 +47,7 @@ interface LogbookEntry {
     sim_instrument: number
   }
   error_explanation: string | null
+  warning_explanation: string | null
 }
 
 interface LogbookStats {

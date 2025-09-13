@@ -145,6 +145,9 @@ class LogbookEntry(BaseModel):
     # Validation error explanation
     error_explanation: Optional[str] = None
     
+    # Validation warning explanation
+    warning_explanation: Optional[str] = None
+    
     def to_dict(self) -> dict:
         """Convert the entry to a dictionary for JSON serialization."""
         running_totals_dict = None
@@ -193,7 +196,8 @@ class LogbookEntry(BaseModel):
             'instructor_name': self.instructor_name,
             'instructor_comments': self.instructor_comments,
             'running_totals': running_totals_dict,
-            'error_explanation': self.error_explanation
+            'error_explanation': self.error_explanation,
+            'warning_explanation': self.warning_explanation
         }
     
     class Config:
@@ -230,7 +234,8 @@ class LogbookEntry(BaseModel):
                 "landings_night": 0,
                 "dual_received": 0.0,
                 "remarks": "Cross country flight BOS-JFK",
-                "error_explanation": None
+                "error_explanation": None,
+                "warning_explanation": None
             }
         }
 
@@ -312,21 +317,22 @@ class LogbookEntry(BaseModel):
 
         # Check cross-country time validity
         if self.conditions.cross_country > 0:
-            # Cross-country flights should have different departure and destination
+            # Cross-country flights with same departure and destination are valid if there are intermediate stops
+            # or if the route indicates multiple airports were visited
             if (self.departure and self.destination and 
                 self.departure.identifier and self.destination.identifier and
                 self.departure.identifier == self.destination.identifier):
-                issues.append("Cross-country time logged for flight with same departure and destination airport")
-            
-            # Check distance requirement for cross-country (>50nm for private pilot)
-            if 'Distance:' in (self.remarks or ''):
-                try:
-                    distance_str = self.remarks.split('Distance:')[1].split('nm')[0].strip()
-                    distance = float(distance_str)
-                    if distance < 50:
-                        issues.append(f"Cross-country time logged for flight under 50nm ({distance}nm)")
-                except Exception:
-                    pass
+                
+                # Check if remarks indicate intermediate airports or route details
+                has_route_info = False
+                if self.remarks:
+                    # Look for indicators of intermediate stops or route planning
+                    route_indicators = ['-', '→', 'via', 'VIA', 'stop', 'STOP', 'fuel', 'FUEL']
+                    has_route_info = any(indicator in self.remarks for indicator in route_indicators)
+                
+                # Only flag as error if no route information suggests intermediate stops
+                if not has_route_info:
+                    issues.append("Cross-country time logged for flight with same departure and destination airport and no intermediate stops indicated")
         
         # Check for excessive landings vs flight time
         total_landings = (self.landings_day or 0) + (self.landings_night or 0)
@@ -347,10 +353,29 @@ class LogbookEntry(BaseModel):
             if self.pilot_role not in ["PIC", "STUDENT"]:
                 issues.append("Solo time can only be logged by PIC or student pilots")
 
+        # Check for warnings (less severe issues)
+        warnings = []
+        
+        # Check distance requirement for certificate requirements (>50nm for private/instrument/commercial)
+        if self.conditions.cross_country > 0 and 'Distance:' in (self.remarks or ''):
+            try:
+                distance_str = self.remarks.split('Distance:')[1].split('nm')[0].strip()
+                distance = float(distance_str)
+                if distance < 50:
+                    warnings.append(f"Cross-country flight under 50nm ({distance}nm) - valid for logbook but may not count toward private/instrument/commercial certificate requirements")
+            except Exception:
+                pass
+
         # Set error explanation if issues were found
         if issues:
             self.error_explanation = "; ".join(issues)
         else:
-            self.error_explanation = None 
+            self.error_explanation = None
+            
+        # Set warning explanation if warnings were found
+        if warnings:
+            self.warning_explanation = "; ".join(warnings)
+        else:
+            self.warning_explanation = None 
 
 # InstructorEndorsement is now defined as a SQLAlchemy model in src.core.database 

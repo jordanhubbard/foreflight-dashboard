@@ -273,15 +273,27 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
             </Typography>
           </Box>
 
-          {/* Error Summary */}
+          {/* Error and Warning Summary */}
           {(() => {
             const errorEntries = filteredEntries.filter(entry => entry.error_explanation)
-            if (errorEntries.length > 0) {
+            const warningEntries = filteredEntries.filter(entry => entry.warning_explanation)
+            const totalIssues = errorEntries.length + warningEntries.length
+            
+            if (totalIssues > 0) {
               return (
-                <Alert severity="warning" sx={{ mb: 3 }}>
+                <Alert severity={errorEntries.length > 0 ? "error" : "warning"} sx={{ mb: 3 }}>
                   <Typography variant="body2">
-                    <strong>{errorEntries.length}</strong> entries have validation issues. 
-                    Invalid entries are highlighted in red with error details available when expanded.
+                    {errorEntries.length > 0 && (
+                      <>
+                        <strong>{errorEntries.length}</strong> entries have validation errors (highlighted in red).{' '}
+                      </>
+                    )}
+                    {warningEntries.length > 0 && (
+                      <>
+                        <strong>{warningEntries.length}</strong> entries have validation warnings (highlighted in yellow).{' '}
+                      </>
+                    )}
+                    Click to expand entries for detailed information.
                   </Typography>
                 </Alert>
               )
@@ -373,14 +385,21 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
               <TableBody>
                 {filteredEntries.map((entry, index) => {
                   const hasError = entry.error_explanation !== null && entry.error_explanation !== undefined
+                  const hasWarning = entry.warning_explanation !== null && entry.warning_explanation !== undefined
+                  const hasIssue = hasError || hasWarning
+                  
+                  // Determine background color: red for errors, yellow for warnings
+                  const backgroundColor = hasError ? '#ffebee' : hasWarning ? '#fff8e1' : 'inherit'
+                  const hoverColor = hasError ? '#ffcdd2' : hasWarning ? '#ffecb3' : 'rgba(0, 0, 0, 0.04)'
+                  
                   return (
                   <React.Fragment key={index}>
                     <TableRow 
                       hover
                       sx={{
-                        backgroundColor: hasError ? '#ffebee' : 'inherit',
+                        backgroundColor: backgroundColor,
                         '&:hover': {
-                          backgroundColor: hasError ? '#ffcdd2' : 'rgba(0, 0, 0, 0.04)',
+                          backgroundColor: hoverColor,
                         },
                       }}
                     >
@@ -395,6 +414,11 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
                           {hasError && (
                             <Tooltip title={entry.error_explanation || 'Invalid entry'}>
                               <Error color="error" fontSize="small" />
+                            </Tooltip>
+                          )}
+                          {hasWarning && !hasError && (
+                            <Tooltip title={entry.warning_explanation || 'Warning'}>
+                              <Warning color="warning" fontSize="small" />
                             </Tooltip>
                           )}
                         </Box>
@@ -479,10 +503,22 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
                                 <Grid item xs={12}>
                                   <Alert severity="error" sx={{ mt: 1 }}>
                                     <Typography variant="subtitle2" gutterBottom>
-                                      Data Validation Issues
+                                      Data Validation Errors
                                     </Typography>
                                     <Typography variant="body2">
                                       {entry.error_explanation}
+                                    </Typography>
+                                  </Alert>
+                                </Grid>
+                              )}
+                              {hasWarning && (
+                                <Grid item xs={12}>
+                                  <Alert severity="warning" sx={{ mt: 1 }}>
+                                    <Typography variant="subtitle2" gutterBottom>
+                                      Data Validation Warnings
+                                    </Typography>
+                                    <Typography variant="body2">
+                                      {entry.warning_explanation}
                                     </Typography>
                                   </Alert>
                                 </Grid>

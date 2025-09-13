@@ -207,7 +207,8 @@ def convert_entries_to_template_data(entries: List[LogbookEntry]) -> List[Dict]:
                 'asel_time': float(entry.running_totals.asel_time) if entry.running_totals else 0.0,
                 'ground_training': float(entry.running_totals.ground_training) if entry.running_totals else 0.0
             },
-            'error_explanation': getattr(entry, 'error_explanation', None)
+            'error_explanation': getattr(entry, 'error_explanation', None),
+            'warning_explanation': getattr(entry, 'warning_explanation', None)
         }
         template_data.append(entry_dict)
     
