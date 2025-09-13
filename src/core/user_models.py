@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 from pydantic import BaseModel, EmailStr, Field, validator
-from flask_login import UserMixin
+# Removed Flask-Login dependency - using pure FastAPI authentication
 import secrets
 import hashlib
 
@@ -92,8 +92,8 @@ class PasswordReset(BaseModel):
 
 
 @dataclass
-class User(UserMixin):
-    """User model for Flask-Login integration."""
+class User:
+    """User model for FastAPI authentication."""
     id: int
     email: str
     first_name: str
@@ -108,7 +108,7 @@ class User(UserMixin):
     preferences: UserPreferences = None
     
     def get_id(self):
-        """Required by Flask-Login."""
+        """Get user ID as string."""
         return str(self.id)
     
     @property

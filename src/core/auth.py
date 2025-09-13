@@ -12,7 +12,7 @@ from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
-from src.core.auth_models import User, Role
+from src.core.database import User
 
 # Configuration
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -83,8 +83,8 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     
     # Always verify password to prevent timing attacks, even for non-existent users
     if user:
-        password_valid = verify_password(password, user.password)
-        if password_valid and user.active:
+        password_valid = verify_password(password, user.password_hash)
+        if password_valid and user.is_active:
             return user
     else:
         # Perform dummy password verification to maintain consistent timing
@@ -116,7 +116,7 @@ def get_current_user_from_token(
         return None
     
     user = db.query(User).filter(User.id == user_id).first()
-    if not user or not user.active:
+    if not user or not user.is_active:
         return None
     
     return user
@@ -145,14 +145,12 @@ def create_user(
     # Create user
     user = User(
         email=email,
-        password=hashed_password,
+        password_hash=hashed_password,
         first_name=first_name,
         last_name=last_name,
         student_pilot=student_pilot,
         pilot_certificate_number=pilot_certificate_number,
-        active=True,
-        fs_uniquifier=f"{email}_{datetime.now().timestamp()}",  # Simple uniquifier
-        created_at=datetime.now(timezone.utc)
+        is_active=True
     )
     
     db.add(user)
@@ -244,28 +242,19 @@ def get_user_from_session(request: Request, db: Session) -> Optional[User]:
 
 def create_default_admin_user(db: Session) -> User:
     """Create a default admin user if none exists."""
-    admin_user = db.query(User).filter(User.email == "admin@example.com").first()
+    admin_user = db.query(User).filter(User.email == "admin@foreflight-dashboard.com").first()
     
     if not admin_user:
         admin_user = create_user(
             db=db,
-            email="admin@example.com",
-            password="admin",
+            email="admin@foreflight-dashboard.com",
+            password="admin123",
             first_name="Admin",
             last_name="User",
             student_pilot=False
         )
-        
-        # Create admin role if it doesn't exist
-        admin_role = db.query(Role).filter(Role.name == "admin").first()
-        if not admin_role:
-            admin_role = Role(name="admin", description="Administrator role")
-            db.add(admin_role)
-            db.commit()
-        
-        # Assign admin role to user
-        if admin_role not in admin_user.roles:
-            admin_user.roles.append(admin_role)
-            db.commit()
+        print(f"Created admin user: {admin_user.email}")
+    else:
+        print(f"Admin user already exists: {admin_user.email}")
     
     return admin_user

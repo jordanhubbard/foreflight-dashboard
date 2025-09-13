@@ -314,26 +314,4 @@ class LogbookEntry(BaseModel):
         else:
             self.error_explanation = None 
 
-@dataclass
-class InstructorEndorsement:
-    """Flight instructor endorsement for solo flight."""
-    id: int
-    start_date: datetime
-    expiration_date: datetime
-
-    @staticmethod
-    def calculate_expiration(start_date: datetime) -> datetime:
-        """Calculate the expiration date (90 days from start date)."""
-        return start_date + timedelta(days=90)
-
-    def is_valid_for_date(self, flight_date: datetime) -> bool:
-        """Check if the endorsement is valid for a given flight date."""
-        return self.start_date <= flight_date <= self.expiration_date
-
-    def to_dict(self) -> dict:
-        """Convert the endorsement to a dictionary for JSON serialization."""
-        return {
-            'id': self.id,
-            'start_date': self.start_date.isoformat(),
-            'expiration_date': self.expiration_date.isoformat()
-        } 
+# InstructorEndorsement is now defined as a SQLAlchemy model in src.core.database 

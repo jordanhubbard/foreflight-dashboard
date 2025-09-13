@@ -19,7 +19,7 @@ else
     FASTAPI_PID=$!
 
     # In development, start React dev server for hot reloading
-    if [ "${ENVIRONMENT:-$FLASK_ENV}" = "development" ] && [ -d "/app/frontend" ]; then
+    if [ "${ENVIRONMENT}" = "development" ] && [ -d "/app/frontend" ]; then
         echo "Starting React development server on port ${REACT_DEV_PORT:-3000}..."
         cd /app/frontend
         npm install --silent

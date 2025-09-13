@@ -29,12 +29,14 @@ import uvicorn
 from contextlib import nullcontext
 
 # Database imports
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session
 
 # Application imports
 from src.core.models import LogbookEntry, Aircraft, Airport, FlightConditions, RunningTotals
-from src.core.auth_models import db, User, Role, UserLogbook, InstructorEndorsement
+from src.core.database import (
+    engine, SessionLocal, Base, get_db, init_database,
+    User, UserLogbook, InstructorEndorsement, PasswordResetToken
+)
 from src.core.auth import (
     authenticate_user, create_access_token, get_current_user_from_token,
     create_user, get_password_hash, security, create_default_admin_user,
@@ -133,15 +135,7 @@ async def add_security_headers(request: Request, call_next):
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
-# Database configuration
-data_dir = Path.cwd() / "data"
-data_dir.mkdir(exist_ok=True)
-db_path = data_dir / "app.db"
-DATABASE_URL = os.environ.get('DATABASE_URL', f'sqlite:///{db_path}')
-
-# Create database engine and session
-engine = create_engine(DATABASE_URL, echo=False)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Database is now configured in src.core.database
 
 # Create upload directory
 upload_dir = Path("uploads")
@@ -220,13 +214,7 @@ class EndorsementResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# Dependency to get database session
-def get_db():
-    db_session = SessionLocal()
-    try:
-        yield db_session
-    finally:
-        db_session.close()
+# Database dependency is imported from src.core.database
 
 # Authentication dependency
 async def get_current_user(
@@ -270,7 +258,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         content={"detail": exc.detail}
     )
 
-# Utility functions (migrated from Flask app)
+# Utility functions
 def convert_entries_to_template_data(entries: List[LogbookEntry]) -> List[Dict]:
     """Convert LogbookEntry objects to template-friendly dictionaries."""
     template_data = []
@@ -440,7 +428,7 @@ async def logout(current_user: User = Depends(get_current_user)):
 async def root():
     """Serve the React application."""
     # In development mode, redirect to React dev server
-    if os.environ.get('ENVIRONMENT', os.environ.get('FLASK_ENV')) == 'development':
+    if os.environ.get('ENVIRONMENT') == 'development':
         return HTMLResponse(content=f"""
         <!DOCTYPE html>
         <html>
@@ -729,95 +717,19 @@ async def serve_spa(path: str):
     
     return await root()
 
-# Account Management API Endpoints
-@app.post("/api/admin/accounts/create-from-file")
-async def create_accounts_from_file(
-    file_path: str = "test-accounts.json",
-    request: Request = None
-):
-    """Create accounts from a JSON file.
-    
-    This endpoint is for administrative use to create test or production accounts
-    from a JSON file containing account definitions.
-    """
-    try:
-        # Import Flask app to get the application context
-        from src.app import app as flask_app
-        
-        with flask_app.app_context():
-            # Ensure database tables exist
-            from src.core.auth_models import db
-            from src.core.security import create_user_datastore
-            
-            db.metadata.create_all(bind=engine)
-            
-            # Create default roles if they don't exist
-            user_datastore = create_user_datastore()
-            roles = [
-                ('admin', 'Administrator - Full access to all features'),
-                ('pilot', 'Certified Pilot - Access to all pilot features'),
-                ('student', 'Student Pilot - Access to student-specific features'),
-                ('instructor', 'Flight Instructor - Can manage student endorsements')
-            ]
-            
-            for role_name, description in roles:
-                if not user_datastore.find_role(role_name):
-                    user_datastore.create_role(name=role_name, description=description)
-            
-            db.session.commit()
-            
-            # Create accounts from JSON
-            from src.core.account_manager import AccountManager
-            manager = AccountManager(flask_app)
-            
-            # Validate the JSON file first
-            if not manager.validate_accounts_json(file_path):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Account validation failed. Please check the JSON file."
-                )
-            
-            created_users = manager.create_accounts_from_json(file_path)
-            
-            # Return summary
-            user_summaries = []
-            for user in created_users:
-                user_summaries.append({
-                    "email": user.email,
-                    "name": f"{user.first_name} {user.last_name}",
-                    "roles": [role.name for role in user.roles],
-                    "student_pilot": user.student_pilot,
-                    "created": True
-                })
-            
-            return {
-                "success": True,
-                "message": f"Successfully created {len(created_users)} accounts",
-                "accounts": user_summaries
-            }
-            
-    except Exception as e:
-        logger.error(f"Error creating accounts from file: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error creating accounts: {str(e)}"
-        )
-
 # Initialize database on startup
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and create tables."""
     try:
-        # Create all database tables
-        from src.core.auth_models import db
-        
-        # Initialize the database with SQLAlchemy engine
-        db.metadata.create_all(bind=engine)
+        # Initialize database tables
+        init_database()
         
         # Create default admin user
         db_session = SessionLocal()
         try:
             create_default_admin_user(db_session)
+            db_session.commit()
         finally:
             db_session.close()
         
