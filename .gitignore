@@ -24,8 +24,7 @@ frontend/build/
 frontend/.vite/
 frontend/coverage/
 
-# Package manager files
-frontend/package-lock.json
+# Package manager files (excluding package-lock.json which should be committed)
 frontend/yarn.lock
 frontend/pnpm-lock.yaml
 
