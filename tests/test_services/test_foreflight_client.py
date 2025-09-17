@@ -46,7 +46,9 @@ class TestForeFlightClient:
             pilot_role="PIC",
             dual_received=0.0,
             pic_time=1.5,
-            solo_time=0.0
+            solo_time=0.0,
+            landings_day=1,  # Add required landing fields
+            landings_night=0
         )
 
     def test_client_initialization(self):
@@ -127,7 +129,9 @@ class TestForeFlightClient:
             pilot_role="PIC",
             dual_received=0.0,
             pic_time=2.0,  # Changed
-            solo_time=0.0
+            solo_time=0.0,
+            landings_day=1,  # Add required landing fields
+            landings_night=0
         )
         updated_entry.id = "entry-1"
         
@@ -205,7 +209,9 @@ class TestForeFlightClient:
             pilot_role="PIC",
             dual_received=0.0,
             pic_time=2.0,
-            solo_time=0.0
+            solo_time=0.0,
+            landings_day=1,  # Add required landing fields
+            landings_night=0
         )
         
         mock_client.logbook_entries = [entry1, entry2]

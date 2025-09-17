@@ -26,7 +26,9 @@ def create_valid_entry():
         pilot_role="PIC",
         dual_received=0.0,
         pic_time=1.5,  # Set PIC time to match total time for valid entry
-        solo_time=0.0
+        solo_time=0.0,
+        landings_day=1,  # Add required landing fields
+        landings_night=0
     )
     return entry
 
@@ -103,7 +105,7 @@ def test_invalid_pilot_role():
     assert "Invalid pilot role" in entry.error_explanation
 
 def test_implausibly_short_flight():
-    """Test validation of implausibly short flight times."""
+    """Test validation of short flight times (validation rule was removed)."""
     # Test exactly 0.3 hours (should pass)
     entry = create_valid_entry()
     entry.total_time = 0.3
@@ -112,13 +114,13 @@ def test_implausibly_short_flight():
     entry.validate_entry()
     assert entry.error_explanation is None
 
-    # Test less than 0.3 hours (should fail)
+    # Test less than 0.3 hours (should now pass - validation removed)
     entry = create_valid_entry()
     entry.total_time = 0.2
     entry.conditions.day = 0.2
     entry.pic_time = 0.2  # Update PIC time to match total time
     entry.validate_entry()
-    assert "implausibly short" in entry.error_explanation
+    assert entry.error_explanation is None  # No longer flagged as error
 
     # Test 0 hours (should pass - might be ground training)
     entry = create_valid_entry()
@@ -176,7 +178,7 @@ def test_time_accountability():
     entry.validate_entry()
     assert entry.error_explanation is None
     
-    # Test mixed PIC and dual received time
+    # Test mixed PIC and dual received time (should fail - PIC shouldn't log dual)
     entry = create_valid_entry()
     entry.total_time = 2.0
     entry.conditions.day = 2.0
@@ -184,7 +186,7 @@ def test_time_accountability():
     entry.dual_received = 1.0
     entry.pic_time = 1.0  # Total time split between PIC and dual
     entry.validate_entry()
-    assert entry.error_explanation is None
+    assert "PIC should not log dual received time" in entry.error_explanation
     
     # Test rounding tolerance
     entry = create_valid_entry()
