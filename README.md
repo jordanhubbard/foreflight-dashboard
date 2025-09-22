@@ -1,8 +1,8 @@
 # ForeFlight Logbook Manager
 
-[![CI/CD Pipeline](https://github.com/YOUR_USERNAME/foreflight-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/foreflight-dashboard/actions/workflows/ci.yml)
-[![Security Analysis](https://github.com/YOUR_USERNAME/foreflight-dashboard/actions/workflows/codeql.yml/badge.svg)](https://github.com/YOUR_USERNAME/foreflight-dashboard/actions/workflows/codeql.yml)
-[![codecov](https://codecov.io/gh/YOUR_USERNAME/foreflight-dashboard/branch/main/graph/badge.svg)](https://codecov.io/gh/YOUR_USERNAME/foreflight-dashboard)
+[![CI/CD Pipeline](https://github.com/jordanhubbard/foreflight-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/jordanhubbard/foreflight-dashboard/actions/workflows/ci.yml)
+[![Security Analysis](https://github.com/jordanhubbard/foreflight-dashboard/actions/workflows/codeql.yml/badge.svg)](https://github.com/jordanhubbard/foreflight-dashboard/actions/workflows/codeql.yml)
+[![codecov](https://codecov.io/gh/jordanhubbard/foreflight-dashboard/branch/main/graph/badge.svg)](https://codecov.io/gh/YOUR_USERNAME/foreflight-dashboard)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Node.js 18+](https://img.shields.io/badge/node.js-18+-green.svg)](https://nodejs.org/)
