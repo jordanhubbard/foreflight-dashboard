@@ -3,8 +3,21 @@
 This module provides validation for ICAO aircraft type designators based on
 ICAO Document 8643 - Aircraft Type Designators.
 
-The list includes common general aviation and commercial aircraft types
-that are likely to appear in pilot logbooks.
+IMPORTANT: This validator contains 200+ common aircraft types likely to appear
+in pilot logbooks, but is NOT a complete copy of ICAO Doc 8643. For complete
+and authoritative validation, refer to:
+
+- Official ICAO Database: https://cfapps.icao.int/doc8643/hdr_8643.cfm
+- ICAO Doc 8643: https://www.icao.int/safety/OPS/OPS-Section/Pages/aircraft-type-designators.aspx
+- Searchable Database: https://www.icaodesignators.com/
+
+If you encounter a valid ICAO code that is flagged as invalid, please:
+1. Verify the code at the official ICAO database
+2. Add it to VALID_ICAO_CODES or ADDITIONAL_VALID_CODES below
+3. Submit an issue or PR to update the validator
+
+Last Updated: September 2024
+Coverage: ~200 aircraft types covering GA, Commercial, Military, Experimental
 """
 
 from typing import Set, Dict, Optional
@@ -167,6 +180,9 @@ VALID_ICAO_CODES: Dict[str, Dict[str, str]] = {
     # Vintage/Warbird Aircraft
     "BT-13": {"manufacturer": "Vultee", "model": "BT-13 Valiant", "category": "Vintage Trainer"},
     "BT13": {"manufacturer": "Vultee", "model": "BT-13 Valiant", "category": "Vintage Trainer"},
+    "T6": {"manufacturer": "North American/Beechcraft", "model": "T-6 Texan/Harvard", "category": "Military Trainer"},
+    "T-6": {"manufacturer": "North American/Beechcraft", "model": "T-6 Texan/Harvard", "category": "Military Trainer"},
+    "AT6": {"manufacturer": "North American", "model": "AT-6 Texan", "category": "Military Trainer"},
 
     # Helicopters (Common Training)
     "R22": {"manufacturer": "Robinson", "model": "R22", "category": "Helicopter"},
@@ -203,6 +219,32 @@ VALID_ICAO_CODES: Dict[str, Dict[str, str]] = {
     "AT42": {"manufacturer": "ATR", "model": "ATR 42", "category": "Regional Turboprop"},
 }
 
+# Additional valid ICAO codes that may not be in the main list
+# Add codes here that are verified as valid but missing from VALID_ICAO_CODES
+ADDITIONAL_VALID_CODES: Set[str] = {
+    # Military/Training Aircraft (commonly found in civilian logbooks)
+    "T34",    # T-34 Mentor
+    "T28",    # T-28 Trojan  
+    "P51",    # P-51 Mustang
+    "F16",    # F-16 Fighting Falcon
+    "F18",    # F/A-18 Hornet
+    "A10",    # A-10 Thunderbolt II
+    "C130",   # C-130 Hercules
+    "KC135",  # KC-135 Stratotanker
+    
+    # Regional/Uncommon Aircraft
+    "DHC2",   # DHC-2 Beaver
+    "DHC3",   # DHC-3 Otter
+    "DHC6",   # DHC-6 Twin Otter
+    "AN2",    # Antonov An-2
+    "L39",    # Aero L-39 Albatros
+    
+    # Add more codes here as needed...
+}
+
+# Combined validation set
+ALL_VALID_CODES = set(VALID_ICAO_CODES.keys()) | ADDITIONAL_VALID_CODES
+
 
 def is_valid_icao_code(code: str) -> bool:
     """
@@ -220,7 +262,7 @@ def is_valid_icao_code(code: str) -> bool:
     # Convert to uppercase for comparison
     code_upper = code.upper().strip()
     
-    return code_upper in VALID_ICAO_CODES
+    return code_upper in ALL_VALID_CODES
 
 
 def get_icao_info(code: str) -> Optional[Dict[str, str]]:
@@ -258,7 +300,7 @@ def suggest_similar_codes(code: str, max_suggestions: int = 5) -> list[str]:
     suggestions = []
     
     # Look for codes that start with the same characters
-    for valid_code in VALID_ICAO_CODES.keys():
+    for valid_code in ALL_VALID_CODES:
         if len(suggestions) >= max_suggestions:
             break
             
@@ -311,7 +353,9 @@ def get_validation_summary() -> Dict[str, int]:
         manufacturers.add(manufacturer)
     
     return {
-        "total_codes": len(VALID_ICAO_CODES),
+        "total_codes": len(ALL_VALID_CODES),
+        "detailed_codes": len(VALID_ICAO_CODES),
+        "additional_codes": len(ADDITIONAL_VALID_CODES),
         "categories": categories,
         "manufacturers_count": len(manufacturers)
     }
