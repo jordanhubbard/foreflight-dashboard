@@ -86,6 +86,8 @@ stop:
 	-docker-compose -f $(COMPOSE_FILE) down 2>/dev/null || true
 	@echo "✅ Application stopped successfully!"
 
+restart: stop start
+
 # View application logs
 .PHONY: logs
 logs:
