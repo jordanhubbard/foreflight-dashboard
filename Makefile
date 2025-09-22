@@ -68,8 +68,7 @@ start:
 	@echo "Building and starting services with optimized BuildKit..."
 	docker-compose -f $(COMPOSE_FILE) build $(COMPOSE_BUILD_OPTS)
 	docker-compose -f $(COMPOSE_FILE) up -d
-	@echo "Initializing database with default users..."
-	docker-compose -f $(COMPOSE_FILE) exec foreflight-dashboard python src/init_db.py
+	@echo "✅ Stateless application - no database initialization needed"
 	@echo "✅ Modern FastAPI Application started successfully!"
 	@echo ""
 	@echo "🌐 Main Application: http://localhost:$(FASTAPI_PORT)"
@@ -234,8 +233,7 @@ start-prod:
 	docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
 	@echo "🌐 Starting production services..."
 	docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-	@echo "🔧 Initializing production database..."
-	docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec foreflight-dashboard python src/init_db.py
+	@echo "✅ Stateless application - no database initialization needed"
 	@echo "✅ Production application started successfully!"
 	@echo ""
 	@echo "🌐 Application: http://localhost:$(FASTAPI_PORT)"
