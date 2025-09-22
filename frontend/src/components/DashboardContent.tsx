@@ -28,16 +28,14 @@ import {
   TextField,
   Alert,
   Tooltip,
+  TableSortLabel,
 } from '@mui/material'
 import {
   FlightTakeoff,
   School,
   TrendingUp,
   Schedule,
-  LocationOn,
   Search,
-  FilterList,
-  ExpandMore,
   KeyboardArrowDown,
   KeyboardArrowUp,
   Error,
@@ -91,7 +89,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
     // Sort entries
     filtered.sort((a, b) => {
       let aValue: any, bValue: any
-      
+
       switch (sortBy) {
         case 'date':
           aValue = new Date(a.date)
@@ -101,13 +99,29 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
           aValue = a.aircraft?.registration || ''
           bValue = b.aircraft?.registration || ''
           break
+        case 'route':
+          aValue = `${a.departure?.identifier || ''}-${a.destination?.identifier || ''}`
+          bValue = `${b.departure?.identifier || ''}-${b.destination?.identifier || ''}`
+          break
         case 'total_time':
           aValue = a.total_time || 0
           bValue = b.total_time || 0
           break
-        case 'route':
-          aValue = `${a.departure?.identifier || ''}-${a.destination?.identifier || ''}`
-          bValue = `${b.departure?.identifier || ''}-${b.destination?.identifier || ''}`
+        case 'pic':
+          aValue = a.pic_time || 0
+          bValue = b.pic_time || 0
+          break
+        case 'dual':
+          aValue = a.dual_received || 0
+          bValue = b.dual_received || 0
+          break
+        case 'role':
+          aValue = a.pilot_role || ''
+          bValue = b.pilot_role || ''
+          break
+        case 'landings':
+          aValue = (a.landings_day || 0) + (a.landings_night || 0)
+          bValue = (b.landings_day || 0) + (b.landings_night || 0)
           break
         default:
           aValue = a.date
@@ -121,6 +135,15 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
 
     return filtered
   }, [logbookData.entries, searchTerm, aircraftFilter, sortBy, sortOrder])
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(column)
+      setSortOrder('asc')
+    }
+  }
 
   const toggleRowExpansion = (index: number) => {
     const newExpanded = new Set(expandedRows)
@@ -311,38 +334,34 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
             return null
           })()}
 
-          {/* Color Legend */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              Entry Color Coding:
+          {/* Status Legend */}
+          <Box sx={{ mb: 2, p: 1.5, backgroundColor: '#fafafa', border: '1px solid #e0e0e0', borderRadius: 1 }}>
+            <Typography variant="body2" fontWeight={500} gutterBottom>
+              Status Indicators:
             </Typography>
-            <Box display="flex" flexWrap="wrap" gap={2}>
+            <Box display="flex" flexWrap="wrap" gap={3}>
               <Box display="flex" alignItems="center" gap={0.5}>
-                <Box sx={{ width: 16, height: 16, backgroundColor: '#ffebee', border: '1px solid #ccc', borderRadius: 0.5 }} />
                 <Error color="error" fontSize="small" />
-                <Typography variant="caption">Validation Errors</Typography>
+                <Typography variant="caption">Validation Error</Typography>
               </Box>
               <Box display="flex" alignItems="center" gap={0.5}>
-                <Box sx={{ width: 16, height: 16, backgroundColor: '#fff8e1', border: '1px solid #ccc', borderRadius: 0.5 }} />
                 <Warning color="warning" fontSize="small" />
-                <Typography variant="caption">Warnings</Typography>
+                <Typography variant="caption">Warning</Typography>
               </Box>
               <Box display="flex" alignItems="center" gap={0.5}>
-                <Box sx={{ width: 16, height: 16, backgroundColor: '#e3f2fd', border: '1px solid #ccc', borderRadius: 0.5 }} />
                 <School sx={{ color: '#1976d2' }} fontSize="small" />
                 <Typography variant="caption">Ground Training</Typography>
               </Box>
               <Box display="flex" alignItems="center" gap={0.5}>
-                <Box sx={{ width: 16, height: 16, backgroundColor: '#f3e5f5', border: '1px solid #ccc', borderRadius: 0.5 }} />
                 <NightsStay sx={{ color: '#7b1fa2' }} fontSize="small" />
-                <Typography variant="caption">Night Flights</Typography>
+                <Typography variant="caption">Night Flight</Typography>
               </Box>
             </Box>
           </Box>
 
           {/* Search and Filter Controls */}
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={6}>
               <TextField
                 fullWidth
                 size="small"
@@ -358,7 +377,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={6}>
               <FormControl fullWidth size="small">
                 <InputLabel>Aircraft</InputLabel>
                 <Select
@@ -380,50 +399,119 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Sort By</InputLabel>
-                <Select
-                  value={sortBy}
-                  label="Sort By"
-                  onChange={(e) => setSortBy(e.target.value)}
-                >
-                  <MenuItem value="date">Date</MenuItem>
-                  <MenuItem value="aircraft">Aircraft</MenuItem>
-                  <MenuItem value="total_time">Flight Time</MenuItem>
-                  <MenuItem value="route">Route</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Order</InputLabel>
-                <Select
-                  value={sortOrder}
-                  label="Order"
-                  onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-                >
-                  <MenuItem value="desc">Newest First</MenuItem>
-                  <MenuItem value="asc">Oldest First</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
           </Grid>
 
           {/* Entries Table */}
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
+          <TableContainer
+            component={Paper}
+            variant="outlined"
+            sx={{
+              border: '1px solid #d0d0d0',
+              borderRadius: 0,
+              boxShadow: 'none',
+            }}
+          >
+            <Table
+              size="small"
+              sx={{
+                minWidth: 950,
+                '& .MuiTableCell-root': {
+                  borderRight: '1px solid #e0e0e0',
+                  borderBottom: '1px solid #e0e0e0',
+                  padding: '6px 12px',
+                  '&:last-child': {
+                    borderRight: 'none',
+                  },
+                },
+              }}
+            >
               <TableHead>
-                <TableRow>
-                  <TableCell></TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Aircraft</TableCell>
-                  <TableCell>Route</TableCell>
-                  <TableCell align="right">Total Time</TableCell>
-                  <TableCell align="right">PIC</TableCell>
-                  <TableCell align="right">Dual</TableCell>
-                  <TableCell>Role</TableCell>
-                  <TableCell align="right">Landings</TableCell>
+                <TableRow
+                  sx={{
+                    backgroundColor: '#f5f5f5',
+                    '& .MuiTableCell-head': {
+                      backgroundColor: '#f5f5f5',
+                      fontWeight: 600,
+                      fontSize: '0.875rem',
+                      borderBottom: '2px solid #d0d0d0',
+                      whiteSpace: 'nowrap',
+                    },
+                  }}
+                >
+                  <TableCell sx={{ width: '40px', padding: '6px 8px !important' }}></TableCell>
+                  <TableCell sx={{ width: '40px', padding: '6px 8px !important', textAlign: 'center' }}>Status</TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={sortBy === 'date'}
+                      direction={sortBy === 'date' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('date')}
+                    >
+                      Date
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={sortBy === 'aircraft'}
+                      direction={sortBy === 'aircraft' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('aircraft')}
+                    >
+                      Aircraft
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={sortBy === 'route'}
+                      direction={sortBy === 'route' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('route')}
+                    >
+                      Route
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell align="right">
+                    <TableSortLabel
+                      active={sortBy === 'total_time'}
+                      direction={sortBy === 'total_time' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('total_time')}
+                    >
+                      Total Time
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell align="right">
+                    <TableSortLabel
+                      active={sortBy === 'pic'}
+                      direction={sortBy === 'pic' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('pic')}
+                    >
+                      PIC
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell align="right">
+                    <TableSortLabel
+                      active={sortBy === 'dual'}
+                      direction={sortBy === 'dual' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('dual')}
+                    >
+                      Dual
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={sortBy === 'role'}
+                      direction={sortBy === 'role' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('role')}
+                    >
+                      Role
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell align="right">
+                    <TableSortLabel
+                      active={sortBy === 'landings'}
+                      direction={sortBy === 'landings' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('landings')}
+                    >
+                      Landings
+                    </TableSortLabel>
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -434,7 +522,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
                   
                   // Check for special entry types
                   const isGroundTraining = entry.total_time === 0 && (entry.ground_training || 0) > 0
-                  const hasNightTime = (entry.night_time || 0) > 0
+                  const hasNightTime = (entry.conditions?.night || 0) > 0
                   
                   // Determine background color: errors (red) > warnings (yellow) > ground training (light blue) > night flights (light purple) > default
                   let backgroundColor = 'inherit'
@@ -456,124 +544,161 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
                   
                   return (
                   <React.Fragment key={index}>
-                    <TableRow 
-                      hover
+                    <TableRow
                       sx={{
                         backgroundColor: backgroundColor,
                         '&:hover': {
                           backgroundColor: hoverColor,
+                          cursor: 'pointer',
+                        },
+                        '& .MuiTableCell-root': {
+                          fontSize: '0.875rem',
+                          padding: '8px 12px',
                         },
                       }}
                     >
-                      <TableCell>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <IconButton
-                            size="small"
-                            onClick={() => toggleRowExpansion(index)}
-                          >
-                            {expandedRows.has(index) ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
-                          </IconButton>
-                          {hasError && (
-                            <Tooltip title={entry.error_explanation || 'Invalid entry'}>
-                              <Error color="error" fontSize="small" />
-                            </Tooltip>
-                          )}
-                          {hasWarning && !hasError && (
-                            <Tooltip title={entry.warning_explanation || 'Warning'}>
-                              <Warning color="warning" fontSize="small" />
-                            </Tooltip>
-                          )}
-                          {isGroundTraining && !hasIssue && (
-                            <Tooltip title="Ground Training - No flight time logged">
-                              <School sx={{ color: '#1976d2' }} fontSize="small" />
-                            </Tooltip>
-                          )}
-                          {hasNightTime && !hasIssue && !isGroundTraining && (
-                            <Tooltip title={`Night Flight - ${entry.night_time || 0} hours`}>
-                              <NightsStay sx={{ color: '#7b1fa2' }} fontSize="small" />
-                            </Tooltip>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell>{formatDate(entry.date)}</TableCell>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2" fontWeight="medium">
-                            {entry.aircraft?.registration || 'N/A'}
-                            {entry.aircraft?.icao_type_code && (
-                              <Typography component="span" variant="caption" color="primary" sx={{ ml: 1, fontWeight: 'medium' }}>
-                                ({entry.aircraft.icao_type_code})
-                              </Typography>
-                            )}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {entry.aircraft?.type || 'Unknown'}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <LocationOn fontSize="small" color="action" />
-                          <Typography variant="body2">
-                            {entry.departure?.identifier || '???'} → {entry.destination?.identifier || '???'}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right">{formatTime(entry.total_time)}</TableCell>
-                      <TableCell align="right">{formatTime(entry.pic_time)}</TableCell>
-                      <TableCell align="right">{formatTime(entry.dual_received)}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={entry.pilot_role || 'PIC'}
+                      <TableCell sx={{ padding: '2px 4px !important', textAlign: 'center' }}>
+                        <IconButton
                           size="small"
-                          color={entry.pilot_role === 'PIC' ? 'primary' : 'default'}
-                        />
+                          onClick={() => toggleRowExpansion(index)}
+                          sx={{ padding: '4px' }}
+                        >
+                          {expandedRows.has(index) ? <KeyboardArrowUp fontSize="small" /> : <KeyboardArrowDown fontSize="small" />}
+                        </IconButton>
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell sx={{ padding: '6px !important', textAlign: 'center' }}>
+                        {hasError && (
+                          <Tooltip title={entry.error_explanation || 'Invalid entry'}>
+                            <Error color="error" fontSize="small" />
+                          </Tooltip>
+                        )}
+                        {hasWarning && !hasError && (
+                          <Tooltip title={entry.warning_explanation || 'Warning'}>
+                            <Warning color="warning" fontSize="small" />
+                          </Tooltip>
+                        )}
+                        {isGroundTraining && !hasIssue && (
+                          <Tooltip title="Ground Training">
+                            <School sx={{ color: '#1976d2' }} fontSize="small" />
+                          </Tooltip>
+                        )}
+                        {hasNightTime && !hasIssue && !isGroundTraining && (
+                          <Tooltip title="Night Flight">
+                            <NightsStay sx={{ color: '#7b1fa2' }} fontSize="small" />
+                          </Tooltip>
+                        )}
+                        {!hasError && !hasWarning && !isGroundTraining && !hasNightTime && (
+                          <span style={{ color: '#e0e0e0' }}>—</span>
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '0.875rem', whiteSpace: 'nowrap' }}>{formatDate(entry.date)}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                          {entry.aircraft?.registration || 'N/A'}
+                          {entry.aircraft?.icao_type_code && (
+                            <span style={{ marginLeft: 4, color: '#666', fontSize: '0.75rem' }}>
+                              ({entry.aircraft.icao_type_code})
+                            </span>
+                          )}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                          {entry.departure?.identifier || '???'} → {entry.destination?.identifier || '???'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{formatTime(entry.total_time)}</TableCell>
+                      <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{formatTime(entry.pic_time)}</TableCell>
+                      <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{formatTime(entry.dual_received)}</TableCell>
+                      <TableCell>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontSize: '0.875rem',
+                            fontWeight: entry.pilot_role === 'PIC' ? 600 : 400,
+                            color: entry.pilot_role === 'PIC' ? '#1976d2' : 'inherit'
+                          }}
+                        >
+                          {entry.pilot_role || 'PIC'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
                         {(entry.landings_day || 0) + (entry.landings_night || 0)}
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={9}>
+                      <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={10}>
                         <Collapse in={expandedRows.has(index)} timeout="auto" unmountOnExit>
-                          <Box sx={{ margin: 1 }}>
-                            <Grid container spacing={2}>
-                              <Grid item xs={12} md={6}>
-                                <Typography variant="subtitle2" gutterBottom>
-                                  Flight Details
-                                </Typography>
-                                <Typography variant="body2">
-                                  <strong>Solo:</strong> {formatTime(entry.solo_time)} hrs
-                                </Typography>
-                                <Typography variant="body2">
-                                  <strong>Day Landings:</strong> {entry.landings_day || 0}
-                                </Typography>
-                                <Typography variant="body2">
-                                  <strong>Night Landings:</strong> {entry.landings_night || 0}
-                                </Typography>
+                          <Box sx={{
+                            p: 2,
+                            backgroundColor: '#f8f9fa',
+                            borderTop: '1px solid #e0e0e0'
+                          }}>
+                            <Grid container spacing={3}>
+                              <Grid item xs={12} md={4}>
+                                <Box sx={{ borderLeft: '3px solid #1976d2', pl: 2 }}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                                    Flight Details
+                                  </Typography>
+                                  <Table size="small" sx={{ '& td': { border: 'none', padding: '2px 8px', fontSize: '0.875rem' } }}>
+                                    <TableBody>
+                                      <TableRow>
+                                        <TableCell sx={{ fontWeight: 500 }}>Solo Time:</TableCell>
+                                        <TableCell align="right">{formatTime(entry.solo_time)} hrs</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell sx={{ fontWeight: 500 }}>Day Landings:</TableCell>
+                                        <TableCell align="right">{entry.landings_day || 0}</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell sx={{ fontWeight: 500 }}>Night Landings:</TableCell>
+                                        <TableCell align="right">{entry.landings_night || 0}</TableCell>
+                                      </TableRow>
+                                    </TableBody>
+                                  </Table>
+                                </Box>
                               </Grid>
-                              <Grid item xs={12} md={6}>
-                                <Typography variant="subtitle2" gutterBottom>
-                                  Conditions
-                                </Typography>
-                                <Typography variant="body2">
-                                  <strong>Day:</strong> {formatTime(entry.conditions?.day)} hrs
-                                </Typography>
-                                <Typography variant="body2">
-                                  <strong>Night:</strong> {formatTime(entry.conditions?.night)} hrs
-                                </Typography>
-                                <Typography variant="body2">
-                                  <strong>Cross Country:</strong> {formatTime(entry.conditions?.cross_country)} hrs
-                                </Typography>
+                              <Grid item xs={12} md={4}>
+                                <Box sx={{ borderLeft: '3px solid #9c27b0', pl: 2 }}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                                    Conditions
+                                  </Typography>
+                                  <Table size="small" sx={{ '& td': { border: 'none', padding: '2px 8px', fontSize: '0.875rem' } }}>
+                                    <TableBody>
+                                      <TableRow>
+                                        <TableCell sx={{ fontWeight: 500 }}>Day:</TableCell>
+                                        <TableCell align="right">{formatTime(entry.conditions?.day)} hrs</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell sx={{ fontWeight: 500 }}>Night:</TableCell>
+                                        <TableCell align="right">{formatTime(entry.conditions?.night)} hrs</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell sx={{ fontWeight: 500 }}>Cross Country:</TableCell>
+                                        <TableCell align="right">{formatTime(entry.conditions?.cross_country)} hrs</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell sx={{ fontWeight: 500 }}>Actual IMC:</TableCell>
+                                        <TableCell align="right">{formatTime(entry.conditions?.actual_instrument)} hrs</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell sx={{ fontWeight: 500 }}>Simulated IMC:</TableCell>
+                                        <TableCell align="right">{formatTime(entry.conditions?.simulated_instrument)} hrs</TableCell>
+                                      </TableRow>
+                                    </TableBody>
+                                  </Table>
+                                </Box>
                               </Grid>
                               {entry.remarks && (
-                                <Grid item xs={12}>
-                                  <Typography variant="subtitle2" gutterBottom>
-                                    Remarks
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary">
-                                    {entry.remarks}
-                                  </Typography>
+                                <Grid item xs={12} md={4}>
+                                  <Box sx={{ borderLeft: '3px solid #ff9800', pl: 2 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                                      Remarks
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                                      {entry.remarks}
+                                    </Typography>
+                                  </Box>
                                 </Grid>
                               )}
                               {hasError && (

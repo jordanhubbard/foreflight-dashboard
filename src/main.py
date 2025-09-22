@@ -181,6 +181,8 @@ def convert_entries_to_template_data(entries: List[LogbookEntry]) -> List[Dict]:
             'pic_time': float(entry.pic_time),
             'dual_received': float(entry.dual_received),
             'solo_time': float(entry.solo_time) if entry.solo_time else 0.0,
+            'ground_training': float(entry.ground_training) if entry.ground_training else 0.0,
+            'night_time': float(entry.conditions.night) if entry.conditions else 0.0,
             'conditions': {
                 'day': float(entry.conditions.day),
                 'night': float(entry.conditions.night),
