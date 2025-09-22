@@ -49,12 +49,6 @@ make clean
    - 🔧 **API**: http://localhost:5051 (FastAPI backend)
    - ⚛️ **React Dev**: http://localhost:3000 (Development server)
 
-### Default Users
-After running `make start`, you can log in with:
-- **Admin**: `admin@example.com` / `admin`
-- **User**: `user@example.com` / `user`
-- **Student**: `student@example.com` / `student`
-
 ### GitHub Codespaces
 1. Click the green "Code" button above
 2. Select "Open with Codespaces"
