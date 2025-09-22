@@ -4,6 +4,7 @@ from datetime import datetime, time, timezone, timedelta
 from typing import Optional, List, Dict
 from pydantic import BaseModel, Field, validator
 from dataclasses import dataclass
+from .icao_validator import is_valid_icao_code, get_icao_info, suggest_similar_codes, get_validation_error_message
 
 class Airport(BaseModel):
     """Airport information."""
@@ -266,6 +267,11 @@ class LogbookEntry(BaseModel):
                 issues.append("Missing aircraft registration")
             elif not self.aircraft.registration.startswith(('N', 'C-', 'G-')):  # US, Canadian, or UK registrations
                 issues.append(f"Invalid aircraft registration format: {self.aircraft.registration}")
+        
+        # Validate ICAO aircraft type code - only for flights, not ground training
+        if self.total_time > 0 and self.aircraft and self.aircraft.icao_type_code:
+            if not is_valid_icao_code(self.aircraft.icao_type_code):
+                issues.append(get_validation_error_message(self.aircraft.icao_type_code))
             
         # Validate pilot role
         valid_roles = ["PIC", "SIC", "STUDENT", "INSTRUCTOR", "SPLIT"]
