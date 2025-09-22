@@ -1,24 +1,28 @@
-# ForeFlight Logbook Manager
+# ForeFlight Dashboard
 
-[![CI/CD Pipeline](https://github.com/YOUR_USERNAME/foreflight-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/foreflight-dashboard/actions/workflows/ci.yml)
-[![Security Analysis](https://github.com/YOUR_USERNAME/foreflight-dashboard/actions/workflows/codeql.yml/badge.svg)](https://github.com/YOUR_USERNAME/foreflight-dashboard/actions/workflows/codeql.yml)
-[![codecov](https://codecov.io/gh/YOUR_USERNAME/foreflight-dashboard/branch/main/graph/badge.svg)](https://codecov.io/gh/YOUR_USERNAME/foreflight-dashboard)
+[![CI/CD Pipeline](https://github.com/jordanhubbard/foreflight-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/jordanhubbard/foreflight-dashboard/actions/workflows/ci.yml)
+[![Security Analysis](https://github.com/jordanhubbard/foreflight-dashboard/actions/workflows/codeql.yml/badge.svg)](https://github.com/jordanhubbard/foreflight-dashboard/actions/workflows/codeql.yml)
+[![codecov](https://codecov.io/gh/jordanhubbard/foreflight-dashboard/branch/main/graph/badge.svg)](https://codecov.io/gh/jordanhubbard/foreflight-dashboard)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Node.js 18+](https://img.shields.io/badge/node.js-18+-green.svg)](https://nodejs.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
 
-A free, open-source tool for managing and analyzing ForeFlight logbook data. This application helps pilots organize, analyze, and visualize their flight data from ForeFlight. **This is not commercial software - no terms to agree to, completely free to use.**
+A modern, stateless web application for analyzing ForeFlight logbook data. This application helps pilots import, validate, and visualize their flight data from ForeFlight CSV exports with advanced validation rules and beautiful visual distinctions. **Completely free and open-source - no accounts, no tracking, no commercial restrictions.**
 
 🐳 **Container-First Architecture**: This application is designed exclusively for containerized deployment. All operations run inside Docker containers for consistency, security, and easy deployment to any container platform.
 
 ## Features
 
-- Import ForeFlight logbook data
-- Analyze flight hours and patterns
-- Generate reports and statistics
-- Track currency requirements
-- Visualize flight data
+- **📊 Import & Analyze**: Upload ForeFlight CSV exports for comprehensive analysis
+- **✅ Smart Validation**: Advanced validation rules for cross-country flights, ground training, and time accountability
+- **🎨 Visual Distinctions**: Pastel backgrounds for ground training (blue) and night flights (purple) with intuitive icons
+- **✈️ ICAO Aircraft Codes**: Full support for ICAO aircraft type designators with validation and suggestions
+- **📈 Statistics Dashboard**: Real-time flight statistics, totals, and currency tracking
+- **🔍 Search & Filter**: Powerful filtering by aircraft, date range, flight type, and more
+- **🌙 Night Flight Tracking**: Special highlighting and tracking for night flight experience
+- **👨‍🎓 Ground Training Support**: Proper handling and validation of ground training entries
+- **🚫 Stateless Architecture**: No user accounts, no data persistence - upload and analyze on-demand
 
 ## Quick Start
 
@@ -43,24 +47,25 @@ make clean
 
 ### What `make start` does:
 1. **Builds** the Docker image with all dependencies (Python, Node.js, React, etc.)
-2. **Initializes** the database with default users
-3. **Starts** all services:
-   - 🌐 **Web UI**: http://localhost:8081 (React frontend)
-   - 🔧 **API**: http://localhost:5051 (FastAPI backend)
-   - ⚛️ **React Dev**: http://localhost:3000 (Development server)
+2. **Starts** the stateless application (no database initialization needed)
+3. **Serves** the complete application:
+   - 🌐 **Main Application**: http://localhost:5051 (FastAPI + React)
+   - 📚 **API Documentation**: http://localhost:5051/docs (Interactive API docs)
+   - ⚛️ **React Dev Server**: http://localhost:3001 (Development mode only)
 
-### Default Users
-After running `make start`, you can log in with:
-- **Admin**: `admin@example.com` / `admin`
-- **User**: `user@example.com` / `user`
-- **Student**: `student@example.com` / `student`
+### No User Accounts Required
+This is a **stateless application** - simply:
+1. Start the application with `make start`
+2. Open http://localhost:5051 in your browser
+3. Upload your ForeFlight CSV file and analyze immediately
+4. No registration, login, or data persistence required
 
 ### GitHub Codespaces
 1. Click the green "Code" button above
 2. Select "Open with Codespaces"
 3. Click "New codespace"
 4. Run: `make start`
-5. Access the forwarded port URL (typically port 8081)
+5. Access the forwarded port URL (typically port 5051)
 
 ### Manual Docker Commands
 
@@ -68,33 +73,19 @@ If you prefer not to use Make, you can run the Docker commands directly:
 
 ```bash
 # Build the image
-docker build --target development -t foreflight-dashboard:latest .
+docker-compose -f docker-compose.yml build
 
-# Initialize database
-docker run --rm \
-  -v $(pwd)/uploads:/app/uploads \
-  -v $(pwd)/logs:/app/logs \
-  foreflight-dashboard:latest \
-  python src/init_db.py
+# Start the application (stateless - no initialization needed)
+docker-compose -f docker-compose.yml up -d
 
-# Start the application
-docker run -d \
-  --name foreflight-dashboard-container \
-  -p 8081:8081 \
-  -p 5051:5051 \
-  -p 3000:3000 \
-  -v $(pwd)/src:/app/src \
-  -v $(pwd)/frontend:/app/frontend \
-  -v $(pwd)/uploads:/app/uploads \
-  -v $(pwd)/logs:/app/logs \
-  foreflight-dashboard:latest
+# View logs
+docker-compose -f docker-compose.yml logs -f
 
 # Stop the application
-docker stop foreflight-dashboard-container
-docker rm foreflight-dashboard-container
+docker-compose -f docker-compose.yml down
 
 # Clean up
-docker rmi foreflight-dashboard:latest
+docker-compose -f docker-compose.yml down -v --rmi all
 ```
 
 ## Project Structure
@@ -102,46 +93,58 @@ docker rmi foreflight-dashboard:latest
 ```
 foreflight-dashboard/
 ├── src/                    # Python backend source code
-│   ├── app.py             # Flask application
-│   ├── api/               # FastAPI routes
-│   ├── core/              # Core models and security
+│   ├── main.py            # FastAPI application (replaces Flask)
+│   ├── core/              # Core models, validation, and ICAO support
+│   │   ├── models.py      # Pydantic data models with validation
+│   │   ├── icao_validator.py  # ICAO aircraft code validation
+│   │   └── validation.py  # CSV validation logic
 │   ├── services/          # Business logic
-│   └── templates/         # HTML templates
-├── frontend/              # React frontend
-│   ├── src/               # React source code
+│   │   ├── importer.py    # ForeFlight CSV import service
+│   │   └── foreflight_client.py  # Data processing client
+│   └── static/            # Built React frontend assets
+├── frontend/              # React frontend source
+│   ├── src/               # TypeScript React components
+│   │   ├── components/    # Reusable UI components
+│   │   ├── pages/         # Page components
+│   │   └── services/      # API service layer
 │   ├── package.json       # Node.js dependencies
-│   └── vite.config.ts     # Vite configuration
-├── tests/                 # Test files
-├── uploads/               # User-uploaded files
-├── logs/                  # Application logs
-├── Dockerfile             # Multi-stage Docker build
-├── docker-compose.yml     # Docker Compose configuration
-├── Makefile              # Simplified build commands
+│   └── vite.config.ts     # Vite build configuration
+├── tests/                 # Comprehensive test suite
+│   ├── test_core/         # Core functionality tests
+│   ├── test_fastapi/      # API integration tests
+│   └── test_services/     # Service layer tests
+├── .github/workflows/     # CI/CD pipeline configuration
+├── Dockerfile.local       # Multi-stage Docker build
+├── docker-compose.yml     # Container orchestration
+├── Makefile              # Development workflow commands
 └── requirements.txt       # Python dependencies
 ```
 
-## Features
+## Key Features
 
-- **Modern React Frontend** with Material-UI design system
-- **User Authentication** with Flask-Security-Too
-- **Multi-user Support** with user-specific data isolation
-- **File Upload** for ForeFlight CSV exports
-- **Data Visualization** with charts and statistics
-- **Student Pilot Features** including endorsement tracking
-- **Responsive Design** that works on all devices
-- **Professional UI** matching major tech companies
+- **🎨 Modern React Frontend** with Material-UI design system and TypeScript
+- **🚫 Stateless Architecture** - no user accounts, databases, or data persistence
+- **📁 Session-Based Processing** - upload, analyze, and download results instantly
+- **✅ Advanced Validation** - smart rules for cross-country, ground training, and time accountability
+- **✈️ ICAO Aircraft Support** - comprehensive aircraft type code validation with suggestions
+- **🌙 Visual Flight Distinctions** - color-coded entries for ground training and night flights
+- **📊 Real-Time Statistics** - instant flight totals, currency tracking, and analysis
+- **🔍 Powerful Filtering** - search by aircraft, date, flight type, and validation status
+- **📱 Responsive Design** - works perfectly on desktop, tablet, and mobile devices
+- **🐳 Container-Ready** - deploy anywhere with Docker, no external dependencies
 
 ## Technology Stack
 
-- **Backend**: Python 3.11, Flask, FastAPI, SQLAlchemy, Flask-Security-Too
+- **Backend**: Python 3.11, FastAPI, Pydantic, Pandas (CSV processing)
 - **Frontend**: React 18, TypeScript, Material-UI (MUI), Vite
-- **Database**: SQLite (development), PostgreSQL (production ready)
-- **Authentication**: Flask-Security-Too with bcrypt password hashing
-- **Development**: Docker, Docker Compose, Hot reloading
-- **Testing**: Pytest, React Testing Library, Vitest
-- **CI/CD**: GitHub Actions, CodeQL Security Analysis, Automated Testing
-- **Code Quality**: Black, Flake8, MyPy, ESLint, Prettier
-- **Security**: Bandit, Safety, Trivy, SARIF reporting
+- **Architecture**: Stateless, session-based processing (no database required)
+- **Validation**: Advanced Pydantic models with custom aviation-specific rules
+- **Development**: Docker, Docker Compose, hot reloading, multi-stage builds
+- **Testing**: Pytest (115 tests), React Testing Library, 53% code coverage
+- **CI/CD**: GitHub Actions, CodeQL Security Analysis, automated testing
+- **Code Quality**: Black, Flake8, ESLint, Prettier, TypeScript strict mode
+- **Security**: Bandit, Safety, SARIF reporting, container security scanning
+- **Deployment**: Container-first, supports all major cloud platforms
 
 ## CI/CD Pipeline
 
@@ -190,30 +193,29 @@ This application is designed for **container-first deployment** and can be deplo
 ### 📋 Deployment Requirements
 
 - **Container Runtime**: Docker or compatible (Podman, containerd)
-- **Memory**: Minimum 512MB RAM (1GB+ recommended for production)
-- **Storage**: 1GB+ for database and file uploads (persistent volume recommended)
-- **Network**: Single port exposure (configurable, defaults to 3001 for UI)
+- **Memory**: Minimum 512MB RAM (1GB+ recommended for large CSV files)
+- **Storage**: Minimal storage needed (logs only, no persistent data)
+- **Network**: Single port exposure (defaults to 5051 for main application)
+- **No Database**: Stateless architecture requires no external database
 
 ### 🌍 Environment Variables
 
 ```bash
 # Application Configuration
 ENVIRONMENT=production         # Set to 'production' for production deployment
-FASTAPI_PORT=5051             # FastAPI backend port (internal)
-REACT_DEV_PORT=3001           # React frontend port (primary UI)
-SECRET_KEY=your-secret-key    # JWT signing key (REQUIRED in production)
+FASTAPI_PORT=5051             # FastAPI application port
+REACT_DEV_PORT=3001           # React dev server port (development only)
 
-# Database Configuration (optional - defaults to SQLite)
-DATABASE_URL=postgresql://user:pass@host:port/db
-DB_PATH=/app/data/app.db      # SQLite database location
-
-# File Storage
-UPLOAD_PATH=/app/uploads      # File upload directory
-DATA_PATH=/app/data          # Application data directory
+# File Storage (temporary session files only)
+UPLOAD_PATH=/app/uploads      # Temporary file upload directory
+LOGS_PATH=/app/logs          # Application logs directory
 
 # Security (Production)
 ALLOWED_HOSTS=yourdomain.com,*.yourdomain.com  # Restrict host access
 CORS_ORIGINS=https://yourdomain.com            # CORS allowed origins
+
+# Note: No database configuration needed - this is a stateless application
+# All data processing happens in-memory during the session
 ```
 
 ### 🐳 Container Platforms
@@ -252,7 +254,7 @@ CORS_ORIGINS=https://yourdomain.com            # CORS allowed origins
    - name: web
      source_dir: /
      github:
-       repo: your-username/foreflight-dashboard
+       repo: jordanhubbard/foreflight-dashboard
        branch: main
      dockerfile_path: Dockerfile
      http_port: 3001
@@ -418,7 +420,7 @@ CORS_ORIGINS=https://yourdomain.com            # CORS allowed origins
 2. **Deploy Application**:
    ```bash
    # Clone repository
-   git clone https://github.com/your-username/foreflight-dashboard.git
+   git clone https://github.com/jordanhubbard/foreflight-dashboard.git
    cd foreflight-dashboard
    
    # Create production environment file
@@ -501,16 +503,23 @@ docker-compose up --build -d
 
 ### 💾 Data Persistence
 
-**Important**: Configure persistent storage for production:
+**Note**: This is a **stateless application** - no data persistence is required or recommended:
+
+- **No Database**: All processing happens in-memory during the session
+- **No User Data**: No accounts, profiles, or stored user information
+- **Temporary Files**: Uploaded CSV files are processed and discarded
+- **Session-Based**: Each upload/analysis session is independent
+- **Privacy-First**: No data is retained between sessions
+
+For production deployment, only configure log persistence if needed:
 
 ```yaml
-# docker-compose.override.yml for production
+# docker-compose.override.yml for production (optional)
 version: '3.8'
 services:
   foreflight-dashboard:
     volumes:
-      - ./data:/app/data          # Database persistence
-      - ./uploads:/app/uploads    # File upload persistence
+      - ./logs:/app/logs          # Optional: Log persistence only
 ```
 
 ### 🆘 Troubleshooting
@@ -529,7 +538,7 @@ docker-compose exec foreflight-dashboard tail -f /app/logs/foreflight.log
 ```
 
 **Getting Help**:
-- Check the [GitHub Issues](https://github.com/your-username/foreflight-dashboard/issues)
+- Check the [GitHub Issues](https://github.com/jordanhubbard/foreflight-dashboard/issues)
 - Review container logs: `docker-compose logs -f`
 - Verify health check: `curl http://localhost:3001/health`
 
