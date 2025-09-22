@@ -17,6 +17,7 @@ interface LogbookEntry {
   aircraft: {
     registration: string
     type: string
+    icao_type_code?: string | null  // ICAO aircraft type designator (e.g., CH7A, C172)
     category_class: string
   }
   departure: { identifier: string | null }

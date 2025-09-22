@@ -60,8 +60,16 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
 
   // Get unique aircraft for filter dropdown
   const uniqueAircraft = useMemo(() => {
-    const aircraft = new Set(logbookData.entries.map(entry => entry.aircraft?.registration).filter(Boolean))
-    return Array.from(aircraft).sort()
+    const aircraftMap = new Map()
+    logbookData.entries.forEach(entry => {
+      if (entry.aircraft?.registration) {
+        aircraftMap.set(entry.aircraft.registration, {
+          registration: entry.aircraft.registration,
+          icao_type_code: entry.aircraft.icao_type_code
+        })
+      }
+    })
+    return Array.from(aircraftMap.values()).sort((a, b) => a.registration.localeCompare(b.registration))
   }, [logbookData.entries])
 
   // Filter and sort entries
@@ -70,6 +78,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
       const matchesSearch = !searchTerm || 
         entry.aircraft?.registration?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         entry.aircraft?.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.aircraft?.icao_type_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         entry.departure?.identifier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         entry.destination?.identifier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         entry.remarks?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -359,8 +368,13 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
                 >
                   <MenuItem value="">All Aircraft</MenuItem>
                   {uniqueAircraft.map((aircraft) => (
-                    <MenuItem key={aircraft} value={aircraft}>
-                      {aircraft}
+                    <MenuItem key={aircraft.registration} value={aircraft.registration}>
+                      {aircraft.registration}
+                      {aircraft.icao_type_code && (
+                        <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                          ({aircraft.icao_type_code})
+                        </Typography>
+                      )}
                     </MenuItem>
                   ))}
                 </Select>
@@ -486,6 +500,11 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
                         <Box>
                           <Typography variant="body2" fontWeight="medium">
                             {entry.aircraft?.registration || 'N/A'}
+                            {entry.aircraft?.icao_type_code && (
+                              <Typography component="span" variant="caption" color="primary" sx={{ ml: 1, fontWeight: 'medium' }}>
+                                ({entry.aircraft.icao_type_code})
+                              </Typography>
+                            )}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {entry.aircraft?.type || 'Unknown'}

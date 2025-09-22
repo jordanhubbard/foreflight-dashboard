@@ -131,9 +131,15 @@ class ForeFlightImporter:
                     if 'highPerformance (FAA)' in row and pd.notna(row['highPerformance (FAA)']):
                         high_performance = str(row['highPerformance (FAA)']).strip().upper() == 'TRUE'
                     
+                    # Get ICAO type code if available
+                    icao_type_code = None
+                    if 'TypeCode' in row and pd.notna(row['TypeCode']):
+                        icao_type_code = str(row['TypeCode']).strip()
+                    
                     aircraft_dict[aircraft_id] = Aircraft(
                         registration=aircraft_id,
                         type=str(row['Model']) if pd.notna(row['Model']) else 'UNKNOWN',
+                        icao_type_code=icao_type_code,
                         category_class=str(row['aircraftClass (FAA)']) if 'aircraftClass (FAA)' in row and pd.notna(row['aircraftClass (FAA)']) else 'airplane_single_engine_land',
                         gear_type=str(row['GearType']) if 'GearType' in row and pd.notna(row['GearType']) else 'tricycle',
                         complex_aircraft=complex_aircraft,

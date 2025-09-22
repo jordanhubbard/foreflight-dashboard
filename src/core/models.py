@@ -29,6 +29,7 @@ class Aircraft(BaseModel):
     """Aircraft information."""
     registration: str
     type: str
+    icao_type_code: Optional[str] = None  # ICAO aircraft type designator (e.g., CH7A, C172)
     category_class: str
     gear_type: str = "tricycle"  # Default to tricycle gear since it's more common
     complex_aircraft: bool = False
@@ -43,6 +44,7 @@ class Aircraft(BaseModel):
         return {
             'registration': self.registration,
             'type': self.type,
+            'icao_type_code': self.icao_type_code,
             'category_class': self.category_class,
             'gear_type': self.gear_type,
             'complex_aircraft': self.complex_aircraft,

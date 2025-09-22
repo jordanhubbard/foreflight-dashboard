@@ -169,11 +169,7 @@ def convert_entries_to_template_data(entries: List[LogbookEntry]) -> List[Dict]:
     for entry in entries:
         entry_dict = {
             'date': entry.date.isoformat(),
-            'aircraft': {
-                'registration': entry.aircraft.registration,
-                'type': entry.aircraft.type,
-                'category_class': entry.aircraft.category_class
-            },
+            'aircraft': entry.aircraft.to_dict(),
             'departure': {
                 'identifier': entry.departure.identifier if entry.departure else None
             },

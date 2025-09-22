@@ -76,6 +76,7 @@ def validate_logbook(csv_path):
 
         aircraft_data[row['AircraftID'].strip()] = {
             'type': row.get('Model', 'UNKNOWN').strip(),
+            'icao_type_code': row.get('TypeCode', '').strip() or None,
             'category_class': row.get('aircraftClass (FAA)', 'airplane_single_engine_land').strip(),
             'gear_type': row.get('GearType', 'fixed_tricycle').strip()
         }
@@ -123,6 +124,7 @@ def validate_logbook(csv_path):
                 aircraft=Aircraft(
                     registration=aircraft_id,
                     type=aircraft_info['type'],
+                    icao_type_code=aircraft_info['icao_type_code'],
                     category_class=aircraft_info['category_class'],
                     gear_type="tailwheel" if "fixed_tailwheel" in aircraft_info['gear_type'] else "tricycle"
                 ),
