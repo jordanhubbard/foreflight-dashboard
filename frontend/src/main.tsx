@@ -8,45 +8,46 @@ import { Toaster } from 'react-hot-toast'
 import App from './App'
 import './styles/globals.css'
 
-// Create a Material-UI theme with professional design
+// Create a Material-UI theme with aviation-inspired design
 const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#1976d2', // Professional blue
-      light: '#42a5f5',
-      dark: '#1565c0',
+      main: '#003d5b',      // Deep aviation blue (sky at altitude)
+      light: '#0077b6',     // Lighter sky blue
+      dark: '#001d2e',      // Night sky
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#dc004e', // Aviation red
-      light: '#ff5983',
-      dark: '#9a0036',
+      main: '#ff6b35',      // Aviation orange (VFR sectional charts)
+      light: '#ff9e66',     // Lighter orange
+      dark: '#cc4400',      // Deeper orange
       contrastText: '#ffffff',
     },
     background: {
-      default: '#f5f5f5',
+      default: '#f0f4f8',   // Slightly blue-tinted background (sky)
       paper: '#ffffff',
     },
     text: {
-      primary: '#212121',
-      secondary: '#757575',
+      primary: '#1a2332',   // Deep blue-gray (aviation instrument text)
+      secondary: '#5a6c7d', // Muted blue-gray
     },
     error: {
       main: '#d32f2f',
     },
     warning: {
-      main: '#ed6c02',
+      main: '#ffd700',      // Aviation caution yellow
     },
     info: {
-      main: '#0288d1',
+      main: '#0077b6',      // Sky blue
     },
     success: {
-      main: '#2e7d32',
+      main: '#00cc99',      // VFR green (like VFR on charts)
     },
   },
   typography: {
     fontFamily: [
+      'Inter',
       '-apple-system',
       'BlinkMacSystemFont',
       '"Segoe UI"',
@@ -54,6 +55,13 @@ const theme = createTheme({
       '"Helvetica Neue"',
       'Arial',
       'sans-serif',
+    ].join(','),
+    // Use monospace for aviation data (flight times, registrations, codes)
+    fontFamilyMonospace: [
+      '"Roboto Mono"',
+      '"Courier New"',
+      'Courier',
+      'monospace',
     ].join(','),
     h1: {
       fontSize: '2.5rem',
@@ -117,8 +125,10 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          boxShadow: '0 2px 12px rgba(0,61,91,0.12)',
           borderRadius: 12,
+          border: '1px solid rgba(0,119,182,0.08)',
+          background: 'linear-gradient(145deg, #ffffff 0%, #fafcfd 100%)',
         },
       },
     },
@@ -141,7 +151,8 @@ const theme = createTheme({
     MuiAppBar: {
       styleOverrides: {
         root: {
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          boxShadow: '0 2px 8px rgba(0,61,91,0.15)',
+          background: 'linear-gradient(135deg, #003d5b 0%, #0077b6 100%)',
         },
       },
     },

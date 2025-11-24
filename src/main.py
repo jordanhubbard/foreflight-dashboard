@@ -27,6 +27,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, ValidationError
 import uvicorn
 from contextlib import nullcontext
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 # Database imports
 from sqlalchemy.orm import Session
@@ -111,6 +114,39 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
+
+# Security headers middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Add security headers to all responses."""
+    response = await call_next(request)
+    # Content Security Policy
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data:; "
+        "connect-src 'self' https://codecov.io;"
+    )
+    # HTTP Strict Transport Security
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    # X-Frame-Options
+    response.headers["X-Frame-Options"] = "DENY"
+    # X-Content-Type-Options
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    # X-XSS-Protection
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    # Referrer-Policy
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # Permissions-Policy
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    return response
+
+# Rate limiting setup
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Database is now configured in src.core.database
 
@@ -362,7 +398,9 @@ async def health_check():
 # API Routes - Simplified Stateless Application
 
 @app.post("/api/process-logbook")
+@limiter.limit("10/minute")  # Rate limit: 10 uploads per minute per IP
 async def process_logbook(
+    request: Request,
     file: UploadFile = File(...),
     student_pilot: bool = Form(False)
 ):

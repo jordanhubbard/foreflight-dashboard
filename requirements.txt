@@ -22,6 +22,9 @@ email-validator==2.1.0
 # HTTP client
 requests==2.31.0
 
+# Rate limiting
+slowapi==0.1.9
+
 # Template engine (for email templates if needed)
 jinja2==3.1.3
 

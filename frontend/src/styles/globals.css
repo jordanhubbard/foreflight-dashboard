@@ -121,11 +121,23 @@ body {
 
 /* Aviation-specific styles */
 .aviation-blue {
-  color: #1976d2;
+  color: #003d5b;
 }
 
-.aviation-red {
-  color: #dc004e;
+.aviation-orange {
+  color: #ff6b35;
+}
+
+.aviation-sky {
+  color: #0077b6;
+}
+
+.aviation-vfr-green {
+  color: #00cc99;
+}
+
+.aviation-caution {
+  color: #ffd700;
 }
 
 .flight-time {
@@ -134,15 +146,17 @@ body {
 }
 
 .aircraft-registration {
-  font-family: 'Courier New', monospace;
+  font-family: 'Roboto Mono', 'Courier New', monospace;
   font-weight: 600;
-  color: #1976d2;
+  color: #003d5b;
+  letter-spacing: 0.5px;
 }
 
 .airport-code {
-  font-family: 'Courier New', monospace;
+  font-family: 'Roboto Mono', 'Courier New', monospace;
   font-weight: 600;
-  color: #dc004e;
+  color: #ff6b35;
+  letter-spacing: 0.5px;
 }
 
 /* Status indicators */
