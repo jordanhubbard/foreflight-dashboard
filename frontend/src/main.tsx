@@ -56,13 +56,6 @@ const theme = createTheme({
       'Arial',
       'sans-serif',
     ].join(','),
-    // Use monospace for aviation data (flight times, registrations, codes)
-    fontFamilyMonospace: [
-      '"Roboto Mono"',
-      '"Courier New"',
-      'Courier',
-      'monospace',
-    ].join(','),
     h1: {
       fontSize: '2.5rem',
       fontWeight: 600,

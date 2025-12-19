@@ -23,6 +23,7 @@ frontend/dist/
 frontend/build/
 frontend/.vite/
 frontend/coverage/
+src/static/dist/
 
 # Package manager files (excluding package-lock.json which should be committed)
 frontend/yarn.lock
