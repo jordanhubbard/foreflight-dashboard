@@ -497,7 +497,7 @@ async def serve_spa(path: str):
 # Removed database initialization - now stateless application
 
 if __name__ == "__main__":
-    port = int(os.environ.get('FASTAPI_PORT', 5051))
+    port = int(os.environ.get("PORT") or os.environ.get("FASTAPI_PORT") or 5051)
     uvicorn.run(
         "src.main:app",
         host="0.0.0.0",

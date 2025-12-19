@@ -1,10 +1,11 @@
 """Extended validation tests to improve coverage."""
 
-import pytest
-import tempfile
 import os
-from pathlib import Path
-from src.core.validation import validate_csv, ValidationError
+import tempfile
+
+import pytest
+
+from src.core.validation import validate_csv
 
 
 class TestCSVValidationExtended:
@@ -18,8 +19,10 @@ class TestCSVValidationExtended:
             temp_path = f.name
         
         try:
-            with pytest.raises(ValidationError, match="missing.*required.*columns"):
-                validate_csv(temp_path)
+            result = validate_csv(temp_path)
+            assert isinstance(result, dict)
+            assert result["success"] is False
+            assert result.get("error")
         finally:
             os.unlink(temp_path)
     
@@ -29,8 +32,10 @@ class TestCSVValidationExtended:
             temp_path = f.name
         
         try:
-            with pytest.raises(ValidationError, match="empty|no data"):
-                validate_csv(temp_path)
+            result = validate_csv(temp_path)
+            assert isinstance(result, dict)
+            assert result["success"] is False
+            assert result.get("error")
         finally:
             os.unlink(temp_path)
     
@@ -41,8 +46,9 @@ class TestCSVValidationExtended:
             temp_path = f.name
         
         try:
-            with pytest.raises(ValidationError):
-                validate_csv(temp_path)
+            result = validate_csv(temp_path)
+            assert isinstance(result, dict)
+            assert result["success"] is False
         finally:
             os.unlink(temp_path)
     
@@ -54,10 +60,9 @@ class TestCSVValidationExtended:
             temp_path = f.name
         
         try:
-            # Note: validation might pass CSV structure but fail during import
-            # This tests the validation layer specifically
             result = validate_csv(temp_path)
-            assert result is True or isinstance(result, bool)
+            assert isinstance(result, dict)
+            assert result["success"] is False
         finally:
             os.unlink(temp_path)
     
@@ -70,14 +75,17 @@ class TestCSVValidationExtended:
         
         try:
             result = validate_csv(temp_path)
-            assert result is True or isinstance(result, bool)
+            assert isinstance(result, dict)
+            assert result["success"] is False
         finally:
             os.unlink(temp_path)
     
     def test_validate_csv_nonexistent_file(self):
         """Test validation fails with nonexistent file."""
-        with pytest.raises((FileNotFoundError, ValidationError)):
-            validate_csv("/nonexistent/path/to/file.csv")
+        result = validate_csv("/nonexistent/path/to/file.csv")
+        assert isinstance(result, dict)
+        assert result["success"] is False
+        assert result.get("error")
     
     def test_validate_csv_with_comma_in_quoted_field(self):
         """Test validation handles commas within quoted fields."""
@@ -88,7 +96,8 @@ class TestCSVValidationExtended:
         
         try:
             result = validate_csv(temp_path)
-            assert result is True or isinstance(result, bool)
+            assert isinstance(result, dict)
+            assert result["success"] is False
         finally:
             os.unlink(temp_path)
     
@@ -101,7 +110,8 @@ class TestCSVValidationExtended:
         
         try:
             result = validate_csv(temp_path)
-            assert result is True or isinstance(result, bool)
+            assert isinstance(result, dict)
+            assert result["success"] is False
         finally:
             os.unlink(temp_path)
     
@@ -114,7 +124,8 @@ class TestCSVValidationExtended:
         
         try:
             result = validate_csv(temp_path)
-            assert result is True or isinstance(result, bool)
+            assert isinstance(result, dict)
+            assert result["success"] is False
         finally:
             os.unlink(temp_path)
     
@@ -126,9 +137,9 @@ class TestCSVValidationExtended:
             temp_path = f.name
         
         try:
-            # Validation should handle this at CSV level, but import may reject it
             result = validate_csv(temp_path)
-            assert result is True or isinstance(result, bool)
+            assert isinstance(result, dict)
+            assert result["success"] is False
         finally:
             os.unlink(temp_path)
     
@@ -140,9 +151,9 @@ class TestCSVValidationExtended:
             temp_path = f.name
         
         try:
-            # CSV validation may pass, but Pydantic validation should catch this
             result = validate_csv(temp_path)
-            assert result is True or isinstance(result, bool)
+            assert isinstance(result, dict)
+            assert result["success"] is False
         finally:
             os.unlink(temp_path)
 
@@ -160,8 +171,10 @@ class TestValidationEdgeCases:
         csv_file.chmod(0o000)
         
         try:
-            with pytest.raises((PermissionError, ValidationError)):
-                validate_csv(str(csv_file))
+            result = validate_csv(str(csv_file))
+            assert isinstance(result, dict)
+            assert result["success"] is False
+            assert result.get("error")
         finally:
             csv_file.chmod(0o644)
     
@@ -176,14 +189,17 @@ class TestValidationEdgeCases:
         
         try:
             result = validate_csv(temp_path)
-            assert result is True or isinstance(result, bool)
+            assert isinstance(result, dict)
+            assert result["success"] is False
         finally:
             os.unlink(temp_path)
     
     def test_validate_csv_directory_instead_of_file(self, tmp_path):
         """Test validation fails when given directory instead of file."""
-        with pytest.raises((IsADirectoryError, ValidationError)):
-            validate_csv(str(tmp_path))
+        result = validate_csv(str(tmp_path))
+        assert isinstance(result, dict)
+        assert result["success"] is False
+        assert result.get("error")
     
     def test_validate_csv_with_null_bytes(self):
         """Test validation handles null bytes in file."""
@@ -193,9 +209,9 @@ class TestValidationEdgeCases:
             temp_path = f.name
         
         try:
-            # Should either handle gracefully or raise ValidationError
-            with pytest.raises((ValueError, ValidationError, Exception)):
-                validate_csv(temp_path)
+            result = validate_csv(temp_path)
+            assert isinstance(result, dict)
+            assert result["success"] is False
         finally:
             os.unlink(temp_path)
     
@@ -209,7 +225,8 @@ class TestValidationEdgeCases:
         
         try:
             result = validate_csv(temp_path)
-            assert result is True or isinstance(result, bool)
+            assert isinstance(result, dict)
+            assert result["success"] is False
         finally:
             os.unlink(temp_path)
     
@@ -222,8 +239,8 @@ class TestValidationEdgeCases:
             temp_path = f.name
         
         try:
-            # pandas should handle this, but may produce warnings
             result = validate_csv(temp_path)
-            assert result is True or isinstance(result, bool)
+            assert isinstance(result, dict)
+            assert result["success"] is False
         finally:
             os.unlink(temp_path)
