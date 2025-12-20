@@ -14,10 +14,16 @@ else
     export PYTHONPATH=/app
 
     # Start FastAPI application (replaces both Flask and old FastAPI)
-    # Railway sets PORT at runtime; locally we typically use FASTAPI_PORT.
-    API_PORT=${PORT:-${FASTAPI_PORT:-5051}}
+    # On Railway Docker deployments, routing is tied to the container's exposed port (FASTAPI_PORT).
+    API_PORT=${FASTAPI_PORT:-5051}
     echo "Starting FastAPI application on port ${API_PORT}..."
-    python -m uvicorn src.main:app --host=0.0.0.0 --port=${API_PORT} --reload &
+
+    UVICORN_ARGS=(--host=0.0.0.0 --port=${API_PORT})
+    if [ "${ENVIRONMENT}" = "development" ]; then
+        UVICORN_ARGS+=(--reload)
+    fi
+
+    python -m uvicorn src.main:app "${UVICORN_ARGS[@]}" &
     FASTAPI_PID=$!
 
     # In development, start React dev server for hot reloading
