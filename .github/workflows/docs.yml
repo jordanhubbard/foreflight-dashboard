@@ -49,10 +49,10 @@ jobs:
           cp AUDIT_REPORT.md docs/audit-report.md
         else
           cat > docs/audit-report.md << 'EOF'
-          # Audit Report
+        # Audit Report
 
-          No `AUDIT_REPORT.md` was found in the repository at build time.
-          EOF
+        No `AUDIT_REPORT.md` was found in the repository at build time.
+        EOF
         fi
         cp LICENSE docs/license.md
         
@@ -61,10 +61,10 @@ jobs:
           cp tests/README.md docs/testing.md
         else
           cat > docs/testing.md << 'EOF'
-          # Testing
+        # Testing
 
-          No testing documentation file (`tests/README.md`) was found in the repository at build time.
-          EOF
+        No testing documentation file (`tests/README.md`) was found in the repository at build time.
+        EOF
         fi
 
     - name: Generate API documentation
