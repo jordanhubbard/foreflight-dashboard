@@ -130,6 +130,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, frontend-tests, api-tests]
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
     
     steps:
     - name: Checkout code
