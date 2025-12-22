@@ -190,6 +190,7 @@ jobs:
         context: .
         target: production
         push: false
+        load: true
         tags: foreflight-dashboard:security-scan
         
     - name: Run comprehensive security scan
