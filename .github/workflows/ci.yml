@@ -107,8 +107,8 @@ jobs:
 
     - name: Build and start application (cloud-compatible Dockerfile)
       run: |
-        docker-compose -f docker-compose.yml build
-        docker-compose -f docker-compose.yml up -d
+        docker compose -f docker-compose.yml build
+        docker compose -f docker-compose.yml up -d
         
     - name: Wait for application to be ready
       run: |
@@ -119,12 +119,12 @@ jobs:
     - name: Run API endpoint integration tests
       run: |
         echo "Running comprehensive API endpoint tests..."
-        docker-compose -f docker-compose.yml exec -T foreflight-dashboard pytest tests/test_fastapi/ -v --tb=short
+        docker compose -f docker-compose.yml exec -T foreflight-dashboard pytest tests/test_fastapi/ -v --tb=short
 
     - name: Stop application
       run: |
         echo "Stopping test application..."
-        docker-compose -f docker-compose.yml down
+        docker compose -f docker-compose.yml down
 
   build:
     runs-on: ubuntu-latest

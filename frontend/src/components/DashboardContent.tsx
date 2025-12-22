@@ -5,7 +5,6 @@ import {
   Card,
   CardContent,
   Typography,
-  Chip,
   Table,
   TableBody,
   TableCell,
@@ -20,11 +19,6 @@ import {
   InputLabel,
   Collapse,
   IconButton,
-  Tabs,
-  Tab,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   TextField,
   Alert,
   Tooltip,
@@ -42,14 +36,13 @@ import {
   Warning,
   NightsStay,
 } from '@mui/icons-material'
-import { LogbookData, LogbookEntry } from '../services/logbookService'
+import { LogbookData } from '../services/logbookService'
 
 interface DashboardContentProps {
   logbookData: LogbookData
 }
 
 const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
-  const [selectedTab, setSelectedTab] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
   const [aircraftFilter, setAircraftFilter] = useState('')
   const [sortBy, setSortBy] = useState('date')
@@ -72,7 +65,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
 
   // Filter and sort entries
   const filteredEntries = useMemo(() => {
-    let filtered = logbookData.entries.filter(entry => {
+    const filtered = logbookData.entries.filter(entry => {
       const matchesSearch = !searchTerm || 
         entry.aircraft?.registration?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         entry.aircraft?.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -88,12 +81,13 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
 
     // Sort entries
     filtered.sort((a, b) => {
-      let aValue: any, bValue: any
+      let aValue: string | number
+      let bValue: string | number
 
       switch (sortBy) {
         case 'date':
-          aValue = new Date(a.date)
-          bValue = new Date(b.date)
+          aValue = new Date(a.date).getTime()
+          bValue = new Date(b.date).getTime()
           break
         case 'aircraft':
           aValue = a.aircraft?.registration || ''
@@ -124,8 +118,8 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ logbookData }) => {
           bValue = (b.landings_day || 0) + (b.landings_night || 0)
           break
         default:
-          aValue = a.date
-          bValue = b.date
+          aValue = new Date(a.date).getTime()
+          bValue = new Date(b.date).getTime()
       }
 
       if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1

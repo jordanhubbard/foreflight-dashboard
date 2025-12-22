@@ -48,8 +48,13 @@ const UploadPage: React.FC = () => {
       const data = await logbookService.processLogbook(file, isStudentPilot)
       setLogbookData(data)
       toast.success(`Successfully processed ${data.entries.length} logbook entries!`)
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Failed to process logbook'
+    } catch (err: unknown) {
+      const maybeErr = err as {
+        response?: { data?: { detail?: string } }
+        message?: string
+      }
+      const errorMessage =
+        maybeErr.response?.data?.detail || maybeErr.message || 'Failed to process logbook'
       setError(errorMessage)
       toast.error(errorMessage)
     } finally {
