@@ -45,12 +45,26 @@ jobs:
         # Copy main documentation
         cp README.md docs/index.md
         cp DEPLOYMENT.md docs/deployment.md
-        cp AUDIT_REPORT.md docs/audit-report.md
+        if [ -f AUDIT_REPORT.md ]; then
+          cp AUDIT_REPORT.md docs/audit-report.md
+        else
+          cat > docs/audit-report.md << 'EOF'
+          # Audit Report
+
+          No `AUDIT_REPORT.md` was found in the repository at build time.
+          EOF
+        fi
         cp LICENSE docs/license.md
         
         # Copy test documentation if it exists
         if [ -f tests/README.md ]; then
           cp tests/README.md docs/testing.md
+        else
+          cat > docs/testing.md << 'EOF'
+          # Testing
+
+          No testing documentation file (`tests/README.md`) was found in the repository at build time.
+          EOF
         fi
 
     - name: Generate API documentation
