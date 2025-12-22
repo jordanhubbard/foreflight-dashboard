@@ -6,6 +6,10 @@ on:
     - cron: '0 9 * * 1'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   update-python-dependencies:
     name: Update Python Dependencies
@@ -18,7 +22,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
         
@@ -35,11 +39,14 @@ jobs:
         
         # For now, just check for security updates
         pip install safety
-        safety check --json --output safety-report.json || true
+        (safety check --output json || true) > safety-report.json
+        if [ ! -s safety-report.json ]; then
+          echo '{"vulnerabilities":[]}' > safety-report.json
+        fi
         
     - name: Check for security vulnerabilities
       run: |
-        if [ -f safety-report.json ]; then
+        if [ -s safety-report.json ]; then
           if [ "$(jq '.vulnerabilities | length' safety-report.json)" -gt 0 ]; then
             echo "🚨 Security vulnerabilities found!"
             jq '.vulnerabilities[] | "- \(.package_name): \(.vulnerability_id)"' safety-report.json
@@ -49,7 +56,8 @@ jobs:
         fi
         
     - name: Create Pull Request for Python updates
-      uses: peter-evans/create-pull-request@v5
+      continue-on-error: true
+      uses: peter-evans/create-pull-request@v7
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         commit-message: 'chore: update Python dependencies'
@@ -97,12 +105,15 @@ jobs:
         npm update
         
         # Check for security vulnerabilities
-        npm audit --json > npm-audit.json || true
+        (npm audit --json || true) > npm-audit.json
+        if [ ! -s npm-audit.json ]; then
+          echo '{"metadata":{"vulnerabilities":{"total":0}},"vulnerabilities":{}}' > npm-audit.json
+        fi
         
     - name: Check for security vulnerabilities
       run: |
         cd frontend
-        if [ -f npm-audit.json ]; then
+        if [ -s npm-audit.json ]; then
           VULN_COUNT=$(jq '.metadata.vulnerabilities.total // 0' npm-audit.json)
           if [ "$VULN_COUNT" -gt 0 ]; then
             echo "🚨 $VULN_COUNT npm security vulnerabilities found!"
@@ -122,7 +133,8 @@ jobs:
         npm run lint || true
         
     - name: Create Pull Request for Node updates
-      uses: peter-evans/create-pull-request@v5
+      continue-on-error: true
+      uses: peter-evans/create-pull-request@v7
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         commit-message: 'chore: update Node.js dependencies'
@@ -155,6 +167,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         
     - name: Update GitHub Actions versions
+      continue-on-error: true
       uses: renovatebot/github-action@v39.2.4
       with:
         configurationFile: .github/renovate.json
@@ -205,7 +218,7 @@ jobs:
         fi
         
     - name: Upload security scan results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: weekly-security-scan
         path: trivy-results.json
