@@ -31,7 +31,7 @@ We highly encourage switching to the new `scan` command which is easier to use, 
         "account": "",
         "local_database_path": null,
         "safety_version": "3.7.0",
-        "timestamp": "2025-12-22 15:50:06",
+        "timestamp": "2025-12-29 09:37:01",
         "packages_found": 47,
         "vulnerabilities_found": 0,
         "vulnerabilities_ignored": 0,
@@ -53,8 +53,8 @@ We highly encourage switching to the new `scan` command which is easier to use, 
         "git": {
             "branch": "main",
             "tag": "",
-            "commit": "33822f110bcf0ed6f2aac418d593a0781a5ffea6",
-            "dirty": "False",
+            "commit": "df47b7bedbc34a85296a4af65e3bce456b104bb6",
+            "dirty": "True",
             "origin": "https://github.com/jordanhubbard/foreflight-dashboard"
         },
         "project": null,
@@ -574,21 +574,6 @@ We highly encourage switching to the new `scan` command which is easier to use, 
                 }
             ]
         },
-        "typer": {
-            "name": "typer",
-            "version": "0.20.1",
-            "requirements": [
-                {
-                    "raw": "typer==0.20.1",
-                    "extras": [],
-                    "marker": null,
-                    "name": "typer",
-                    "specifier": "==0.20.1",
-                    "url": null,
-                    "found": "/opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/typer-0.20.1.dist-info"
-                }
-            ]
-        },
         "dparse": {
             "name": "dparse",
             "version": "0.6.4",
@@ -661,6 +646,21 @@ We highly encourage switching to the new `scan` command which is easier to use, 
                     "specifier": "==0.18.17",
                     "url": null,
                     "found": "/opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/ruamel_yaml-0.18.17.dist-info"
+                }
+            ]
+        },
+        "typer": {
+            "name": "typer",
+            "version": "0.21.0",
+            "requirements": [
+                {
+                    "raw": "typer==0.21.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "typer",
+                    "specifier": "==0.21.0",
+                    "url": null,
+                    "found": "/opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/typer-0.21.0.dist-info"
                 }
             ]
         },
