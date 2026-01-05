@@ -31,8 +31,8 @@ We highly encourage switching to the new `scan` command which is easier to use, 
         "account": "",
         "local_database_path": null,
         "safety_version": "3.7.0",
-        "timestamp": "2025-12-29 09:37:01",
-        "packages_found": 47,
+        "timestamp": "2026-01-05 09:39:43",
+        "packages_found": 46,
         "vulnerabilities_found": 0,
         "vulnerabilities_ignored": 0,
         "remediations_recommended": 0,
@@ -53,7 +53,7 @@ We highly encourage switching to the new `scan` command which is easier to use, 
         "git": {
             "branch": "main",
             "tag": "",
-            "commit": "df47b7bedbc34a85296a4af65e3bce456b104bb6",
+            "commit": "202b651096588a5c76a1b41b73311f44b7df96cb",
             "dirty": "True",
             "origin": "https://github.com/jordanhubbard/foreflight-dashboard"
         },
@@ -139,21 +139,6 @@ We highly encourage switching to the new `scan` command which is easier to use, 
                 }
             ]
         },
-        "ruamel.yaml.clib": {
-            "name": "ruamel.yaml.clib",
-            "version": "0.2.15",
-            "requirements": [
-                {
-                    "raw": "ruamel.yaml.clib==0.2.15",
-                    "extras": [],
-                    "marker": null,
-                    "name": "ruamel.yaml.clib",
-                    "specifier": "==0.2.15",
-                    "url": null,
-                    "found": "/opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/ruamel_yaml_clib-0.2.15.dist-info"
-                }
-            ]
-        },
         "typing-inspection": {
             "name": "typing-inspection",
             "version": "0.4.2",
@@ -196,21 +181,6 @@ We highly encourage switching to the new `scan` command which is easier to use, 
                     "specifier": "==0.16.0",
                     "url": null,
                     "found": "/opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/h11-0.16.0.dist-info"
-                }
-            ]
-        },
-        "filelock": {
-            "name": "filelock",
-            "version": "3.20.1",
-            "requirements": [
-                {
-                    "raw": "filelock==3.20.1",
-                    "extras": [],
-                    "marker": null,
-                    "name": "filelock",
-                    "specifier": "==3.20.1",
-                    "url": null,
-                    "found": "/opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/filelock-3.20.1.dist-info"
                 }
             ]
         },
@@ -394,33 +364,18 @@ We highly encourage switching to the new `scan` command which is easier to use, 
                 }
             ]
         },
-        "marshmallow": {
-            "name": "marshmallow",
-            "version": "4.1.2",
+        "ruamel.yaml": {
+            "name": "ruamel.yaml",
+            "version": "0.19.1",
             "requirements": [
                 {
-                    "raw": "marshmallow==4.1.2",
+                    "raw": "ruamel.yaml==0.19.1",
                     "extras": [],
                     "marker": null,
-                    "name": "marshmallow",
-                    "specifier": "==4.1.2",
+                    "name": "ruamel.yaml",
+                    "specifier": "==0.19.1",
                     "url": null,
-                    "found": "/opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/marshmallow-4.1.2.dist-info"
-                }
-            ]
-        },
-        "certifi": {
-            "name": "certifi",
-            "version": "2025.11.12",
-            "requirements": [
-                {
-                    "raw": "certifi==2025.11.12",
-                    "extras": [],
-                    "marker": null,
-                    "name": "certifi",
-                    "specifier": "==2025.11.12",
-                    "url": null,
-                    "found": "/opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/certifi-2025.11.12.dist-info"
+                    "found": "/opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/ruamel_yaml-0.19.1.dist-info"
                 }
             ]
         },
@@ -559,6 +514,36 @@ We highly encourage switching to the new `scan` command which is easier to use, 
                 }
             ]
         },
+        "marshmallow": {
+            "name": "marshmallow",
+            "version": "4.2.0",
+            "requirements": [
+                {
+                    "raw": "marshmallow==4.2.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "marshmallow",
+                    "specifier": "==4.2.0",
+                    "url": null,
+                    "found": "/opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/marshmallow-4.2.0.dist-info"
+                }
+            ]
+        },
+        "filelock": {
+            "name": "filelock",
+            "version": "3.20.2",
+            "requirements": [
+                {
+                    "raw": "filelock==3.20.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "filelock",
+                    "specifier": "==3.20.2",
+                    "url": null,
+                    "found": "/opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/filelock-3.20.2.dist-info"
+                }
+            ]
+        },
         "pycparser": {
             "name": "pycparser",
             "version": "2.23",
@@ -634,21 +619,6 @@ We highly encourage switching to the new `scan` command which is easier to use, 
                 }
             ]
         },
-        "ruamel.yaml": {
-            "name": "ruamel.yaml",
-            "version": "0.18.17",
-            "requirements": [
-                {
-                    "raw": "ruamel.yaml==0.18.17",
-                    "extras": [],
-                    "marker": null,
-                    "name": "ruamel.yaml",
-                    "specifier": "==0.18.17",
-                    "url": null,
-                    "found": "/opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/ruamel_yaml-0.18.17.dist-info"
-                }
-            ]
-        },
         "typer": {
             "name": "typer",
             "version": "0.21.0",
@@ -706,6 +676,21 @@ We highly encourage switching to the new `scan` command which is easier to use, 
                     "specifier": "==0.7.0",
                     "url": null,
                     "found": "/opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/annotated_types-0.7.0.dist-info"
+                }
+            ]
+        },
+        "certifi": {
+            "name": "certifi",
+            "version": "2026.1.4",
+            "requirements": [
+                {
+                    "raw": "certifi==2026.1.4",
+                    "extras": [],
+                    "marker": null,
+                    "name": "certifi",
+                    "specifier": "==2026.1.4",
+                    "url": null,
+                    "found": "/opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/certifi-2026.1.4.dist-info"
                 }
             ]
         },
