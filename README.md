@@ -1,4 +1,23 @@
-# ForeFlight Dashboard
+# ⚠️ ARCHIVED REPOSITORY
+
+> **This repository has been archived and is no longer actively maintained.**
+> 
+> **🔗 This project has moved to the [Aviation Monorepo](https://github.com/jordanhubbard/Aviation)**
+> 
+> All active development, issues, and pull requests should now be directed to:
+> **https://github.com/jordanhubbard/Aviation/tree/main/apps/foreflight-dashboard**
+>
+> The new monorepo provides:
+> - ✅ Unified CI/CD pipeline across all aviation projects
+> - ✅ Shared dependencies and utilities
+> - ✅ Centralized issue tracking and project management
+> - ✅ Improved collaboration and code reuse
+>
+> This repository remains available for historical reference only.
+
+---
+
+# ForeFlight Dashboard (Archived)
 
 [![CI/CD Pipeline](https://github.com/jordanhubbard/foreflight-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/jordanhubbard/foreflight-dashboard/actions/workflows/ci.yml)
 [![Security Analysis](https://github.com/jordanhubbard/foreflight-dashboard/actions/workflows/codeql.yml/badge.svg)](https://github.com/jordanhubbard/foreflight-dashboard/actions/workflows/codeql.yml)
